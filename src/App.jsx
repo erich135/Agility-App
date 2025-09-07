@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { createClient } from './lib/SupabaseClient'
+import supabase from './lib/SupabaseClient';
 import { getFilingStatus } from "./lib/dueStatus";
 import dayjs from "dayjs";
 

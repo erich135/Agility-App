@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState, useRef } from "react";
 import supabase from './lib/SupabaseClient';
 import { getFilingStatus } from "./lib/dueStatus";
 import dayjs from "dayjs";
-import logo from '../public/agility-logo.png';
 
 /* ----------------------- DATE HELPERS (robust) ----------------------- */
 // Parse many inputs -> { y, m, d } (numbers) or null
@@ -319,7 +318,7 @@ function App() {
       <header id="app-header" className={`sticky top-0 bg-white/80 backdrop-blur-md z-20 p-4 -mx-6 mb-4 transition-shadow ${headerShadow ? 'scrolled' : ''}`}>
         <div className="max-w-screen-xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <img src={logo} alt="Agility" style={{height:40}}/>
+            <img src="/agility-logo.png" alt="Agility" style={{height:40}}/>
             <h1 className="text-2xl font-bold">CIPC Annual Returns Tracker</h1>
           </div>
           <div className="flex items-center gap-2">

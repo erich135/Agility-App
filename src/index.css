@@ -3,10 +3,22 @@
 @tailwind utilities;
 
 /* small UI helper styles */
-#app-header.scrolled {
-	box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+:root{
+	--bg: #ffffff;
+	--muted: #6b7280;
 }
 
-.client-card-hover:hover {
-	transform: translateY(-3px);
+.dark {
+	--bg: #0b1220;
+	--muted: #9ca3af;
+	color-scheme: dark;
 }
+
+#app-header.scrolled {
+	box-shadow: 0 8px 28px rgba(2,6,23,0.12);
+}
+
+.client-card-hover:hover { transform: translateY(-3px); }
+
+.btn-primary{ background: #16a34a; color:white; padding:0.5rem 0.9rem; border-radius:6px }
+.btn-ghost{ background:transparent; padding:0.4rem 0.7rem; border-radius:6px }

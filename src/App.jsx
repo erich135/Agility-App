@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import supabase from './lib/SupabaseClient';
 import { getFilingStatus } from "./lib/dueStatus";
 import dayjs from "dayjs";
+import logo from '../public/agility-logo.png';
 
 /* ----------------------- DATE HELPERS (robust) ----------------------- */
 // Parse many inputs -> { y, m, d } (numbers) or null
@@ -61,6 +62,9 @@ function App() {
   // --- state ---
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
+  const [headerShadow, setHeaderShadow] = useState(false);
+  const searchRef = useRef(null);
 
   // search + month filter
   const [search, setSearch] = useState("");
@@ -108,6 +112,29 @@ function App() {
     fetchClients();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortBy, sortAsc]);
+
+  // header shadow on scroll + keyboard shortcut to focus search
+  useEffect(() => {
+    const onScroll = () => setHeaderShadow(window.scrollY > 8);
+    window.addEventListener('scroll', onScroll);
+
+    const onKey = (e) => {
+      const isMac = navigator.platform.toUpperCase().includes('MAC');
+      if ((isMac && e.metaKey && e.key === 'k') || (!isMac && e.ctrlKey && e.key === 'k')) {
+        e.preventDefault();
+        searchRef.current && searchRef.current.focus();
+      }
+      if (e.key === 'd' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        setDarkMode((s) => !s);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, []);
 
   const fetchClients = async () => {
     setLoading(true);
@@ -288,12 +315,16 @@ function App() {
   ];
 
   return (
-    <div className="p-6 max-w-screen-xl mx-auto">
-      <header id="app-header" className="sticky top-0 bg-white/80 backdrop-blur-md z-20 p-4 -mx-6 mb-4 transition-shadow" style={{boxShadow: 'none'}}>
+    <div className={`${darkMode ? 'dark' : ''} p-6 max-w-screen-xl mx-auto`}>
+      <header id="app-header" className={`sticky top-0 bg-white/80 backdrop-blur-md z-20 p-4 -mx-6 mb-4 transition-shadow ${headerShadow ? 'scrolled' : ''}`}>
         <div className="max-w-screen-xl mx-auto flex items-center justify-between">
-          <h1 className="text-2xl font-bold">CIPC Annual Returns Tracker</h1>
-          <div>
-            <button onClick={() => window.scrollTo({top:0, behavior:'smooth'})} className="px-3 py-1 bg-gray-100 rounded">Top</button>
+          <div className="flex items-center gap-4">
+            <img src={logo} alt="Agility" style={{height:40}}/>
+            <h1 className="text-2xl font-bold">CIPC Annual Returns Tracker</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => window.scrollTo({top:0, behavior:'smooth'})} aria-label="Scroll to top" className="px-3 py-1 bg-gray-100 rounded">Top</button>
+            <button onClick={() => setDarkMode((s)=>!s)} className="px-3 py-1 bg-gray-100 rounded">{darkMode ? 'Light' : 'Dark'}</button>
           </div>
         </div>
         {/* Legend */}
@@ -310,6 +341,7 @@ function App() {
           type="text"
           placeholder="Search clients..."
           className="border border-gray-300 rounded px-3 py-2 w-full md:max-w-md"
+          ref={searchRef}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />

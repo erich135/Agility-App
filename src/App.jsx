@@ -289,7 +289,20 @@ function App() {
 
   return (
     <div className="p-6 max-w-screen-xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">CIPC Annual Returns Tracker</h1>
+      <header id="app-header" className="sticky top-0 bg-white/80 backdrop-blur-md z-20 p-4 -mx-6 mb-4 transition-shadow" style={{boxShadow: 'none'}}>
+        <div className="max-w-screen-xl mx-auto flex items-center justify-between">
+          <h1 className="text-2xl font-bold">CIPC Annual Returns Tracker</h1>
+          <div>
+            <button onClick={() => window.scrollTo({top:0, behavior:'smooth'})} className="px-3 py-1 bg-gray-100 rounded">Top</button>
+          </div>
+        </div>
+        {/* Legend */}
+        <div className="mt-3 flex gap-3 items-center text-sm">
+          <div className="px-3 py-1 rounded text-white bg-[#0000FF]">Filed (within cycle)</div>
+          <div className="px-3 py-1 rounded text-white bg-[#FF8C00]">Due this month</div>
+          <div className="px-3 py-1 rounded text-white bg-[#FF0000]">Overdue</div>
+        </div>
+      </header>
 
       {/* Search + Month Filter + Add */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2 mb-4">
@@ -321,8 +334,8 @@ function App() {
         </button>
       </div>
 
-      {/* “Headers” bar for card view sorting */}
-      <div className="mb-3 overflow-x-auto">
+  {/* “Headers” bar for card view sorting */}
+  <div className="mb-3 overflow-x-auto" style={{paddingTop: '8px'}}>
         <div className="inline-grid grid-cols-7 gap-4 text-xs font-semibold">
           <button className="text-left" onClick={() => toggleSort("client_name")}>
             Client Name {sortIndicator("client_name")}

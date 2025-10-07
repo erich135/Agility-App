@@ -64,6 +64,7 @@ function App() {
   const [darkMode, setDarkMode] = useState(false);
   const [headerShadow, setHeaderShadow] = useState(false);
   const searchRef = useRef(null);
+  const [legendFilter, setLegendFilter] = useState(null); // null | 'red' | 'orange' | 'blue'
 
   // search + month filter
   const [search, setSearch] = useState("");
@@ -189,6 +190,19 @@ function App() {
       (c.client_name || "").toLowerCase().includes(term)
     );
   }, [monthFiltered, search]);
+
+  // apply legend color filter to the final displayed set
+  const displayedClients = useMemo(() => {
+    if (!legendFilter) return filteredClients;
+    return filteredClients.filter((c) => {
+      const status = getFilingStatus(
+        c.registration_date,
+        c.last_cipc_filed,
+        c.last_bo_filed
+      );
+      return status === legendFilter;
+    });
+  }, [filteredClients, legendFilter]);
 
   // --- CRUD / actions ---
   const handleFormSubmit = async (e) => {
@@ -326,11 +340,34 @@ function App() {
             <button onClick={() => setDarkMode((s)=>!s)} className="px-3 py-1 bg-gray-100 rounded">{darkMode ? 'Light' : 'Dark'}</button>
           </div>
         </div>
-        {/* Legend */}
+        {/* Legend (click to filter) */}
         <div className="mt-3 flex gap-3 items-center text-sm">
-          <div className="px-3 py-1 rounded text-white bg-[#0000FF]">Filed (within cycle)</div>
-          <div className="px-3 py-1 rounded text-white bg-[#FF8C00]">Due this month</div>
-          <div className="px-3 py-1 rounded text-white bg-[#FF0000]">Overdue</div>
+          <button
+            type="button"
+            onClick={() => setLegendFilter((s) => (s === 'blue' ? null : 'blue'))}
+            aria-pressed={legendFilter === 'blue'}
+            className={`px-3 py-1 rounded text-white bg-[#0000FF] focus:outline-none focus:ring-2 focus:ring-offset-2 ${legendFilter === 'blue' ? 'ring-4 ring-white/30' : ''}`}
+          >
+            Filed (within cycle)
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setLegendFilter((s) => (s === 'orange' ? null : 'orange'))}
+            aria-pressed={legendFilter === 'orange'}
+            className={`px-3 py-1 rounded text-white bg-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-offset-2 ${legendFilter === 'orange' ? 'ring-4 ring-white/30' : ''}`}
+          >
+            Due this month
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setLegendFilter((s) => (s === 'red' ? null : 'red'))}
+            aria-pressed={legendFilter === 'red'}
+            className={`px-3 py-1 rounded text-white bg-[#FF0000] focus:outline-none focus:ring-2 focus:ring-offset-2 ${legendFilter === 'red' ? 'ring-4 ring-white/30' : ''}`}
+          >
+            Overdue
+          </button>
         </div>
       </header>
 
@@ -395,7 +432,7 @@ function App() {
         <p>Loading clients...</p>
       ) : (
         <div className="space-y-4">
-          {filteredClients.map((client) => (
+          {displayedClients.map((client) => (
             <div
               key={client.id}
               className={`rounded-lg p-4 shadow-md text-white ring-1 ring-white/40 ${getRowColor(

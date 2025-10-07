@@ -61,7 +61,6 @@ function App() {
   // --- state ---
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
   const [headerShadow, setHeaderShadow] = useState(false);
   const searchRef = useRef(null);
   const [legendFilter, setLegendFilter] = useState(null); // null | 'red' | 'orange' | 'blue'
@@ -123,10 +122,6 @@ function App() {
       if ((isMac && e.metaKey && e.key === 'k') || (!isMac && e.ctrlKey && e.key === 'k')) {
         e.preventDefault();
         searchRef.current && searchRef.current.focus();
-      }
-      if (e.key === 'd' && (e.ctrlKey || e.metaKey)) {
-        e.preventDefault();
-        setDarkMode((s) => !s);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -328,7 +323,7 @@ function App() {
   ];
 
   return (
-    <div className={`${darkMode ? 'dark' : ''} p-6 max-w-screen-xl mx-auto`}>
+    <div className="p-6 max-w-screen-xl mx-auto">
       <header id="app-header" className={`sticky top-0 bg-white/80 backdrop-blur-md z-20 p-4 -mx-6 mb-4 transition-shadow ${headerShadow ? 'scrolled' : ''}`}>
         <div className="max-w-screen-xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -337,7 +332,6 @@ function App() {
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => window.scrollTo({top:0, behavior:'smooth'})} aria-label="Scroll to top" className="px-3 py-1 bg-gray-100 rounded">Top</button>
-            <button onClick={() => setDarkMode((s)=>!s)} className="px-3 py-1 bg-gray-100 rounded">{darkMode ? 'Light' : 'Dark'}</button>
           </div>
         </div>
         {/* Legend (click to filter) */}

@@ -1,86 +1,85 @@
-// Twilio SMS Service
-import twilio from 'twilio';
-
+// TwilioService.js - SMS service using Vercel API endpoint
 class TwilioService {
   constructor() {
-    // These will be set from environment variables
-    this.accountSid = import.meta.env.VITE_TWILIO_ACCOUNT_SID;
-    this.authToken = import.meta.env.VITE_TWILIO_AUTH_TOKEN;
-    this.fromNumber = import.meta.env.VITE_TWILIO_PHONE_NUMBER;
-
-    // Initialize Twilio client only if credentials are provided
-    if (this.accountSid && this.authToken) {
-      this.client = twilio(this.accountSid, this.authToken);
-    } else {
-      console.warn('Twilio credentials not configured. SMS will be logged to console.');
-      this.client = null;
-    }
+    // Use Vercel serverless function for SMS sending
+    this.apiEndpoint = '/api/send-sms';
+    console.log('TwilioService initialized with API endpoint');
   }
 
-  async sendSMS(to, message) {
-    try {
-      // If Twilio is not configured, just log to console (for development)
-      if (!this.client) {
-        console.log(`📱 SMS would be sent to ${to}: ${message}`);
-        return { success: true, mock: true };
-      }
+  formatPhoneNumber(phone) {
+    // Remove all non-digit characters
+    const cleaned = phone.replace(/\D/g, '');
+    
+    // If starts with 27, it's already in international format
+    if (cleaned.startsWith('27')) {
+      return '+' + cleaned;
+    }
+    
+    // If starts with 0, replace with +27
+    if (cleaned.startsWith('0')) {
+      return '+27' + cleaned.substring(1);
+    }
+    
+    // If it's just 9 digits, assume it's a SA number without leading 0
+    if (cleaned.length === 9) {
+      return '+27' + cleaned;
+    }
+    
+    // Default: add +27 if no country code
+    return '+27' + cleaned;
+  }
 
-      // Send actual SMS via Twilio
-      const result = await this.client.messages.create({
-        body: message,
-        from: this.fromNumber,
-        to: to
+  async sendOTP(phoneNumber, otp) {
+    try {
+      const formattedPhone = this.formatPhoneNumber(phoneNumber);
+      console.log('Sending SMS to:', formattedPhone);
+
+      const response = await fetch(this.apiEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phoneNumber: formattedPhone,
+          otp: otp
+        })
       });
 
-      console.log(`✅ SMS sent successfully to ${to}. SID: ${result.sid}`);
-      return { 
-        success: true, 
-        sid: result.sid,
-        mock: false 
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to send SMS');
+      }
+
+      console.log('SMS sent successfully:', result.messageSid);
+      return {
+        success: true,
+        messageSid: result.messageSid
       };
 
     } catch (error) {
-      console.error('❌ Failed to send SMS:', error);
+      console.error('Failed to send SMS:', error);
       
-      // Fallback to console logging if SMS fails
-      console.log(`📱 SMS fallback to ${to}: ${message}`);
+      // Fallback: log the OTP for development
+      console.log('FALLBACK - Your OTP is:', otp);
       
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: error.message,
-        fallback: true 
+        fallback: true,
+        otp: otp // Include OTP for development debugging
       };
     }
   }
 
-  async sendOTP(phoneNumber, otpCode) {
-    const message = `Your Agility verification code is: ${otpCode}\n\nThis code expires in 5 minutes.\n\nIf you didn't request this, please ignore this message.`;
-    
-    return await this.sendSMS(phoneNumber, message);
+  async sendSMS(phoneNumber, message) {
+    // Legacy method - redirect to sendOTP for compatibility
+    return await this.sendOTP(phoneNumber, message);
   }
 
-  // Format phone number to international format if needed
-  formatPhoneNumber(phone) {
-    // Remove any spaces, dashes, or parentheses
-    let cleaned = phone.replace(/[\s\-\(\)]/g, '');
-    
-    // If it starts with 0, replace with +27 (South African format)
-    if (cleaned.startsWith('0')) {
-      cleaned = '+27' + cleaned.substring(1);
-    }
-    
-    // If it doesn't start with +, assume it needs +27
-    if (!cleaned.startsWith('+')) {
-      cleaned = '+27' + cleaned;
-    }
-    
-    return cleaned;
-  }
-
-  // Test SMS functionality
   async testSMS(phoneNumber) {
-    const testMessage = "Test message from Agility system. SMS integration is working!";
-    return await this.sendSMS(this.formatPhoneNumber(phoneNumber), testMessage);
+    const testOTP = '123456';
+    return await this.sendOTP(phoneNumber, testOTP);
   }
 }
 

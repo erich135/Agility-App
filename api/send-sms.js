@@ -29,14 +29,20 @@ export default async function handler(req, res) {
     // Import Twilio only on the server side
     const twilio = require('twilio');
     
-    const client = twilio(
-      process.env.VITE_TWILIO_ACCOUNT_SID, 
-      process.env.VITE_TWILIO_AUTH_TOKEN
-    );
+    // Try both prefixed and non-prefixed environment variables
+    const accountSid = process.env.TWILIO_ACCOUNT_SID || process.env.VITE_TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN || process.env.VITE_TWILIO_AUTH_TOKEN;
+    const fromNumber = process.env.TWILIO_PHONE_NUMBER || process.env.VITE_TWILIO_PHONE_NUMBER;
+
+    if (!accountSid || !authToken || !fromNumber) {
+      throw new Error('Twilio credentials not configured in environment variables');
+    }
+
+    const client = twilio(accountSid, authToken);
 
     const message = await client.messages.create({
       body: `Your Agility login code: ${otp}. Valid for 10 minutes.`,
-      from: process.env.VITE_TWILIO_PHONE_NUMBER,
+      from: fromNumber,
       to: phoneNumber,
     });
 

@@ -11,6 +11,10 @@
 .dark {
 	--bg: #0b1220;
 	--muted: #9ca3af;
+	--card-bg: #071024;
+	--input-bg: #1f2937;
+	--text: #e5eef8;
+	--muted-text: #9ca3af;
 	color-scheme: dark;
 }
 
@@ -24,7 +28,13 @@
 .btn-ghost{ background:transparent; padding:0.4rem 0.7rem; border-radius:6px }
 
 /* typography */
-body { font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; background: var(--bg); }
+body { font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; background: var(--bg); color: var(--text, #111827); }
+
+/* dark-mode specific UI tweaks */
+.dark #app-header { background: rgba(8,11,18,0.7); }
+.dark .rounded-lg { background: var(--card-bg); }
+.dark input[type="text"], .dark select, .dark input[type="date"] { background: var(--input-bg); color: var(--text); border-color: rgba(255,255,255,0.06); }
+.dark .px-3.py-1.rounded.text-white.bg\[\#0000FF\] { box-shadow: none; }
 
 @keyframes overduePulse {
 	0% { box-shadow: 0 0 0 0 rgba(255,0,0,0.26); }

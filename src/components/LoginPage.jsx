@@ -1,0 +1,286 @@
+import React, { useState } from 'react';
+import supabase from '../lib/SupabaseClient';
+import twilioService from '../services/TwilioService';
+
+const LoginPage = ({ onLoginSuccess }) => {
+  const [step, setStep] = useState('email'); // 'email' or 'otp'
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [otp, setOtp] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+
+  // Step 1: Request OTP
+  const handleEmailSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      // Check if user exists in database
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id, email, phone, role, is_active')
+        .eq('email', email.toLowerCase().trim())
+        .single();
+
+      if (userError || !userData) {
+        throw new Error('User not found. Please contact your administrator.');
+      }
+
+      if (!userData.is_active) {
+        throw new Error('Your account is inactive. Please contact your administrator.');
+      }
+
+      if (!userData.phone) {
+        throw new Error('No phone number on file. Please contact your administrator.');
+      }
+
+      setPhone(userData.phone);
+
+      // Generate 6-digit OTP
+      const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+      
+      // Store OTP in database with expiration (5 minutes)
+      const expiresAt = new Date();
+      expiresAt.setMinutes(expiresAt.getMinutes() + 5);
+
+      const { error: otpError } = await supabase
+        .from('user_otps')
+        .upsert({
+          user_id: userData.id,
+          otp_code: otpCode,
+          expires_at: expiresAt.toISOString(),
+          used: false
+        });
+
+      if (otpError) throw otpError;
+
+      // Send SMS via Twilio
+      const smsResult = await twilioService.sendOTP(userData.phone, otpCode);
+      
+      if (smsResult.success) {
+        if (smsResult.mock) {
+          // Twilio not configured - show OTP in console for development
+          console.log(`🔐 OTP for ${userData.phone}: ${otpCode}`);
+          alert(`Development Mode: OTP is ${otpCode}\n\nCheck console for details.`);
+        } else {
+          // Real SMS sent
+          alert(`OTP sent to ${userData.phone.replace(/(\d{3})\d{4}(\d{3})/, '$1****$2')}`);
+        }
+      } else {
+        // SMS failed but OTP is logged for fallback
+        console.log(`🔐 SMS Failed - OTP for ${userData.phone}: ${otpCode}`);
+        alert(`SMS delivery failed. For testing, your OTP is: ${otpCode}`);
+      }
+      
+      setStep('otp');
+      setOtpSent(true);
+
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Step 2: Verify OTP
+  const handleOtpSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      // Verify OTP
+      const { data: otpData, error: otpError } = await supabase
+        .from('user_otps')
+        .select(`
+          id,
+          otp_code,
+          expires_at,
+          used,
+          users (id, email, phone, role, full_name)
+        `)
+        .eq('otp_code', otp)
+        .eq('used', false)
+        .gte('expires_at', new Date().toISOString())
+        .single();
+
+      if (otpError || !otpData) {
+        throw new Error('Invalid or expired OTP. Please try again.');
+      }
+
+      // Mark OTP as used
+      await supabase
+        .from('user_otps')
+        .update({ used: true })
+        .eq('id', otpData.id);
+
+      // Create session/login
+      const userData = {
+        id: otpData.users.id,
+        email: otpData.users.email,
+        phone: otpData.users.phone,
+        role: otpData.users.role,
+        full_name: otpData.users.full_name
+      };
+
+      // Store in localStorage for session management
+      localStorage.setItem('agility_user', JSON.stringify(userData));
+      localStorage.setItem('agility_login_time', Date.now().toString());
+
+      onLoginSuccess(userData);
+
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOtp = () => {
+    setStep('email');
+    setOtp('');
+    setOtpSent(false);
+    setError('');
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center p-4">
+      <div className="max-w-md w-full">
+        {/* Logo/Header */}
+        <div className="text-center mb-8">
+          <div className="mx-auto h-16 w-16 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center mb-4">
+            <span className="text-2xl font-bold text-white">A</span>
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900">Agility</h1>
+          <p className="text-gray-600 mt-2">Client Management System</p>
+        </div>
+
+        {/* Login Form */}
+        <div className="bg-white rounded-lg shadow-xl p-8">
+          {step === 'email' ? (
+            <>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-6">Welcome Back</h2>
+              
+              {error && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                  <div className="flex">
+                    <svg className="w-5 h-5 text-red-400 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.998-.833-2.768 0L3.046 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    <span className="text-sm text-red-700">{error}</span>
+                  </div>
+                </div>
+              )}
+
+              <form onSubmit={handleEmailSubmit}>
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter your email address"
+                    disabled={loading}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading || !email.trim()}
+                  className="w-full bg-gradient-to-r from-green-500 to-blue-600 text-white py-2 px-4 rounded-lg hover:from-green-600 hover:to-blue-700 focus:ring-2 focus:ring-blue-500 disabled:opacity-50 flex items-center justify-center"
+                >
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Sending OTP...
+                    </>
+                  ) : (
+                    'Send OTP'
+                  )}
+                </button>
+              </form>
+            </>
+          ) : (
+            <>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-6">Enter OTP</h2>
+              
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <p className="text-sm text-blue-800">
+                  We've sent a 6-digit code to your phone number ending in {phone.slice(-3)}
+                </p>
+              </div>
+
+              {error && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                  <div className="flex">
+                    <svg className="w-5 h-5 text-red-400 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.998-.833-2.768 0L3.046 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    <span className="text-sm text-red-700">{error}</span>
+                  </div>
+                </div>
+              )}
+
+              <form onSubmit={handleOtpSubmit}>
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    6-Digit Code
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center text-2xl tracking-widest"
+                    placeholder="000000"
+                    maxLength="6"
+                    disabled={loading}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading || otp.length !== 6}
+                  className="w-full bg-gradient-to-r from-green-500 to-blue-600 text-white py-2 px-4 rounded-lg hover:from-green-600 hover:to-blue-700 focus:ring-2 focus:ring-blue-500 disabled:opacity-50 flex items-center justify-center mb-4"
+                >
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Verifying...
+                    </>
+                  ) : (
+                    'Verify & Login'
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  className="w-full text-blue-600 hover:text-blue-800 py-2 text-sm"
+                  disabled={loading}
+                >
+                  Didn't receive the code? Try again
+                </button>
+              </form>
+            </>
+          )}
+        </div>
+
+        <div className="text-center mt-6">
+          <p className="text-sm text-gray-500">
+            Need help? Contact your administrator
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default LoginPage;

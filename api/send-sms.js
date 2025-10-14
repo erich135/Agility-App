@@ -34,8 +34,15 @@ export default async function handler(req, res) {
     const authToken = process.env.TWILIO_AUTH_TOKEN || process.env.VITE_TWILIO_AUTH_TOKEN;
     const fromNumber = process.env.TWILIO_PHONE_NUMBER || process.env.VITE_TWILIO_PHONE_NUMBER;
 
+    console.log('🔍 Twilio Environment Check:', {
+      accountSid: accountSid ? '✅ Set' : '❌ Missing',
+      authToken: authToken ? '✅ Set' : '❌ Missing', 
+      fromNumber: fromNumber ? '✅ Set' : '❌ Missing'
+    });
+
     if (!accountSid || !authToken || !fromNumber) {
-      throw new Error('Twilio credentials not configured in environment variables');
+      console.log('⚠️ Twilio credentials not configured in Vercel - SMS will fail gracefully');
+      throw new Error('SMS service not configured. Please use the console OTP to login.');
     }
 
     const client = twilio(accountSid, authToken);

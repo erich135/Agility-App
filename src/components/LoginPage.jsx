@@ -89,11 +89,13 @@ const LoginPage = ({ onLoginSuccess }) => {
           setError(`OTP sent to ${userData.phone.replace(/(\d{3})\d{4}(\d{3})/, '$1****$2')}. Check console for development OTP.`);
         } else {
           console.log('❌ SMS failed, using fallback');
-          setError(`SMS delivery failed. For testing, your OTP is: ${otpCode} (also check console)`);
+          console.log(`🚨 IMPORTANT: Your OTP is ${otpCode} - Use this to login!`);
+          setError(`SMS delivery failed. Your OTP is: ${otpCode}`);
         }
       } catch (smsError) {
         console.error('SMS service error:', smsError);
-        setError(`SMS service unavailable. For testing, your OTP is: ${otpCode} (also check console)`);
+        console.log(`🚨 IMPORTANT: Your OTP is ${otpCode} - Use this to login!`);
+        setError(`SMS service unavailable. Your OTP is: ${otpCode}`);
       }
       
       setStep('otp');

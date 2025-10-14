@@ -546,11 +546,7 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
               </div>
             </div>
             <button
-              onClick={() => {
-                console.log('Add Document button clicked, current state:', showAdditionalForm);
-                setShowAdditionalForm(!showAdditionalForm);
-                console.log('Setting showAdditionalForm to:', !showAdditionalForm);
-              }}
+              onClick={() => setShowAdditionalForm(!showAdditionalForm)}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm font-medium"
             >
               {showAdditionalForm ? 'Cancel' : '+ Add Document'}
@@ -733,15 +729,8 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
             <div className="flex space-x-3">
               <button
                 onClick={() => {
-                  console.log('Additional Documents button clicked');
                   const additionalSection = document.getElementById('additional-documents-section');
-                  console.log('Found section:', additionalSection);
-                  if (additionalSection) {
-                    additionalSection.scrollIntoView({ behavior: 'smooth' });
-                    console.log('Scroll initiated');
-                  } else {
-                    console.error('Additional documents section not found');
-                  }
+                  additionalSection?.scrollIntoView({ behavior: 'smooth' });
                 }}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >

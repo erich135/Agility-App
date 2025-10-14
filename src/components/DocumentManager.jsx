@@ -534,17 +534,22 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
         </div>
 
         {/* Additional Documents Section */}
-        <div className="px-6 py-4 border-t border-gray-200">
+        <div className="px-6 py-4 border-t-2 border-blue-200 bg-blue-50">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-2">
-              <span className="text-lg">📎</span>
-              <h3 className="text-lg font-semibold text-gray-900">Additional Documents</h3>
+            <div className="flex items-center space-x-3">
+              <div className="flex-shrink-0 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                <span className="text-white font-bold text-sm">+</span>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Additional Documents</h3>
+                <p className="text-sm text-gray-600">Upload custom documents with descriptions</p>
+              </div>
             </div>
             <button
               onClick={() => setShowAdditionalForm(!showAdditionalForm)}
-              className="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm font-medium"
             >
-              {showAdditionalForm ? 'Cancel' : 'Add Document'}
+              {showAdditionalForm ? 'Cancel' : '+ Add Document'}
             </button>
           </div>
 

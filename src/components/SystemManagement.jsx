@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase } from '../lib/SupabaseClient';
+import supabase from '../lib/SupabaseClient';
 
 const SystemManagement = () => {
   const [activeTab, setActiveTab] = useState('users');

@@ -73,15 +73,34 @@ export default async function handler(req, res) {
       code: error.code,
       moreInfo: error.moreInfo,
       status: error.status,
-      details: error.details
+      details: error.details,
+      accountSid: accountSid ? accountSid.substring(0, 8) + '...' : 'Missing',
+      fromNumber: fromNumber,
+      toNumber: phoneNumber
     });
+    
+    // Common Twilio error codes and solutions
+    let errorSolution = '';
+    if (error.code === 20003) {
+      errorSolution = 'Authentication failed - check Account SID and Auth Token';
+    } else if (error.code === 21211) {
+      errorSolution = 'Invalid phone number format';
+    } else if (error.code === 21408) {
+      errorSolution = 'Phone number not verified (trial account)';
+    } else if (error.code === 21610) {
+      errorSolution = 'Message cannot be sent to this number (unsubscribed)';
+    } else if (error.code === 30001) {
+      errorSolution = 'Message delivery failed - network or carrier issue';
+    }
     
     // Return more specific error information
     return res.status(500).json({ 
       error: 'Failed to send SMS',
       details: error.message,
       twilioCode: error.code,
-      moreInfo: error.moreInfo
+      moreInfo: error.moreInfo,
+      solution: errorSolution,
+      fallbackMessage: 'Use the console OTP to login while we resolve this issue'
     });
   }
 }

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMS Diagnostic Tool</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 40px auto; 
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status { 
+            padding: 15px; 
+            margin: 10px 0; 
+            border-radius: 5px; 
+            border-left: 4px solid #007cba;
+            background: #e7f3ff;
+        }
+        .error { 
+            border-left-color: #dc3545;
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .success { 
+            border-left-color: #28a745;
+            background: #d4edda;
+            color: #155724;
+        }
+        .warning {
+            border-left-color: #ffc107;
+            background: #fff3cd;
+            color: #856404;
+        }
+        button {
+            background: #007cba;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover { background: #005a8b; }
+        pre { 
+            background: #f8f9fa; 
+            padding: 15px; 
+            border-radius: 5px; 
+            overflow-x: auto;
+            font-size: 14px;
+        }
+        input[type="text"] {
+            width: 300px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 SMS Diagnostic Tool</h1>
+        <p>This tool helps diagnose Twilio SMS delivery issues in your Agility app.</p>
+        
+        <div class="status">
+            <strong>Purpose:</strong> Test Twilio configuration and identify SMS delivery problems.
+        </div>
+
+        <h2>📋 Step 1: Test Twilio Credentials</h2>
+        <button onclick="testCredentials()">Test Twilio Account</button>
+        <div id="credentialsResult"></div>
+
+        <h2>📱 Step 2: Test SMS Delivery</h2>
+        <div>
+            <label>Phone Number (+27836504028):</label><br>
+            <input type="text" id="phoneNumber" value="+27836504028" placeholder="+27836504028">
+            <br>
+            <button onclick="testSMS()">Send Test SMS</button>
+        </div>
+        <div id="smsResult"></div>
+
+        <h2>🔧 Common Solutions</h2>
+        <div class="status warning">
+            <strong>Trial Account Issues:</strong>
+            <ul>
+                <li>Verify your phone number in <a href="https://console.twilio.com/us1/develop/phone-numbers/manage/verified" target="_blank">Twilio Console</a></li>
+                <li>Check if you've exceeded trial limits</li>
+                <li>Ensure account has sufficient balance</li>
+            </ul>
+        </div>
+
+        <div class="status">
+            <strong>Phone Number Issues:</strong>
+            <ul>
+                <li>Ensure +27836504028 is verified as a caller ID</li>
+                <li>Check if number format is correct</li>
+                <li>Verify the Twilio phone number (+12189867505) is active</li>
+            </ul>
+        </div>
+
+        <h2>📊 Current Status</h2>
+        <div class="status">
+            <strong>Expected Results:</strong><br>
+            ✅ Credentials Valid → Account accessible<br>
+            ✅ SMS Test Success → Full SMS functionality<br>
+            ❌ Any failures → Specific error codes and solutions provided
+        </div>
+    </div>
+
+    <script>
+        async function testCredentials() {
+            const resultDiv = document.getElementById('credentialsResult');
+            resultDiv.innerHTML = '<div class="status">Testing credentials...</div>';
+            
+            try {
+                const response = await fetch('/api/test-twilio');
+                const result = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="status success">
+                            <strong>✅ Credentials Valid!</strong><br>
+                            Account: ${result.account.friendlyName}<br>
+                            Status: ${result.account.status}<br>
+                            Phone Number: ${result.fromNumber}
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="status error">
+                            <strong>❌ Credentials Failed</strong><br>
+                            Error: ${result.error}<br>
+                            Details: ${result.details}<br>
+                            ${result.code ? `Twilio Code: ${result.code}` : ''}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="status error">
+                        <strong>❌ Test Failed</strong><br>
+                        Error: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        async function testSMS() {
+            const phoneNumber = document.getElementById('phoneNumber').value;
+            const resultDiv = document.getElementById('smsResult');
+            resultDiv.innerHTML = '<div class="status">Sending test SMS...</div>';
+            
+            try {
+                const response = await fetch('/api/send-sms', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        phoneNumber: phoneNumber,
+                        otp: '123456'
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="status success">
+                            <strong>✅ SMS Sent Successfully!</strong><br>
+                            Message SID: ${result.messageSid}<br>
+                            Check your phone for the test message.
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="status error">
+                            <strong>❌ SMS Failed</strong><br>
+                            Error: ${result.error}<br>
+                            Details: ${result.details}<br>
+                            ${result.twilioCode ? `Twilio Code: ${result.twilioCode}` : ''}<br>
+                            ${result.solution ? `Solution: ${result.solution}` : ''}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="status error">
+                        <strong>❌ SMS Test Failed</strong><br>
+                        Error: ${error.message}
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

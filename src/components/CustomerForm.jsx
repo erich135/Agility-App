@@ -181,11 +181,35 @@ const CustomerForm = ({ customerId, onClose, onSave }) => {
         }
       }));
 
-      // For now, we'll just store the file locally
-      // In a real implementation, you'd upload to Supabase Storage or another service
-      
-      // Simulate upload delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Upload to Supabase Storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${formData.client_name || 'customer'}_${documentType}_${Date.now()}.${fileExt}`;
+      const filePath = `${customerId || 'new'}/${fileName}`;
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('client-documents')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Save document metadata to database
+      const { error: dbError } = await supabase
+        .from('documents')
+        .insert([{
+          client_id: customerId || 'new',
+          document_type: documentType,
+          file_name: file.name,
+          file_path: uploadData.path,
+          file_size: file.size,
+          mime_type: file.type,
+          uploaded_by: 'current_user' // You might want to get this from auth context
+        }]);
+
+      if (dbError) {
+        throw dbError;
+      }
 
       setUploadedFiles(prev => ({
         ...prev,
@@ -193,7 +217,8 @@ const CustomerForm = ({ customerId, onClose, onSave }) => {
           ...prev[documentType],
           uploading: false,
           uploaded: true,
-          uploadedAt: new Date().toISOString()
+          uploadedAt: new Date().toISOString(),
+          filePath: uploadData.path
         }
       }));
 

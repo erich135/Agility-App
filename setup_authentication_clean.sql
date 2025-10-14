@@ -51,18 +51,35 @@ CREATE TABLE IF NOT EXISTS public.user_otps (
     created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 4. Disable RLS for now (we'll handle security in the app layer)
+-- 4. Create documents table for file management
+CREATE TABLE IF NOT EXISTS public.documents (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    client_id text NOT NULL,
+    document_type text NOT NULL,
+    file_name text NOT NULL,
+    file_path text NOT NULL,
+    file_size bigint,
+    mime_type text,
+    uploaded_by text,
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 5. Disable RLS for now (we'll handle security in the app layer)
 ALTER TABLE public.users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_otps DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.documents DISABLE ROW LEVEL SECURITY;
 
--- 5. Create indexes for better performance
+-- 6. Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_users_email ON public.users(email);
 CREATE INDEX IF NOT EXISTS idx_users_role ON public.users(role);
 CREATE INDEX IF NOT EXISTS idx_user_otps_user_id ON public.user_otps(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_otps_code ON public.user_otps(otp_code);
 CREATE INDEX IF NOT EXISTS idx_user_otps_expires ON public.user_otps(expires_at);
+CREATE INDEX IF NOT EXISTS idx_documents_client_id ON public.documents(client_id);
+CREATE INDEX IF NOT EXISTS idx_documents_type ON public.documents(document_type);
 
--- 6. Insert initial admin user
+-- 7. Insert initial admin user
 INSERT INTO public.users (email, full_name, phone, role, is_active)
 VALUES (
     'erich@lmwfinance.co.za',
@@ -76,7 +93,7 @@ VALUES (
     role = EXCLUDED.role,
     is_active = EXCLUDED.is_active;
 
--- 7. Create function to clean up expired OTPs (optional)
+-- 8. Create function to clean up expired OTPs (optional)
 CREATE OR REPLACE FUNCTION cleanup_expired_otps()
 RETURNS void AS $$
 BEGIN
@@ -85,7 +102,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 8. Create trigger to update updated_at timestamp
+-- 9. Create trigger to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -105,5 +122,29 @@ BEGIN
     END IF;
 END $$;
 
+-- 10. Create storage bucket for documents (run this in Supabase Dashboard > Storage)
+-- Note: This needs to be created manually in Supabase Dashboard
+-- Go to Storage > Create Bucket > Name: "client-documents" > Public: false
+
+-- 11. Storage policies (if needed, run these after creating the bucket)
+/*
+-- Allow authenticated users to upload files
+CREATE POLICY "Allow authenticated uploads" ON storage.objects
+  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+
+-- Allow authenticated users to view files  
+CREATE POLICY "Allow authenticated downloads" ON storage.objects
+  FOR SELECT USING (auth.role() = 'authenticated');
+
+-- Allow authenticated users to delete files
+CREATE POLICY "Allow authenticated deletes" ON storage.objects
+  FOR DELETE USING (auth.role() = 'authenticated');
+*/
+
 -- Setup complete!
 -- This clean version handles existing tables and prevents conflicts.
+
+-- NEXT STEPS:
+-- 1. Run this entire script in Supabase SQL Editor
+-- 2. Go to Storage > Create a new bucket named "client-documents" (private)
+-- 3. Test the application - document uploads should now work!

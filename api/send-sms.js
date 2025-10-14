@@ -45,7 +45,14 @@ export default async function handler(req, res) {
       throw new Error('SMS service not configured. Please use the console OTP to login.');
     }
 
+    console.log('🚀 Initializing Twilio client...');
     const client = twilio(accountSid, authToken);
+
+    console.log('📱 Sending SMS:', {
+      from: fromNumber,
+      to: phoneNumber,
+      bodyLength: `Your Agility login code: ${otp}. Valid for 10 minutes.`.length
+    });
 
     const message = await client.messages.create({
       body: `Your Agility login code: ${otp}. Valid for 10 minutes.`,
@@ -53,7 +60,7 @@ export default async function handler(req, res) {
       to: phoneNumber,
     });
 
-    console.log('SMS sent successfully:', message.sid);
+    console.log('✅ SMS sent successfully:', message.sid);
     
     return res.status(200).json({ 
       success: true, 
@@ -61,11 +68,20 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('Failed to send SMS:', error);
+    console.error('❌ Twilio SMS Error Details:', {
+      message: error.message,
+      code: error.code,
+      moreInfo: error.moreInfo,
+      status: error.status,
+      details: error.details
+    });
     
+    // Return more specific error information
     return res.status(500).json({ 
       error: 'Failed to send SMS',
-      details: error.message 
+      details: error.message,
+      twilioCode: error.code,
+      moreInfo: error.moreInfo
     });
   }
 }

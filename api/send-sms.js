@@ -27,7 +27,14 @@ export default async function handler(req, res) {
 
   try {
     // Import Twilio only on the server side
-    const twilio = require('twilio');
+    let twilio;
+    try {
+      twilio = require('twilio');
+      console.log('✅ Twilio module loaded successfully');
+    } catch (moduleError) {
+      console.error('❌ Failed to load Twilio module:', moduleError.message);
+      throw new Error(`Twilio module not found: ${moduleError.message}`);
+    }
     
     // Try both prefixed and non-prefixed environment variables
     const accountSid = process.env.TWILIO_ACCOUNT_SID || process.env.VITE_TWILIO_ACCOUNT_SID;

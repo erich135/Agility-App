@@ -61,14 +61,38 @@ CREATE TABLE IF NOT EXISTS public.documents (
     file_size bigint,
     mime_type text,
     uploaded_by text,
+    document_name text,
     created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+-- Add document_name column if documents table already exists
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'documents' AND column_name = 'document_name') THEN
+        ALTER TABLE public.documents ADD COLUMN document_name text;
+    END IF;
+    
+    -- Update existing records to populate document_name from file_name for backward compatibility
+    UPDATE public.documents SET document_name = file_name WHERE document_name IS NULL;
+END $$;
 
 -- 5. Disable RLS for now (we'll handle security in the app layer)
 ALTER TABLE public.users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_otps DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.documents DISABLE ROW LEVEL SECURITY;
+
+-- 5b. Disable RLS on storage tables (if they exist)
+DO $$ 
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'storage' AND table_name = 'objects') THEN
+        ALTER TABLE storage.objects DISABLE ROW LEVEL SECURITY;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'storage' AND table_name = 'buckets') THEN
+        ALTER TABLE storage.buckets DISABLE ROW LEVEL SECURITY;
+    END IF;
+END $$;
 
 -- 6. Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_users_email ON public.users(email);

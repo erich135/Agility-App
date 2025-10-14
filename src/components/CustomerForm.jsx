@@ -378,7 +378,7 @@ const CustomerForm = ({ customerId, onClose, onSave }) => {
 
         {/* Form Content */}
         <form onSubmit={handleSubmit} className="flex flex-col flex-1">
-          <div className="overflow-y-auto px-6 py-4 space-y-6" style={{maxHeight: 'calc(90vh - 140px)'}}>
+          <div className="overflow-y-auto px-6 py-4 pb-8 space-y-6" style={{maxHeight: 'calc(90vh - 200px)'}}>
             
             {/* Error Display */}
             {error && (
@@ -778,9 +778,9 @@ const CustomerForm = ({ customerId, onClose, onSave }) => {
 
           {/* Uploaded Files Summary */}
           {Object.values(uploadedFiles).some(file => file) && (
-            <div className="px-6 py-4 border-t border-gray-200 bg-blue-50">
+            <div className="px-6 py-4 mb-4 border-t border-gray-200 bg-blue-50">
               <h4 className="text-sm font-medium text-gray-900 mb-3">📎 Uploaded Documents</h4>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {Object.entries(uploadedFiles).map(([type, file]) => {
                   if (!file) return null;
                   

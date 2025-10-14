@@ -6,6 +6,14 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState({});
   const [error, setError] = useState(null);
+  
+  // Additional documents state
+  const [showAdditionalForm, setShowAdditionalForm] = useState(false);
+  const [additionalDoc, setAdditionalDoc] = useState({
+    file: null,
+    description: '',
+    documentName: ''
+  });
 
   // Document types with labels and icons
   const documentTypes = [
@@ -169,6 +177,73 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
       setError(`Upload failed: ${err.message}`);
     } finally {
       setUploading(prev => ({ ...prev, [documentType]: false }));
+    }
+  };
+
+  // Handle additional document upload with description
+  const handleAdditionalDocUpload = async () => {
+    if (!additionalDoc.file || !additionalDoc.description.trim() || !additionalDoc.documentName.trim()) {
+      alert('Please select a file, enter a document name, and provide a description');
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (additionalDoc.file.size > 10 * 1024 * 1024) {
+      alert('File size must be less than 10MB');
+      return;
+    }
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+    if (!allowedTypes.includes(additionalDoc.file.type)) {
+      alert('Only JPEG, PNG, and PDF files are allowed');
+      return;
+    }
+
+    try {
+      setUploading(prev => ({ ...prev, 'additional': true }));
+      setError(null);
+
+      // Create unique filename for additional documents
+      const fileExt = additionalDoc.file.name.split('.').pop();
+      const fileName = `${customerId}/additional/${Date.now()}.${fileExt}`;
+
+      // Upload to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('client-documents')
+        .upload(fileName, additionalDoc.file);
+
+      if (uploadError) throw uploadError;
+
+      // Save document metadata to database with description
+      const { error: dbError } = await supabase
+        .from('documents')
+        .insert([{
+          client_id: customerId,
+          document_type: 'additional',
+          document_name: additionalDoc.documentName,
+          file_name: additionalDoc.file.name,
+          file_path: uploadData.path,
+          file_size: additionalDoc.file.size,
+          mime_type: additionalDoc.file.type,
+          uploaded_by: null, // Will be set when user auth is implemented
+          description: additionalDoc.description
+        }]);
+
+      if (dbError) throw dbError;
+
+      // Reset form and refresh documents
+      setAdditionalDoc({ file: null, description: '', documentName: '' });
+      setShowAdditionalForm(false);
+      await fetchDocuments();
+
+      alert('Additional document uploaded successfully!');
+
+    } catch (err) {
+      console.error('Error uploading additional document:', err);
+      setError(`Upload failed: ${err.message}`);
+    } finally {
+      setUploading(prev => ({ ...prev, 'additional': false }));
     }
   };
 
@@ -417,6 +492,175 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
               })}
             </div>
           )}
+        </div>
+
+        {/* Additional Documents Section */}
+        <div className="px-6 py-4 border-t border-gray-200">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-2">
+              <span className="text-lg">📎</span>
+              <h3 className="text-lg font-semibold text-gray-900">Additional Documents</h3>
+            </div>
+            <button
+              onClick={() => setShowAdditionalForm(!showAdditionalForm)}
+              className="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              {showAdditionalForm ? 'Cancel' : 'Add Document'}
+            </button>
+          </div>
+
+          {/* Additional Document Upload Form */}
+          {showAdditionalForm && (
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Document Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={additionalDoc.documentName}
+                    onChange={(e) => setAdditionalDoc(prev => ({...prev, documentName: e.target.value}))}
+                    placeholder="e.g., Business License, Contract, etc."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description *
+                  </label>
+                  <textarea
+                    value={additionalDoc.description}
+                    onChange={(e) => setAdditionalDoc(prev => ({...prev, description: e.target.value}))}
+                    placeholder="Describe this document and its purpose..."
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Select File *
+                  </label>
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={(e) => setAdditionalDoc(prev => ({...prev, file: e.target.files[0]}))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  {additionalDoc.file && (
+                    <p className="text-sm text-gray-600 mt-1">
+                      Selected: {additionalDoc.file.name} ({(additionalDoc.file.size / 1024 / 1024).toFixed(2)} MB)
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex space-x-2">
+                  <button
+                    onClick={handleAdditionalDocUpload}
+                    disabled={uploading.additional || !additionalDoc.file || !additionalDoc.description.trim() || !additionalDoc.documentName.trim()}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                  >
+                    {uploading.additional ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Uploading...
+                      </>
+                    ) : (
+                      'Upload Document'
+                    )}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowAdditionalForm(false);
+                      setAdditionalDoc({file: null, description: '', documentName: ''});
+                    }}
+                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Display Additional Documents */}
+          <div className="space-y-3">
+            {documents
+              .filter(doc => doc.document_type === 'additional')
+              .map((doc) => (
+                <div key={doc.id} className="bg-white border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-3">
+                        <div className="flex-shrink-0">
+                          {doc.mime_type?.includes('pdf') ? (
+                            <svg className="w-8 h-8 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+                            </svg>
+                          ) : (
+                            <svg className="w-8 h-8 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900">
+                            {doc.document_name}
+                          </p>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {doc.description}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {formatFileSize(doc.file_size)} • {new Date(doc.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2 ml-4">
+                      {/* Download Button */}
+                      <button
+                        onClick={() => handleDownload(doc)}
+                        className="text-blue-600 hover:text-blue-800 transition-colors p-1"
+                        title="Download"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </button>
+                      
+                      {/* Delete Button */}
+                      <button
+                        onClick={() => handleDelete(doc)}
+                        className="text-red-600 hover:text-red-800 transition-colors p-1"
+                        title="Delete"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            
+            {documents.filter(doc => doc.document_type === 'additional').length === 0 && !showAdditionalForm && (
+              <div className="text-center py-6 text-gray-500">
+                <svg className="mx-auto h-8 w-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                <p className="text-sm">No additional documents uploaded yet</p>
+                <button
+                  onClick={() => setShowAdditionalForm(true)}
+                  className="text-blue-600 hover:text-blue-700 text-sm font-medium mt-1"
+                >
+                  Add your first document
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Footer */}

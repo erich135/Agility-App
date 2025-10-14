@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import HomePage from './components/HomePage';
 import CIPCManagement from './components/CIPCManagement';
 import CustomerManagement from './components/CustomerManagement';
+import SystemManagement from './components/SystemManagement';
 import LoginPage from './components/LoginPage';
 
 // Protected Route Component
@@ -59,6 +60,14 @@ const AppContent = () => {
         element={
           <ProtectedRoute>
             <CustomerManagement />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/management" 
+        element={
+          <ProtectedRoute>
+            <SystemManagement />
           </ProtectedRoute>
         } 
       />

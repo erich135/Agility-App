@@ -18,14 +18,26 @@ const LoginPage = ({ onLoginSuccess }) => {
     setError('');
 
     try {
+      console.log('🔍 Looking up user:', email);
+      
       // Check if user exists in database
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('id, email, phone, role, is_active')
+        .select('id, email, phone, role, is_active, full_name')
         .eq('email', email.toLowerCase().trim())
         .single();
 
-      if (userError || !userData) {
+      console.log('👤 User lookup result:', { userData, userError });
+
+      if (userError) {
+        console.error('Database error:', userError);
+        if (userError.code === 'PGRST116') {
+          throw new Error('User not found. Please contact your administrator.');
+        }
+        throw new Error(`Database error: ${userError.message}`);
+      }
+
+      if (!userData) {
         throw new Error('User not found. Please contact your administrator.');
       }
 
@@ -41,11 +53,13 @@ const LoginPage = ({ onLoginSuccess }) => {
 
       // Generate 6-digit OTP
       const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+      console.log('🔐 Generated OTP:', otpCode);
       
-      // Store OTP in database with expiration (5 minutes)
+      // Store OTP in database with expiration (10 minutes)
       const expiresAt = new Date();
-      expiresAt.setMinutes(expiresAt.getMinutes() + 5);
+      expiresAt.setMinutes(expiresAt.getMinutes() + 10);
 
+      console.log('💾 Storing OTP in database...');
       const { error: otpError } = await supabase
         .from('user_otps')
         .upsert({
@@ -55,24 +69,31 @@ const LoginPage = ({ onLoginSuccess }) => {
           used: false
         });
 
-      if (otpError) throw otpError;
+      if (otpError) {
+        console.error('OTP storage error:', otpError);
+        throw new Error(`Failed to generate OTP: ${otpError.message}`);
+      }
 
-      // Send SMS via Twilio
-      const smsResult = await twilioService.sendOTP(userData.phone, otpCode);
-      
-      if (smsResult.success) {
-        if (smsResult.mock) {
-          // Twilio not configured - show OTP in console for development
-          console.log(`🔐 OTP for ${userData.phone}: ${otpCode}`);
-          alert(`Development Mode: OTP is ${otpCode}\n\nCheck console for details.`);
+      console.log('✅ OTP stored successfully');
+
+      // Always show OTP in console for development/testing
+      console.log(`🔐 LOGIN OTP for ${userData.phone}: ${otpCode}`);
+
+      // Try to send SMS
+      try {
+        console.log('📱 Attempting to send SMS...');
+        const smsResult = await twilioService.sendOTP(userData.phone, otpCode);
+        
+        if (smsResult.success) {
+          console.log('✅ SMS sent successfully');
+          setError(`OTP sent to ${userData.phone.replace(/(\d{3})\d{4}(\d{3})/, '$1****$2')}. Check console for development OTP.`);
         } else {
-          // Real SMS sent
-          alert(`OTP sent to ${userData.phone.replace(/(\d{3})\d{4}(\d{3})/, '$1****$2')}`);
+          console.log('❌ SMS failed, using fallback');
+          setError(`SMS delivery failed. For testing, your OTP is: ${otpCode} (also check console)`);
         }
-      } else {
-        // SMS failed but OTP is logged for fallback
-        console.log(`🔐 SMS Failed - OTP for ${userData.phone}: ${otpCode}`);
-        alert(`SMS delivery failed. For testing, your OTP is: ${otpCode}`);
+      } catch (smsError) {
+        console.error('SMS service error:', smsError);
+        setError(`SMS service unavailable. For testing, your OTP is: ${otpCode} (also check console)`);
       }
       
       setStep('otp');
@@ -92,6 +113,8 @@ const LoginPage = ({ onLoginSuccess }) => {
     setError('');
 
     try {
+      console.log('🔍 Verifying OTP:', otp);
+
       // Verify OTP
       const { data: otpData, error: otpError } = await supabase
         .from('user_otps')
@@ -107,15 +130,38 @@ const LoginPage = ({ onLoginSuccess }) => {
         .gte('expires_at', new Date().toISOString())
         .single();
 
-      if (otpError || !otpData) {
+      console.log('🔐 OTP verification result:', { otpData, otpError });
+
+      if (otpError) {
+        console.error('OTP verification error:', otpError);
+        if (otpError.code === 'PGRST116') {
+          throw new Error('Invalid or expired OTP. Please try again or request a new one.');
+        }
+        throw new Error(`OTP verification failed: ${otpError.message}`);
+      }
+
+      if (!otpData) {
         throw new Error('Invalid or expired OTP. Please try again.');
       }
 
+      console.log('✅ OTP verified successfully');
+
       // Mark OTP as used
-      await supabase
+      const { error: updateError } = await supabase
         .from('user_otps')
         .update({ used: true })
         .eq('id', otpData.id);
+
+      if (updateError) {
+        console.error('Failed to mark OTP as used:', updateError);
+        // Don't fail login for this, just log it
+      }
+
+      // Update last_login timestamp
+      await supabase
+        .from('users')
+        .update({ last_login: new Date().toISOString() })
+        .eq('id', otpData.users.id);
 
       // Create session/login
       const userData = {
@@ -126,6 +172,8 @@ const LoginPage = ({ onLoginSuccess }) => {
         full_name: otpData.users.full_name
       };
 
+      console.log('👤 Login successful for user:', userData.email);
+
       // Store in localStorage for session management
       localStorage.setItem('agility_user', JSON.stringify(userData));
       localStorage.setItem('agility_login_time', Date.now().toString());
@@ -133,6 +181,7 @@ const LoginPage = ({ onLoginSuccess }) => {
       onLoginSuccess(userData);
 
     } catch (err) {
+      console.error('Login error:', err);
       setError(err.message);
     } finally {
       setLoading(false);

@@ -32,7 +32,15 @@ class TwilioService {
   async sendOTP(phoneNumber, otp) {
     try {
       const formattedPhone = this.formatPhoneNumber(phoneNumber);
-      console.log('Sending SMS to:', formattedPhone);
+      console.log('📱 Attempting SMS to:', formattedPhone, 'OTP:', otp);
+
+      // First check if we're in development mode
+      const isDevelopment = window.location.hostname === 'localhost' || 
+                           window.location.hostname.includes('vercel.app');
+
+      if (isDevelopment) {
+        console.log('🚧 Development Mode - OTP:', otp);
+      }
 
       const response = await fetch(this.apiEndpoint, {
         method: 'POST',
@@ -45,29 +53,37 @@ class TwilioService {
         })
       });
 
-      const result = await response.json();
-
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to send SMS');
+        const errorText = await response.text();
+        let errorMessage;
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error || errorJson.details || 'Failed to send SMS';
+        } catch {
+          errorMessage = `HTTP ${response.status}: ${errorText}`;
+        }
+        throw new Error(errorMessage);
       }
 
-      console.log('SMS sent successfully:', result.messageSid);
+      const result = await response.json();
+      console.log('✅ SMS sent successfully:', result.messageSid);
+      
       return {
         success: true,
         messageSid: result.messageSid
       };
 
     } catch (error) {
-      console.error('Failed to send SMS:', error);
+      console.error('❌ SMS sending failed:', error);
       
-      // Fallback: log the OTP for development
-      console.log('FALLBACK - Your OTP is:', otp);
+      // Always log OTP for development/testing
+      console.log('🔐 FALLBACK OTP (use this to login):', otp);
       
       return {
         success: false,
         error: error.message,
         fallback: true,
-        otp: otp // Include OTP for development debugging
+        otp: otp
       };
     }
   }

@@ -15,6 +15,7 @@ const SystemManagement = () => {
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
   const [showUserModal, setShowUserModal] = useState(false);
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
 
   // Fetch system data
   useEffect(() => {
@@ -67,31 +68,63 @@ const SystemManagement = () => {
 
   const handleUserEdit = (user) => {
     setSelectedUser(user);
+    setIsCreatingUser(false);
     setShowUserModal(true);
   };
 
-  const handleUserUpdate = async (updatedUser) => {
-    try {
-      const { error } = await supabase
-        .from('users')
-        .update({
-          full_name: updatedUser.full_name,
-          email: updatedUser.email,
-          phone: updatedUser.phone,
-          role: updatedUser.role,
-          is_active: updatedUser.is_active
-        })
-        .eq('id', updatedUser.id);
+  const handleUserCreate = () => {
+    setSelectedUser({
+      full_name: '',
+      email: '',
+      phone: '',
+      role: 'user',
+      is_active: true
+    });
+    setIsCreatingUser(true);
+    setShowUserModal(true);
+  };
 
-      if (error) throw error;
+  const handleUserUpdate = async (userData) => {
+    try {
+      if (isCreatingUser) {
+        // Create new user
+        const { error } = await supabase
+          .from('users')
+          .insert([{
+            full_name: userData.full_name,
+            email: userData.email,
+            phone: userData.phone,
+            role: userData.role,
+            is_active: userData.is_active
+          }]);
+
+        if (error) throw error;
+        alert('User created successfully!');
+      } else {
+        // Update existing user
+        const { error } = await supabase
+          .from('users')
+          .update({
+            full_name: userData.full_name,
+            email: userData.email,
+            phone: userData.phone,
+            role: userData.role,
+            is_active: userData.is_active
+          })
+          .eq('id', userData.id);
+
+        if (error) throw error;
+        alert('User updated successfully!');
+      }
 
       // Refresh users list
       await fetchSystemData();
       setShowUserModal(false);
       setSelectedUser(null);
+      setIsCreatingUser(false);
     } catch (error) {
-      console.error('Error updating user:', error);
-      alert('Failed to update user');
+      console.error('Error saving user:', error);
+      alert(`Failed to ${isCreatingUser ? 'create' : 'update'} user: ${error.message}`);
     }
   };
 
@@ -237,12 +270,23 @@ const SystemManagement = () => {
               <div>
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="text-lg font-medium text-gray-900">User Management</h3>
-                  <button
-                    onClick={() => fetchSystemData()}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                  >
-                    Refresh
-                  </button>
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={handleUserCreate}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center"
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      Add User
+                    </button>
+                    <button
+                      onClick={() => fetchSystemData()}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    >
+                      Refresh
+                    </button>
+                  </div>
                 </div>
                 
                 <div className="overflow-x-auto">
@@ -420,7 +464,11 @@ const SystemManagement = () => {
       {showUserModal && selectedUser && (
         <UserEditModal
           user={selectedUser}
-          onClose={() => setShowUserModal(false)}
+          isCreating={isCreatingUser}
+          onClose={() => {
+            setShowUserModal(false);
+            setIsCreatingUser(false);
+          }}
           onUpdate={handleUserUpdate}
         />
       )}
@@ -429,7 +477,7 @@ const SystemManagement = () => {
 };
 
 // User Edit Modal Component
-const UserEditModal = ({ user, onClose, onUpdate }) => {
+const UserEditModal = ({ user, isCreating, onClose, onUpdate }) => {
   const [formData, setFormData] = useState({
     full_name: user.full_name || '',
     email: user.email || '',
@@ -448,7 +496,7 @@ const UserEditModal = ({ user, onClose, onUpdate }) => {
       <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
         <div className="mt-3">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-medium text-gray-900">Edit User</h3>
+            <h3 className="text-lg font-medium text-gray-900">{isCreating ? 'Create New User' : 'Edit User'}</h3>
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600"
@@ -527,7 +575,7 @@ const UserEditModal = ({ user, onClose, onUpdate }) => {
                 type="submit"
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
               >
-                Update User
+                {isCreating ? 'Create User' : 'Update User'}
               </button>
             </div>
           </form>

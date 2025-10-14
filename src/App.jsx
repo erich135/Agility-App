@@ -9,7 +9,7 @@ import LoginPage from './components/LoginPage';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
-  const { isLoggedIn, loading } = useAuth();
+  const { isLoggedIn, loading, login } = useAuth();
   
   if (loading) {
     return (
@@ -23,7 +23,7 @@ const ProtectedRoute = ({ children }) => {
   }
   
   if (!isLoggedIn()) {
-    return <LoginPage onLoginSuccess={() => {}} />;
+    return <LoginPage onLoginSuccess={login} />;
   }
   
   return children;

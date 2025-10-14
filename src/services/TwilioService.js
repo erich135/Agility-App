@@ -1,9 +1,9 @@
 // TwilioService.js - SMS service using Vercel API endpoint
 class TwilioService {
   constructor() {
-    // Use Vercel serverless function for SMS sending
-    this.apiEndpoint = '/api/send-sms';
-    console.log('TwilioService initialized with API endpoint');
+    // Use simple REST API endpoint (no npm dependencies)
+    this.apiEndpoint = '/api/send-sms-simple';
+    console.log('TwilioService initialized with simple REST API endpoint');
   }
 
   formatPhoneNumber(phone) {

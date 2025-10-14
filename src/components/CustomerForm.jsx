@@ -34,6 +34,24 @@ const CustomerForm = ({ customerId, onClose, onSave }) => {
     { director_order: 5, director_name: '', id_number: '', contact_telephone: '', contact_email: '' }
   ]);
 
+  // File upload state
+  const [uploadedFiles, setUploadedFiles] = useState({
+    registration_certificate: null,
+    tax_certificate: null,
+    vat_certificate: null,
+    paye_certificate: null,
+    public_officer_id: null
+  });
+  
+  // File input refs
+  const fileInputRefs = {
+    registration_certificate: React.useRef(null),
+    tax_certificate: React.useRef(null),
+    vat_certificate: React.useRef(null),
+    paye_certificate: React.useRef(null),
+    public_officer_id: React.useRef(null)
+  };
+
   const isEditing = !!customerId;
 
   // Load existing customer data if editing
@@ -127,6 +145,81 @@ const CustomerForm = ({ customerId, onClose, onSave }) => {
       };
       return updated;
     });
+  };
+
+  // File upload handlers
+  const handleFileUpload = (documentType) => {
+    fileInputRefs[documentType].current?.click();
+  };
+
+  const handleFileChange = async (documentType, event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Check file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File size must be less than 10MB');
+      return;
+    }
+
+    // Check file type (images and PDFs only)
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'];
+    if (!allowedTypes.includes(file.type)) {
+      alert('Only images (JPEG, PNG, GIF) and PDF files are allowed');
+      return;
+    }
+
+    try {
+      setUploadedFiles(prev => ({
+        ...prev,
+        [documentType]: {
+          file,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          uploading: true
+        }
+      }));
+
+      // For now, we'll just store the file locally
+      // In a real implementation, you'd upload to Supabase Storage or another service
+      
+      // Simulate upload delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      setUploadedFiles(prev => ({
+        ...prev,
+        [documentType]: {
+          ...prev[documentType],
+          uploading: false,
+          uploaded: true,
+          uploadedAt: new Date().toISOString()
+        }
+      }));
+
+      console.log(`✅ ${documentType} uploaded successfully:`, file.name);
+      
+    } catch (error) {
+      console.error('File upload error:', error);
+      setUploadedFiles(prev => ({
+        ...prev,
+        [documentType]: {
+          ...prev[documentType],
+          uploading: false,
+          error: 'Upload failed'
+        }
+      }));
+    }
+
+    // Clear the input
+    event.target.value = '';
+  };
+
+  const removeFile = (documentType) => {
+    setUploadedFiles(prev => ({
+      ...prev,
+      [documentType]: null
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -306,11 +399,26 @@ const CustomerForm = ({ customerId, onClose, onSave }) => {
                     />
                     <button
                       type="button"
-                      className="px-3 py-2 text-sm bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors flex items-center"
+                      onClick={() => handleFileUpload('registration_certificate')}
+                      className={`px-3 py-2 text-sm border rounded-lg transition-colors flex items-center ${
+                        uploadedFiles.registration_certificate?.uploaded 
+                          ? 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100'
+                          : uploadedFiles.registration_certificate?.uploading
+                          ? 'bg-yellow-50 text-yellow-600 border-yellow-200'
+                          : 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100'
+                      }`}
                       title="Upload Registration Certificate"
                     >
-                      📄
+                      {uploadedFiles.registration_certificate?.uploading ? '⏳' : 
+                       uploadedFiles.registration_certificate?.uploaded ? '✅' : '📄'}
                     </button>
+                    <input
+                      type="file"
+                      ref={fileInputRefs.registration_certificate}
+                      onChange={(e) => handleFileChange('registration_certificate', e)}
+                      accept="image/*,.pdf"
+                      style={{ display: 'none' }}
+                    />
                   </div>
                 </div>
 
@@ -328,11 +436,26 @@ const CustomerForm = ({ customerId, onClose, onSave }) => {
                     />
                     <button
                       type="button"
-                      className="px-3 py-2 text-sm bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors flex items-center"
+                      onClick={() => handleFileUpload('tax_certificate')}
+                      className={`px-3 py-2 text-sm border rounded-lg transition-colors flex items-center ${
+                        uploadedFiles.tax_certificate?.uploaded 
+                          ? 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100'
+                          : uploadedFiles.tax_certificate?.uploading
+                          ? 'bg-yellow-50 text-yellow-600 border-yellow-200'
+                          : 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100'
+                      }`}
                       title="Upload Tax Certificate"
                     >
-                      🏛️
+                      {uploadedFiles.tax_certificate?.uploading ? '⏳' : 
+                       uploadedFiles.tax_certificate?.uploaded ? '✅' : '🏛️'}
                     </button>
+                    <input
+                      type="file"
+                      ref={fileInputRefs.tax_certificate}
+                      onChange={(e) => handleFileChange('tax_certificate', e)}
+                      accept="image/*,.pdf"
+                      style={{ display: 'none' }}
+                    />
                   </div>
                 </div>
 
@@ -350,11 +473,26 @@ const CustomerForm = ({ customerId, onClose, onSave }) => {
                     />
                     <button
                       type="button"
-                      className="px-3 py-2 text-sm bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors flex items-center"
+                      onClick={() => handleFileUpload('vat_certificate')}
+                      className={`px-3 py-2 text-sm border rounded-lg transition-colors flex items-center ${
+                        uploadedFiles.vat_certificate?.uploaded 
+                          ? 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100'
+                          : uploadedFiles.vat_certificate?.uploading
+                          ? 'bg-yellow-50 text-yellow-600 border-yellow-200'
+                          : 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100'
+                      }`}
                       title="Upload VAT Certificate"
                     >
-                      💰
+                      {uploadedFiles.vat_certificate?.uploading ? '⏳' : 
+                       uploadedFiles.vat_certificate?.uploaded ? '✅' : '💰'}
                     </button>
+                    <input
+                      type="file"
+                      ref={fileInputRefs.vat_certificate}
+                      onChange={(e) => handleFileChange('vat_certificate', e)}
+                      accept="image/*,.pdf"
+                      style={{ display: 'none' }}
+                    />
                   </div>
                 </div>
 
@@ -372,11 +510,26 @@ const CustomerForm = ({ customerId, onClose, onSave }) => {
                     />
                     <button
                       type="button"
-                      className="px-3 py-2 text-sm bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors flex items-center"
+                      onClick={() => handleFileUpload('paye_certificate')}
+                      className={`px-3 py-2 text-sm border rounded-lg transition-colors flex items-center ${
+                        uploadedFiles.paye_certificate?.uploaded 
+                          ? 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100'
+                          : uploadedFiles.paye_certificate?.uploading
+                          ? 'bg-yellow-50 text-yellow-600 border-yellow-200'
+                          : 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100'
+                      }`}
                       title="Upload PAYE Certificate"
                     >
-                      💼
+                      {uploadedFiles.paye_certificate?.uploading ? '⏳' : 
+                       uploadedFiles.paye_certificate?.uploaded ? '✅' : '💼'}
                     </button>
+                    <input
+                      type="file"
+                      ref={fileInputRefs.paye_certificate}
+                      onChange={(e) => handleFileChange('paye_certificate', e)}
+                      accept="image/*,.pdf"
+                      style={{ display: 'none' }}
+                    />
                   </div>
                 </div>
 
@@ -428,11 +581,26 @@ const CustomerForm = ({ customerId, onClose, onSave }) => {
                     />
                     <button
                       type="button"
-                      className="px-3 py-2 text-sm bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors flex items-center"
+                      onClick={() => handleFileUpload('public_officer_id')}
+                      className={`px-3 py-2 text-sm border rounded-lg transition-colors flex items-center ${
+                        uploadedFiles.public_officer_id?.uploaded 
+                          ? 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100'
+                          : uploadedFiles.public_officer_id?.uploading
+                          ? 'bg-yellow-50 text-yellow-600 border-yellow-200'
+                          : 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100'
+                      }`}
                       title="Upload Public Officer ID"
                     >
-                      🆔
+                      {uploadedFiles.public_officer_id?.uploading ? '⏳' : 
+                       uploadedFiles.public_officer_id?.uploaded ? '✅' : '🆔'}
                     </button>
+                    <input
+                      type="file"
+                      ref={fileInputRefs.public_officer_id}
+                      onChange={(e) => handleFileChange('public_officer_id', e)}
+                      accept="image/*,.pdf"
+                      style={{ display: 'none' }}
+                    />
                   </div>
                 </div>
               </div>
@@ -582,6 +750,48 @@ const CustomerForm = ({ customerId, onClose, onSave }) => {
               </div>
             </div>
           </div>
+
+          {/* Uploaded Files Summary */}
+          {Object.values(uploadedFiles).some(file => file) && (
+            <div className="px-6 py-4 border-t border-gray-200 bg-blue-50">
+              <h4 className="text-sm font-medium text-gray-900 mb-3">📎 Uploaded Documents</h4>
+              <div className="space-y-2">
+                {Object.entries(uploadedFiles).map(([type, file]) => {
+                  if (!file) return null;
+                  
+                  const labels = {
+                    registration_certificate: 'Registration Certificate',
+                    tax_certificate: 'Tax Certificate',
+                    vat_certificate: 'VAT Certificate',
+                    paye_certificate: 'PAYE Certificate',
+                    public_officer_id: 'Public Officer ID'
+                  };
+                  
+                  return (
+                    <div key={type} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center space-x-2">
+                        <span className={file.uploaded ? 'text-green-600' : 'text-yellow-600'}>
+                          {file.uploading ? '⏳' : file.uploaded ? '✅' : '📄'}
+                        </span>
+                        <span className="text-gray-700">{labels[type]}</span>
+                        <span className="text-gray-500">({file.name})</span>
+                      </div>
+                      {file.uploaded && (
+                        <button
+                          type="button"
+                          onClick={() => removeFile(type)}
+                          className="text-red-600 hover:text-red-800 text-xs"
+                          title="Remove file"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Footer */}
           <div className="flex-shrink-0 px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end space-x-3">

@@ -247,11 +247,11 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
     }
   };
 
-  const handleDownload = async (document) => {
+  const handleDownload = async (doc) => {
     try {
       const { data, error } = await supabase.storage
         .from('client-documents')
-        .download(document.file_path);
+        .download(doc.file_path);
 
       if (error) throw error;
 
@@ -259,7 +259,7 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
       const url = URL.createObjectURL(data);
       const link = document.createElement('a');
       link.href = url;
-      link.download = document.document_name;
+      link.download = doc.document_name || doc.file_name;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -271,8 +271,35 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
     }
   };
 
-  const handleDelete = async (document) => {
-    if (!window.confirm(`Are you sure you want to delete "${document.document_name}"?`)) {
+  const handleView = async (doc) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('client-documents')
+        .download(doc.file_path);
+
+      if (error) throw error;
+
+      // Create blob URL and open in new tab
+      const url = URL.createObjectURL(data);
+      const newWindow = window.open(url, '_blank');
+      
+      // Clean up the URL after a delay
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 1000);
+
+      if (!newWindow) {
+        alert('Please allow popups to view documents');
+      }
+
+    } catch (err) {
+      console.error('Error viewing document:', err);
+      alert(`View failed: ${err.message}`);
+    }
+  };
+
+  const handleDelete = async (doc) => {
+    if (!window.confirm(`Are you sure you want to delete "${doc.document_name || doc.file_name}"?`)) {
       return;
     }
 
@@ -280,7 +307,7 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
       // Delete from storage
       const { error: storageError } = await supabase.storage
         .from('client-documents')
-        .remove([document.file_path]);
+        .remove([doc.file_path]);
 
       if (storageError) throw storageError;
 
@@ -288,7 +315,7 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
       const { error: dbError } = await supabase
         .from('documents')
         .delete()
-        .eq('id', document.id);
+        .eq('id', doc.id);
 
       if (dbError) throw dbError;
 
@@ -453,6 +480,18 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
                               </div>
                               
                               <div className="flex items-center space-x-2">
+                                {/* View Button */}
+                                <button
+                                  onClick={() => handleView(doc)}
+                                  className="text-green-600 hover:text-green-800 transition-colors p-1"
+                                  title="View Document"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                  </svg>
+                                </button>
+
                                 {/* Download Button */}
                                 <button
                                   onClick={() => handleDownload(doc)}
@@ -620,6 +659,18 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
                     </div>
                     
                     <div className="flex items-center space-x-2 ml-4">
+                      {/* View Button */}
+                      <button
+                        onClick={() => handleView(doc)}
+                        className="text-green-600 hover:text-green-800 transition-colors p-1"
+                        title="View Document"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      </button>
+
                       {/* Download Button */}
                       <button
                         onClick={() => handleDownload(doc)}

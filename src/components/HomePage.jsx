@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import NotificationCenter from './NotificationCenter';
 
 const HomePage = () => {
   const { user, logout, isAdmin } = useAuth();
@@ -21,8 +22,9 @@ const HomePage = () => {
               className="h-16 w-auto"
             />
             
-            {/* User Info & Logout */}
+            {/* User Info, Notifications & Logout */}
             <div className="flex items-center space-x-4">
+              <NotificationCenter />
               <div className="text-right">
                 <p className="text-sm text-gray-600">Welcome back,</p>
                 <p className="font-semibold text-gray-900">{user?.full_name || user?.email}</p>
@@ -52,6 +54,29 @@ const HomePage = () => {
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
             Comprehensive client management and CIPC filing system for accountancy professionals
           </p>
+        </div>
+
+        {/* Quick Stats Banner */}
+        <div className="mb-12">
+          <Link 
+            to="/dashboard"
+            className="block bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl shadow-2xl p-8 hover:shadow-3xl transition-all duration-300 transform hover:scale-105"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-3xl font-bold mb-2">📊 Analytics Dashboard</h2>
+                <p className="text-blue-100 text-lg">View comprehensive compliance reports, revenue tracking, and business insights</p>
+              </div>
+              <svg 
+                className="w-12 h-12 text-white animate-bounce" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+            </div>
+          </Link>
         </div>
 
         {/* Navigation Cards */}

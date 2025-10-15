@@ -8,6 +8,8 @@ import SystemManagement from './components/SystemManagement';
 import CalendarTaskManagement from './components/CalendarTaskManagement';
 import AIInsights from './components/AIInsights';
 import LoginPage from './components/LoginPage';
+import DashboardAnalytics from './components/DashboardAnalytics';
+import ClientPortal from './components/ClientPortal';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -88,6 +90,18 @@ const AppContent = () => {
             <AIInsights />
           </ProtectedRoute>
         } 
+      />
+      <Route 
+        path="/dashboard" 
+        element={
+          <ProtectedRoute>
+            <DashboardAnalytics />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/client-portal" 
+        element={<ClientPortal />} 
       />
     </Routes>
   );

@@ -3,8 +3,11 @@ import { Link } from 'react-router-dom';
 import supabase from '../lib/SupabaseClient';
 import CustomerForm from './CustomerForm';
 import DocumentManager from './DocumentManager';
+import ActivityLogger from '../lib/ActivityLogger';
+import { useAuth } from '../contexts/AuthContext';
 
 const CustomerManagement = () => {
+  const { user } = useAuth();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -91,7 +94,22 @@ const CustomerManagement = () => {
     fetchCustomers(); // Refresh the list
   };
 
-  const handleViewDocuments = (customer) => {
+  const handleViewDocuments = async (customer) => {
+    // Log customer access
+    if (user) {
+      await ActivityLogger.logCustomerAccess(
+        user.id,
+        user.full_name || user.email,
+        customer.id,
+        customer.client_name,
+        {
+          action_type: 'view_customer_details',
+          accessed_timestamp: new Date().toISOString(),
+          registration_number: customer.registration_number
+        }
+      );
+    }
+    
     setDocumentsCustomer(customer);
     setShowDocuments(true);
   };

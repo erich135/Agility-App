@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import supabase from '../lib/SupabaseClient';
 import twilioService from '../services/TwilioService';
+import ActivityLogger from '../lib/ActivityLogger';
 
 const LoginPage = ({ onLoginSuccess }) => {
   const [step, setStep] = useState('email'); // 'email' or 'otp'
@@ -76,6 +77,14 @@ const LoginPage = ({ onLoginSuccess }) => {
 
       console.log('✅ OTP stored successfully');
 
+      // Log OTP generation
+      await ActivityLogger.logOTPGenerated(
+        userData.id,
+        userData.full_name || userData.email,
+        userData.phone,
+        { email: userData.email, otp_length: otpCode.length }
+      );
+
       // Always show OTP in console for development/testing
       console.log(`🔐 LOGIN OTP for ${userData.phone}: ${otpCode}`);
 
@@ -102,6 +111,18 @@ const LoginPage = ({ onLoginSuccess }) => {
       setOtpSent(true);
 
     } catch (err) {
+      // Log failed login attempt
+      await ActivityLogger.logLogin(
+        email, // Use email as identifier when user lookup fails
+        email,
+        false,
+        { 
+          error_message: err.message,
+          attempted_email: email,
+          step: 'user_lookup'
+        }
+      );
+      
       setError(err.message);
     } finally {
       setLoading(false);
@@ -148,6 +169,14 @@ const LoginPage = ({ onLoginSuccess }) => {
 
       console.log('✅ OTP verified successfully');
 
+      // Log successful OTP verification
+      await ActivityLogger.logOTPVerification(
+        otpData.users.id,
+        otpData.users.full_name || otpData.users.email,
+        true,
+        { email: otpData.users.email, phone: otpData.users.phone }
+      );
+
       // Mark OTP as used
       const { error: updateError } = await supabase
         .from('user_otps')
@@ -176,6 +205,19 @@ const LoginPage = ({ onLoginSuccess }) => {
 
       console.log('👤 Login successful for user:', userData.email);
 
+      // Log successful login
+      await ActivityLogger.logLogin(
+        userData.id,
+        userData.full_name || userData.email,
+        true,
+        { 
+          email: userData.email, 
+          phone: userData.phone, 
+          role: userData.role,
+          login_timestamp: new Date().toISOString()
+        }
+      );
+
       // Store in localStorage for session management
       localStorage.setItem('agility_user', JSON.stringify(userData));
       localStorage.setItem('agility_login_time', Date.now().toString());
@@ -184,6 +226,21 @@ const LoginPage = ({ onLoginSuccess }) => {
 
     } catch (err) {
       console.error('Login error:', err);
+      
+      // Log failed OTP verification
+      if (otp && phone) {
+        await ActivityLogger.logOTPVerification(
+          phone, // Use phone as identifier when user ID not available
+          email,
+          false,
+          { 
+            error_message: err.message,
+            attempted_otp: otp.length,
+            email: email
+          }
+        );
+      }
+      
       setError(err.message);
     } finally {
       setLoading(false);

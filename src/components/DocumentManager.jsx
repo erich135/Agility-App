@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import supabase from '../lib/SupabaseClient';
+import ActivityLogger from '../lib/ActivityLogger';
+import { useAuth } from '../contexts/AuthContext';
 
 const DocumentManager = ({ customerId, customerName, onClose }) => {
+  const { user } = useAuth();
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState({});
@@ -99,7 +102,21 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
 
   useEffect(() => {
     fetchDocuments();
-  }, [customerId]);
+    
+    // Log customer document access
+    if (user && customerId && customerName) {
+      ActivityLogger.logCustomerAccess(
+        user.id,
+        user.full_name || user.email,
+        customerId,
+        customerName,
+        {
+          action_type: 'document_management',
+          accessed_timestamp: new Date().toISOString()
+        }
+      );
+    }
+  }, [customerId, user, customerName]);
 
   const fetchDocuments = async () => {
     try {
@@ -165,6 +182,24 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
         }]);
 
       if (dbError) throw dbError;
+
+      // Log document upload
+      if (user) {
+        await ActivityLogger.logDocumentUpload(
+          user.id,
+          user.full_name || user.email,
+          uploadData.path, // Use file path as document ID
+          file.name,
+          documentType,
+          customerId,
+          {
+            customer_name: customerName,
+            file_size: file.size,
+            mime_type: file.type,
+            original_filename: file.name
+          }
+        );
+      }
 
       // Refresh documents list
       await fetchDocuments();
@@ -232,6 +267,25 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
 
       if (dbError) throw dbError;
 
+      // Log additional document upload
+      if (user) {
+        await ActivityLogger.logDocumentUpload(
+          user.id,
+          user.full_name || user.email,
+          uploadData.path, // Use file path as document ID
+          additionalDoc.documentName,
+          'additional',
+          customerId,
+          {
+            customer_name: customerName,
+            description: additionalDoc.description,
+            file_size: additionalDoc.file.size,
+            mime_type: additionalDoc.file.type,
+            original_filename: additionalDoc.file.name
+          }
+        );
+      }
+
       // Reset form and refresh documents
       setAdditionalDoc({ file: null, description: '', documentName: '' });
       setShowAdditionalForm(false);
@@ -254,6 +308,23 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
         .download(doc.file_path);
 
       if (error) throw error;
+
+      // Log document download
+      if (user) {
+        await ActivityLogger.logDocumentDownload(
+          user.id,
+          user.full_name || user.email,
+          doc.id,
+          doc.document_name || doc.file_name,
+          customerId,
+          {
+            customer_name: customerName,
+            document_type: doc.document_type,
+            file_size: doc.file_size,
+            mime_type: doc.mime_type
+          }
+        );
+      }
 
       // Create download link
       const url = URL.createObjectURL(data);
@@ -278,6 +349,23 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
         .download(doc.file_path);
 
       if (error) throw error;
+
+      // Log document view
+      if (user) {
+        await ActivityLogger.logDocumentView(
+          user.id,
+          user.full_name || user.email,
+          doc.id,
+          doc.document_name || doc.file_name,
+          customerId,
+          {
+            customer_name: customerName,
+            document_type: doc.document_type,
+            file_size: doc.file_size,
+            mime_type: doc.mime_type
+          }
+        );
+      }
 
       // Create blob URL and open in new tab
       const url = URL.createObjectURL(data);
@@ -318,6 +406,23 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
         .eq('id', doc.id);
 
       if (dbError) throw dbError;
+
+      // Log document deletion
+      if (user) {
+        await ActivityLogger.logDocumentDelete(
+          user.id,
+          user.full_name || user.email,
+          doc.id,
+          doc.document_name || doc.file_name,
+          customerId,
+          {
+            customer_name: customerName,
+            document_type: doc.document_type,
+            file_size: doc.file_size,
+            mime_type: doc.mime_type
+          }
+        );
+      }
 
       // Refresh documents list
       await fetchDocuments();

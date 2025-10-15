@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import supabase from '../lib/SupabaseClient';
+import ActivityLogger from '../lib/ActivityLogger';
+import { useAuth } from '../contexts/AuthContext';
 
 const CustomerForm = ({ customerId, onClose, onSave }) => {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -288,6 +291,21 @@ const CustomerForm = ({ customerId, onClose, onSave }) => {
           .eq('id', customerId);
         
         if (updateError) throw updateError;
+
+        // Log customer update
+        if (user) {
+          await ActivityLogger.logCustomerUpdate(
+            user.id,
+            user.full_name || user.email,
+            customerId,
+            formData.client_name,
+            {
+              registration_number: formData.registration_number,
+              updated_fields: Object.keys(customerPayload).filter(key => key !== 'updated_at'),
+              update_timestamp: new Date().toISOString()
+            }
+          );
+        }
       } else {
         // Create new customer
         customerPayload.created_at = new Date().toISOString();
@@ -300,6 +318,23 @@ const CustomerForm = ({ customerId, onClose, onSave }) => {
         
         if (insertError) throw insertError;
         customerId_final = newCustomer.id;
+
+        // Log customer creation
+        if (user) {
+          await ActivityLogger.logCustomerCreate(
+            user.id,
+            user.full_name || user.email,
+            customerId_final,
+            formData.client_name,
+            {
+              registration_number: formData.registration_number,
+              company_email: formData.company_email,
+              company_telephone: formData.company_telephone,
+              status: formData.status,
+              created_timestamp: new Date().toISOString()
+            }
+          );
+        }
       }
 
       // Handle directors data

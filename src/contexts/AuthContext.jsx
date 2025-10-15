@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import ActivityLogger from '../lib/ActivityLogger';
 
 const AuthContext = createContext();
 
@@ -52,7 +53,20 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('agility_login_time', Date.now().toString());
   };
 
-  const logout = () => {
+  const logout = async () => {
+    // Log logout activity before clearing session
+    if (user) {
+      await ActivityLogger.logLogout(
+        user.id,
+        user.full_name || user.email,
+        {
+          logout_timestamp: new Date().toISOString(),
+          email: user.email,
+          role: user.role
+        }
+      );
+    }
+    
     setUser(null);
     localStorage.removeItem('agility_user');
     localStorage.removeItem('agility_login_time');

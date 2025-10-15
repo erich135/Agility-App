@@ -5,6 +5,8 @@ import HomePage from './components/HomePage';
 import CIPCManagement from './components/CIPCManagement';
 import CustomerManagement from './components/CustomerManagement';
 import SystemManagement from './components/SystemManagement';
+import CalendarTaskManagement from './components/CalendarTaskManagement';
+import AIInsights from './components/AIInsights';
 import LoginPage from './components/LoginPage';
 
 // Protected Route Component
@@ -68,6 +70,22 @@ const AppContent = () => {
         element={
           <ProtectedRoute>
             <SystemManagement />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/calendar" 
+        element={
+          <ProtectedRoute>
+            <CalendarTaskManagement />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/ai-insights" 
+        element={
+          <ProtectedRoute>
+            <AIInsights />
           </ProtectedRoute>
         } 
       />

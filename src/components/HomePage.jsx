@@ -134,6 +134,84 @@ const HomePage = () => {
             </div>
           </Link>
 
+          {/* Calendar & Tasks Card */}
+          <Link 
+            to="/calendar" 
+            className="group block bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+          >
+            <div className="p-8">
+              <div className="w-16 h-16 bg-blue-500 rounded-lg flex items-center justify-center mb-6 group-hover:bg-blue-600 transition-colors">
+                <svg 
+                  className="w-8 h-8 text-white" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" 
+                  />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-3">Calendar & Tasks</h2>
+              <p className="text-gray-600 leading-relaxed">
+                Task management, calendar scheduling, deadline tracking, and business workflow organization.
+              </p>
+              <div className="mt-6 flex items-center text-blue-500 group-hover:text-blue-600">
+                <span className="font-medium">Manage Schedule</span>
+                <svg 
+                  className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+              </div>
+            </div>
+          </Link>
+
+          {/* AI Insights Card */}
+          <Link
+            to="/ai-insights"
+            className="group block bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+          >
+            <div className="p-8">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center mb-6 group-hover:from-purple-600 group-hover:to-pink-600 transition-colors">
+                <svg 
+                  className="w-8 h-8 text-white" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" 
+                  />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-3">AI Insights</h2>
+              <p className="text-gray-600 leading-relaxed">
+                Smart document processing with OCR, automatic classification, and intelligent business insights.
+              </p>
+              <div className="mt-6 flex items-center text-purple-500 group-hover:text-purple-600">
+                <span className="font-medium">Explore AI Features</span>
+                <svg 
+                  className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+              </div>
+            </div>
+          </Link>
+
           {/* Management Card - Admin Only */}
           {isAdmin() && (
             <Link 

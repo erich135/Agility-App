@@ -21,7 +21,14 @@ ADD COLUMN IF NOT EXISTS directors TEXT,
 ADD COLUMN IF NOT EXISTS shareholders TEXT,
 ADD COLUMN IF NOT EXISTS financial_year_end DATE,
 ADD COLUMN IF NOT EXISTS share_capital DECIMAL(15,2),
-ADD COLUMN IF NOT EXISTS number_of_shares INTEGER;
+ADD COLUMN IF NOT EXISTS number_of_shares INTEGER,
+ADD COLUMN IF NOT EXISTS company_public_officer_name VARCHAR(255),
+ADD COLUMN IF NOT EXISTS public_officer_id_number VARCHAR(50),
+ADD COLUMN IF NOT EXISTS contact_person_name VARCHAR(255),
+ADD COLUMN IF NOT EXISTS contact_person_telephone VARCHAR(50),
+ADD COLUMN IF NOT EXISTS contact_person_email VARCHAR(255),
+ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Active',
+ADD COLUMN IF NOT EXISTS notes TEXT;
 
 -- ============================================
 -- 2. Create Enhanced Features Tables (if not exists)

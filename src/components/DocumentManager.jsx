@@ -474,7 +474,7 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
         </div>
 
         {/* Content - Now with proper scrolling */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 min-h-0">
+        <div className="flex-1 overflow-y-auto px-6 py-4 pb-6 min-h-0">
           {/* Error Display */}
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
@@ -588,7 +588,7 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
                               <div className="flex items-center space-x-2">
                                 {/* View Button */}
                                 <button
-                                  onClick={() => handleView(doc)}
+                                  onClick={(e) => { e.stopPropagation(); handleView(doc); }}
                                   className="text-green-600 hover:text-green-800 transition-colors p-1"
                                   title="View Document"
                                 >
@@ -600,7 +600,7 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
 
                                 {/* Download Button */}
                                 <button
-                                  onClick={() => handleDownload(doc)}
+                                  onClick={(e) => { e.stopPropagation(); handleDownload(doc); }}
                                   className="text-blue-600 hover:text-blue-800 transition-colors p-1"
                                   title="Download"
                                 >
@@ -611,7 +611,7 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
                                 
                                 {/* Delete Button */}
                                 <button
-                                  onClick={() => handleDelete(doc)}
+                                  onClick={(e) => { e.stopPropagation(); handleDelete(doc); }}
                                   className="text-red-600 hover:text-red-800 transition-colors p-1"
                                   title="Delete"
                                 >
@@ -796,7 +796,7 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
                     <div className="flex items-center space-x-2 ml-4">
                       {/* View Button */}
                       <button
-                        onClick={() => handleView(doc)}
+                        onClick={(e) => { e.stopPropagation(); handleView(doc); }}
                         className="text-green-600 hover:text-green-800 transition-colors p-1"
                         title="View Document"
                       >
@@ -808,7 +808,7 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
 
                       {/* Download Button */}
                       <button
-                        onClick={() => handleDownload(doc)}
+                        onClick={(e) => { e.stopPropagation(); handleDownload(doc); }}
                         className="text-blue-600 hover:text-blue-800 transition-colors p-1"
                         title="Download"
                       >
@@ -819,7 +819,7 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
                       
                       {/* Delete Button */}
                       <button
-                        onClick={() => handleDelete(doc)}
+                        onClick={(e) => { e.stopPropagation(); handleDelete(doc); }}
                         className="text-red-600 hover:text-red-800 transition-colors p-1"
                         title="Delete"
                       >
@@ -850,13 +850,13 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex-shrink-0">
-          <div className="flex justify-between items-center">
+        <div className="px-6 py-6 border-t border-gray-200 bg-gray-50 flex-shrink-0">
+          <div className="flex justify-between items-center gap-4">
             <div className="text-sm text-gray-600">
               <p><strong>Supported formats:</strong> PDF, JPG, PNG (max 10MB each)</p>
               <p><strong>Total documents:</strong> {documents.length}</p>
             </div>
-            <div className="flex space-x-3">
+            <div className="flex space-x-3 flex-shrink-0">
               <button
                 onClick={() => {
                   const smartUploadSection = document.getElementById('smart-upload-section');

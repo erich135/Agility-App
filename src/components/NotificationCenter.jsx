@@ -33,7 +33,13 @@ const NotificationCenter = () => {
       ).length;
       setUnreadCount(unread);
     } catch (error) {
-      console.error('Error fetching notifications:', error);
+      // Silently handle error if notifications table doesn't exist yet
+      if (!error.message?.includes('does not exist')) {
+        console.error('Error fetching notifications:', error);
+      }
+      // Set empty state
+      setNotifications([]);
+      setUnreadCount(0);
     } finally {
       setLoading(false);
     }

@@ -105,15 +105,27 @@ const DashboardAnalytics = () => {
       });
 
       // Documents
-      const { count: docCount } = await supabase
-        .from('documents')
-        .select('*', { count: 'exact', head: true });
+      let docCount = 0;
+      try {
+        const { count } = await supabase
+          .from('documents')
+          .select('*', { count: 'exact', head: true });
+        docCount = count || 0;
+      } catch (e) {
+        console.log('Documents table not ready');
+      }
 
       // Tasks
-      const { count: taskCount } = await supabase
-        .from('tasks')
-        .select('*', { count: 'exact', head: true })
-        .in('status', ['todo', 'in_progress']);
+      let taskCount = 0;
+      try {
+        const { count } = await supabase
+          .from('tasks')
+          .select('*', { count: 'exact', head: true })
+          .in('status', ['todo', 'in_progress']);
+        taskCount = count || 0;
+      } catch (e) {
+        console.log('Tasks table not ready');
+      }
 
       // Billing (if tables exist)
       let totalRevenue = 0;
@@ -145,8 +157,8 @@ const DashboardAnalytics = () => {
         completedThisMonth: 0, // TODO: Calculate from filing_history
         totalRevenue: totalRevenue,
         pendingPayments: pendingPayments,
-        documentsUploaded: docCount || 0,
-        activeTasks: taskCount || 0
+        documentsUploaded: docCount,
+        activeTasks: taskCount
       });
     } catch (error) {
       console.error('Error fetching statistics:', error);

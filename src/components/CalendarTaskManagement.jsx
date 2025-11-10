@@ -27,9 +27,33 @@ const CalendarTaskManagement = () => {
 
   // Combine tasks and events for calendar display
   const calendarItems = React.useMemo(() => {
+    // Filter function based on calendar filter selection
+    const shouldIncludeItem = (item, sourceType) => {
+      if (calendarFilter === 'all') return true;
+      if (calendarFilter === 'mine') {
+        // Show items created by current user OR assigned to current user
+        if (sourceType === 'task') {
+          return item.created_by === user?.id || 
+                 (item.assigned_to && item.assigned_to.includes(user?.id));
+        } else {
+          return item.created_by === user?.id || 
+                 (item.attendees && item.attendees.includes(user?.id));
+        }
+      }
+      // Specific user selected
+      if (sourceType === 'task') {
+        return item.created_by === calendarFilter || 
+               (item.assigned_to && item.assigned_to.includes(calendarFilter));
+      } else {
+        return item.created_by === calendarFilter || 
+               (item.attendees && item.attendees.includes(calendarFilter));
+      }
+    };
+
     // Convert tasks to event format for calendar display
     const taskEvents = tasks
       .filter(task => task.start_time && task.end_time) // Only show tasks with time slots
+      .filter(task => shouldIncludeItem(task, 'task'))
       .map(task => ({
         id: task.id,
         title: task.title,
@@ -44,14 +68,16 @@ const CalendarTaskManagement = () => {
       }));
 
     // Calendar events already in correct format
-    const events = calendarEvents.map(event => ({
-      ...event,
-      _sourceType: 'event',
-      _originalData: event
-    }));
+    const events = calendarEvents
+      .filter(event => shouldIncludeItem(event, 'event'))
+      .map(event => ({
+        ...event,
+        _sourceType: 'event',
+        _originalData: event
+      }));
 
     return [...taskEvents, ...events];
-  }, [tasks, calendarEvents]);
+  }, [tasks, calendarEvents, calendarFilter, user?.id]);
 
   // Document deadlines
   const [documentDeadlines, setDocumentDeadlines] = useState([]);
@@ -59,6 +85,10 @@ const CalendarTaskManagement = () => {
   // Calendar state
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDateActionMenu, setShowDateActionMenu] = useState(false);
+  
+  // Calendar filter state
+  const [calendarFilter, setCalendarFilter] = useState('mine'); // 'mine', 'all', or user ID
+  const [availableUsers, setAvailableUsers] = useState([]);
 
   // Form states
   const [taskFormData, setTaskFormData] = useState({
@@ -93,7 +123,18 @@ const CalendarTaskManagement = () => {
   // Load data on component mount
   useEffect(() => {
     loadDashboardData();
+    loadUsers();
   }, []);
+
+  // Load available users for calendar filter
+  const loadUsers = async () => {
+    try {
+      const users = await CalendarTaskService.getAllUsers();
+      setAvailableUsers(users);
+    } catch (err) {
+      console.error('Error loading users:', err);
+    }
+  };
 
   const loadDashboardData = async () => {
     try {
@@ -865,7 +906,54 @@ const CalendarTaskManagement = () => {
         {activeTab === 'calendar' && (
           <div className="bg-white rounded-lg shadow h-full">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">Calendar</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium text-gray-900">Calendar</h3>
+                
+                {/* Calendar Filter Controls */}
+                <div className="flex items-center space-x-4">
+                  <span className="text-sm font-medium text-gray-700">Show:</span>
+                  <div className="flex items-center space-x-3">
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="radio"
+                        name="calendarFilter"
+                        value="mine"
+                        checked={calendarFilter === 'mine'}
+                        onChange={(e) => setCalendarFilter(e.target.value)}
+                        className="mr-2 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700">My Calendar</span>
+                    </label>
+                    
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="radio"
+                        name="calendarFilter"
+                        value="all"
+                        checked={calendarFilter === 'all'}
+                        onChange={(e) => setCalendarFilter(e.target.value)}
+                        className="mr-2 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700">All Users</span>
+                    </label>
+
+                    {availableUsers.length > 0 && (
+                      <select
+                        value={calendarFilter !== 'mine' && calendarFilter !== 'all' ? calendarFilter : ''}
+                        onChange={(e) => e.target.value && setCalendarFilter(e.target.value)}
+                        className="text-sm border border-gray-300 rounded-md px-3 py-1 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Select User...</option>
+                        {availableUsers.map(u => (
+                          <option key={u.id} value={u.id}>
+                            {u.full_name || u.email}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
             <div className="h-full">
               <Calendar 

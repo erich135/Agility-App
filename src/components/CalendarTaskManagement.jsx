@@ -70,111 +70,6 @@ const CalendarTaskManagement = () => {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      
-      // Temporarily use mock data instead of API calls
-      console.log('Loading dashboard with mock data...');
-      
-      // Mock dashboard stats
-      setDashboardStats({
-        tasks: { pending: 3, overdue: 1 },
-        deadlines: { thisWeek: 2 },
-        calendar: { todayEvents: 1 }
-      });
-
-      // Mock tasks
-      setTasks([
-        {
-          id: '1',
-          title: 'Review Client Onboarding Process',
-          description: 'Review and update workflow',
-          task_type: 'general',
-          priority: 'medium',
-          status: 'pending',
-          due_date: '2025-11-15T10:00:00Z',
-          created_at: '2025-11-10T08:00:00Z'
-        },
-        {
-          id: '2', 
-          title: 'CIPC Filing Deadline',
-          description: 'File annual returns',
-          task_type: 'filing_deadline',
-          priority: 'urgent',
-          status: 'in_progress',
-          due_date: '2025-11-12T17:00:00Z',
-          created_at: '2025-11-09T09:00:00Z'
-        }
-      ]);
-
-      // Mock deadlines
-      setDocumentDeadlines([
-        {
-          id: '1',
-          document_type: 'vat_return',
-          deadline_date: '2025-11-17',
-          description: 'VAT Return Filing Due',
-          status: 'pending',
-          priority: 'high',
-          created_at: '2025-11-10T08:00:00Z'
-        }
-      ]);
-
-      // Mock calendar events
-      setCalendarEvents([
-        {
-          id: '1',
-          title: 'Client Consultation',
-          description: 'Meeting with ABC Corp',
-          event_type: 'appointment',
-          start_time: '2025-11-11T09:00:00Z',
-          end_time: '2025-11-11T10:00:00Z',
-          location: 'Conference Room A',
-          created_at: '2025-11-10T08:00:00Z'
-        },
-        {
-          id: '2',
-          title: 'Team Planning Meeting',
-          description: 'Weekly team sync',
-          event_type: 'meeting',
-          start_time: '2025-11-12T14:00:00Z',
-          end_time: '2025-11-12T15:00:00Z',
-          location: 'Main Office',
-          created_at: '2025-11-10T08:00:00Z'
-        },
-        {
-          id: '3',
-          title: 'VAT Filing Deadline',
-          description: 'Submit VAT returns',
-          event_type: 'deadline',
-          start_time: '2025-11-15T17:00:00Z',
-          end_time: '2025-11-15T17:00:00Z',
-          location: 'Online',
-          created_at: '2025-11-10T08:00:00Z'
-        },
-        {
-          id: '4',
-          title: 'Client Follow-up Call',
-          description: 'Check on document status',
-          event_type: 'reminder',
-          start_time: '2025-11-13T10:30:00Z',
-          end_time: '2025-11-13T11:00:00Z',
-          location: 'Phone',
-          created_at: '2025-11-10T08:00:00Z'
-        },
-        {
-          id: '5',
-          title: 'New Client Onboarding',
-          description: 'Welcome meeting for DEF Corp',
-          event_type: 'appointment',
-          start_time: '2025-11-14T11:00:00Z',
-          end_time: '2025-11-14T12:00:00Z',
-          location: 'Conference Room B',
-          created_at: '2025-11-10T08:00:00Z'
-        }
-      ]);
-
-      console.log('Mock data loaded successfully');
-      
-      /* ORIGINAL API CALLS - COMMENTED OUT UNTIL DB IS FIXED
       // Load dashboard stats
       const statsResult = await CalendarTaskService.getDashboardStats(user?.id);
       if (statsResult.success) {
@@ -182,13 +77,13 @@ const CalendarTaskManagement = () => {
       }
 
       // Load tasks
-      const tasksResult = await CalendarTaskService.getTasks({ limit: 20 });
+      const tasksResult = await CalendarTaskService.getTasks({ limit: 50 });
       if (tasksResult.success) {
         setTasks(tasksResult.tasks);
       }
 
       // Load upcoming deadlines
-      const deadlinesResult = await CalendarTaskService.getDocumentDeadlines({ daysAhead: 30 });
+      const deadlinesResult = await CalendarTaskService.getDocumentDeadlines({ daysAhead: 60 });
       if (deadlinesResult.success) {
         setDocumentDeadlines(deadlinesResult.deadlines);
       }
@@ -199,13 +94,12 @@ const CalendarTaskManagement = () => {
       
       const eventsResult = await CalendarTaskService.getCalendarEvents({
         startDate: startOfMonth.toISOString(),
-        endDate: endOfMonth.toISOString()
+        endDate: new Date(endOfMonth.getFullYear(), endOfMonth.getMonth(), endOfMonth.getDate(), 23, 59, 59).toISOString()
       });
       
       if (eventsResult.success) {
         setCalendarEvents(eventsResult.events);
       }
-      */
 
     } catch (err) {
       console.error('Error loading dashboard data:', err);
@@ -261,78 +155,34 @@ const CalendarTaskManagement = () => {
   const handleCreateTask = async (e) => {
     e.preventDefault();
     try {
-      // Validate user availability if assignees and times are provided
+      // Validate user availability via DB if assignees and times are provided
       if (taskFormData.assignees.length > 0 && taskFormData.startTime && taskFormData.endTime) {
-        const validation = validateAssigneeAvailability(
-          taskFormData.assignees,
-          taskFormData.startTime,
-          taskFormData.endTime
-        );
-
-        if (!validation.valid) {
-          const conflictMessages = validation.conflicts.map(uc => {
-            const conflictList = uc.conflicts.map(c => 
-              `  - ${c.title} (${new Date(c.start).toLocaleString()} - ${new Date(c.end).toLocaleString()})`
-            ).join('\n');
-            return `User has conflicts:\n${conflictList}`;
-          }).join('\n\n');
-
+        const assigneeIds = taskFormData.assignees.map(u => u.id);
+        const { conflicts, error } = await CalendarTaskService.checkUserTimeConflicts({
+          userIds: assigneeIds,
+          startTime: taskFormData.startTime,
+          endTime: taskFormData.endTime
+        });
+        if (error) {
+          console.warn('Conflict check error (continuing):', error);
+        } else if (conflicts.length > 0) {
+          const conflictMessages = conflicts.map(c => `  - ${c.title} (${new Date(c.start).toLocaleString()} - ${new Date(c.end).toLocaleString()})`).join('\n');
           const proceed = window.confirm(
             `⚠️ SCHEDULING CONFLICT DETECTED\n\n${conflictMessages}\n\nDo you want to create this task anyway?`
           );
-
-          if (!proceed) {
-            return;
-          }
+          if (!proceed) return;
         }
       }
 
-      // Temporarily use mock success instead of API call
-      console.log('Creating task with mock success...', taskFormData);
-      
-      // Mock successful task creation
-      const mockTask = {
-        id: Date.now().toString(),
-        title: taskFormData.title,
-        description: taskFormData.description,
-        task_type: taskFormData.taskType,
-        priority: taskFormData.priority,
-        due_date: taskFormData.dueDate,
-        start_time: taskFormData.startTime,
-        end_time: taskFormData.endTime,
-        status: 'pending',
-        created_at: new Date().toISOString()
-      };
-
-      setTasks(prev => [mockTask, ...prev]);
-      setTaskFormData({
-        title: '',
-        description: '',
-        taskType: 'general',
-        priority: 'medium',
-        dueDate: '',
-        startTime: '',
-        endTime: '',
-        clientId: '',
-        assignees: []
-      });
-      setShowTaskForm(false);
-      
-      // Update dashboard stats
-      setDashboardStats(prev => ({
-        ...prev,
-        tasks: { ...prev.tasks, pending: (prev.tasks?.pending || 0) + 1 }
-      }));
-      
-      console.log('Mock task created successfully');
-
-      /* ORIGINAL API CALL - COMMENTED OUT
+      // Create via API
       const result = await CalendarTaskService.createTask({
         title: taskFormData.title,
         description: taskFormData.description,
         taskType: taskFormData.taskType,
         priority: taskFormData.priority,
         dueDate: taskFormData.dueDate || null,
+        startTime: taskFormData.startTime || null,
+        endTime: taskFormData.endTime || null,
         assignees: taskFormData.assignees.map(user => user.id),
         clientId: taskFormData.clientId || null,
         createdBy: user?.id
@@ -346,13 +196,16 @@ const CalendarTaskManagement = () => {
           taskType: 'general',
           priority: 'medium',
           dueDate: '',
+          startTime: '',
+          endTime: '',
           clientId: '',
           assignees: []
         });
         setShowTaskForm(false);
-        await loadDashboardData(); // Refresh dashboard stats
+        await loadDashboardData();
+      } else {
+        console.error('Failed to create task:', result.error);
       }
-      */
     } catch (err) {
       console.error('Error creating task:', err);
     }
@@ -361,30 +214,22 @@ const CalendarTaskManagement = () => {
   const handleCreateEvent = async (e) => {
     e.preventDefault();
     try {
-      // Validate attendee availability if attendees and times are provided
+      // Validate attendee availability via DB if attendees and times are provided
       if (eventFormData.attendees.length > 0 && eventFormData.startTime && eventFormData.endTime) {
         const attendeeIds = eventFormData.attendees.map(user => user.id);
-        const validation = validateAssigneeAvailability(
-          attendeeIds,
-          eventFormData.startTime,
-          eventFormData.endTime
-        );
-
-        if (!validation.valid) {
-          const conflictMessages = validation.conflicts.map(uc => {
-            const conflictList = uc.conflicts.map(c => 
-              `  - ${c.title} (${new Date(c.start).toLocaleString()} - ${new Date(c.end).toLocaleString()})`
-            ).join('\n');
-            return `User has conflicts:\n${conflictList}`;
-          }).join('\n\n');
-
+        const { conflicts, error } = await CalendarTaskService.checkUserTimeConflicts({
+          userIds: attendeeIds,
+          startTime: eventFormData.startTime,
+          endTime: eventFormData.endTime
+        });
+        if (error) {
+          console.warn('Conflict check error (continuing):', error);
+        } else if (conflicts.length > 0) {
+          const conflictMessages = conflicts.map(c => `  - ${c.title} (${new Date(c.start).toLocaleString()} - ${new Date(c.end).toLocaleString()})`).join('\n');
           const proceed = window.confirm(
             `⚠️ SCHEDULING CONFLICT DETECTED\n\n${conflictMessages}\n\nDo you want to create this event anyway?`
           );
-
-          if (!proceed) {
-            return;
-          }
+          if (!proceed) return;
         }
       }
 

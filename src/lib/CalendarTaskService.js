@@ -107,6 +107,8 @@ class CalendarTaskService {
     clientId = null,
     taskType = 'general',
     priority = 'medium',
+    startTime = null,
+    endTime = null,
     dueDate = null,
     metadata = {},
     createdBy
@@ -119,6 +121,8 @@ class CalendarTaskService {
         client_id: clientId,
         task_type: taskType,
         priority,
+        start_time: startTime,
+        end_time: endTime,
         due_date: dueDate,
         metadata,
         created_by: createdBy,
@@ -155,6 +159,72 @@ class CalendarTaskService {
     } catch (error) {
       console.error('Error creating task:', error);
       return { success: false, error: error.message };
+    }
+  }
+
+  // Check for time conflicts for a set of users between start/end across tasks & events
+  static async checkUserTimeConflicts({ userIds = [], startTime, endTime }) {
+    if (!startTime || !endTime || !userIds.length) {
+      return { conflicts: [], error: null };
+    }
+    try {
+      const startISO = new Date(startTime).toISOString();
+      const endISO = new Date(endTime).toISOString();
+
+      const conflicts = [];
+
+      // 1) Tasks with primary assignee matching and overlapping
+      const { data: directTasks, error: directTaskError } = await supabase
+        .from('tasks')
+        .select('*')
+        .in('assigned_to', userIds)
+        .lt('start_time', endISO)
+        .gt('end_time', startISO);
+
+      if (directTaskError) throw directTaskError;
+      (directTasks || []).forEach(c => conflicts.push({ type: 'task', id: c.id, title: c.title, start: c.start_time, end: c.end_time }));
+
+      // 2) Tasks via task_assignments join table
+      const { data: taskAssns, error: assnError } = await supabase
+        .from('task_assignments')
+        .select('task_id')
+        .in('user_id', userIds);
+
+      if (assnError) throw assnError;
+      const taskIds = [...new Set((taskAssns || []).map(r => r.task_id))];
+      if (taskIds.length) {
+        const { data: assignedTasks, error: assignedTasksError } = await supabase
+          .from('tasks')
+          .select('*')
+          .in('id', taskIds)
+          .lt('start_time', endISO)
+          .gt('end_time', startISO);
+        if (assignedTasksError) throw assignedTasksError;
+        (assignedTasks || []).forEach(c => conflicts.push({ type: 'task', id: c.id, title: c.title, start: c.start_time, end: c.end_time }));
+      }
+
+      // 3) Events via event_attendees join table
+      const { data: eventAtts, error: eventAttError } = await supabase
+        .from('event_attendees')
+        .select('event_id')
+        .in('user_id', userIds);
+      if (eventAttError) throw eventAttError;
+      const eventIds = [...new Set((eventAtts || []).map(r => r.event_id))];
+      if (eventIds.length) {
+        const { data: events, error: eventsError } = await supabase
+          .from('calendar_events')
+          .select('*')
+          .in('id', eventIds)
+          .lt('start_time', endISO)
+          .gt('end_time', startISO);
+        if (eventsError) throw eventsError;
+        (events || []).forEach(c => conflicts.push({ type: 'event', id: c.id, title: c.title, start: c.start_time, end: c.end_time }));
+      }
+
+      return { conflicts, error: null };
+    } catch (err) {
+      console.error('Error checking user time conflicts', err);
+      return { conflicts: [], error: err.message };
     }
   }
 
@@ -247,12 +317,7 @@ class CalendarTaskService {
     try {
       let query = supabase
         .from('tasks')
-        .select(`
-          *,
-          assigned_user:assigned_to(id, full_name, email),
-          created_user:created_by(id, full_name, email),
-          client:client_id(id, client_name, registration_number)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (assignedTo) query = query.eq('assigned_to', assignedTo);
@@ -264,7 +329,7 @@ class CalendarTaskService {
 
       query = query.range(offset, offset + limit - 1);
 
-      const { data, error, count } = await query;
+  const { data, error, count } = await query;
 
       if (error) throw error;
 
@@ -599,11 +664,7 @@ class CalendarTaskService {
     try {
       let query = supabase
         .from('calendar_events')
-        .select(`
-          *,
-          created_user:created_by(id, full_name, email),
-          client:client_id(id, client_name, registration_number)
-        `)
+        .select('*')
         .order('start_time', { ascending: true });
 
       if (startDate) query = query.gte('start_time', startDate);

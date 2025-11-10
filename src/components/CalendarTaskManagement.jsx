@@ -24,6 +24,26 @@ const CalendarTaskManagement = () => {
   // Document deadlines
   const [documentDeadlines, setDocumentDeadlines] = useState([]);
 
+  // Form states
+  const [taskFormData, setTaskFormData] = useState({
+    title: '',
+    description: '',
+    taskType: 'general',
+    priority: 'medium',
+    dueDate: '',
+    clientId: ''
+  });
+
+  const [eventFormData, setEventFormData] = useState({
+    title: '',
+    description: '',
+    eventType: 'meeting',
+    startTime: '',
+    endTime: '',
+    location: '',
+    clientId: ''
+  });
+
   // Load data on component mount
   useEffect(() => {
     loadDashboardData();
@@ -100,6 +120,71 @@ const CalendarTaskManagement = () => {
       }
     } catch (err) {
       console.error('Error completing deadline:', err);
+    }
+  };
+
+  // Form handlers
+  const handleCreateTask = async (e) => {
+    e.preventDefault();
+    try {
+      const result = await CalendarTaskService.createTask({
+        title: taskFormData.title,
+        description: taskFormData.description,
+        taskType: taskFormData.taskType,
+        priority: taskFormData.priority,
+        dueDate: taskFormData.dueDate || null,
+        clientId: taskFormData.clientId || null,
+        createdBy: user?.id
+      });
+
+      if (result.success) {
+        setTasks(prev => [result.task, ...prev]);
+        setTaskFormData({
+          title: '',
+          description: '',
+          taskType: 'general',
+          priority: 'medium',
+          dueDate: '',
+          clientId: ''
+        });
+        setShowTaskForm(false);
+        await loadDashboardData(); // Refresh dashboard stats
+      }
+    } catch (err) {
+      console.error('Error creating task:', err);
+    }
+  };
+
+  const handleCreateEvent = async (e) => {
+    e.preventDefault();
+    try {
+      const result = await CalendarTaskService.createCalendarEvent({
+        title: eventFormData.title,
+        description: eventFormData.description,
+        eventType: eventFormData.eventType,
+        startTime: eventFormData.startTime,
+        endTime: eventFormData.endTime,
+        location: eventFormData.location,
+        clientId: eventFormData.clientId || null,
+        createdBy: user?.id
+      });
+
+      if (result.success) {
+        setCalendarEvents(prev => [...prev, result.event]);
+        setEventFormData({
+          title: '',
+          description: '',
+          eventType: 'meeting',
+          startTime: '',
+          endTime: '',
+          location: '',
+          clientId: ''
+        });
+        setShowEventForm(false);
+        await loadDashboardData(); // Refresh dashboard stats
+      }
+    } catch (err) {
+      console.error('Error creating event:', err);
     }
   };
 
@@ -482,6 +567,194 @@ const CalendarTaskManagement = () => {
           </div>
         )}
       </main>
+
+      {/* Task Creation Modal */}
+      {showTaskForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-medium text-gray-900">Create New Task</h3>
+            </div>
+            <form onSubmit={handleCreateTask} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+                <input
+                  type="text"
+                  required
+                  value={taskFormData.title}
+                  onChange={(e) => setTaskFormData(prev => ({...prev, title: e.target.value}))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  value={taskFormData.description}
+                  onChange={(e) => setTaskFormData(prev => ({...prev, description: e.target.value}))}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Task Type</label>
+                  <select
+                    value={taskFormData.taskType}
+                    onChange={(e) => setTaskFormData(prev => ({...prev, taskType: e.target.value}))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="general">General</option>
+                    <option value="document_renewal">Document Renewal</option>
+                    <option value="filing_deadline">Filing Deadline</option>
+                    <option value="appointment">Appointment</option>
+                    <option value="follow_up">Follow Up</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                  <select
+                    value={taskFormData.priority}
+                    onChange={(e) => setTaskFormData(prev => ({...prev, priority: e.target.value}))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+                <input
+                  type="datetime-local"
+                  value={taskFormData.dueDate}
+                  onChange={(e) => setTaskFormData(prev => ({...prev, dueDate: e.target.value}))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="submit"
+                  className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700"
+                >
+                  Create Task
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowTaskForm(false)}
+                  className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Event Creation Modal */}
+      {showEventForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-medium text-gray-900">Create New Event</h3>
+            </div>
+            <form onSubmit={handleCreateEvent} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+                <input
+                  type="text"
+                  required
+                  value={eventFormData.title}
+                  onChange={(e) => setEventFormData(prev => ({...prev, title: e.target.value}))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  value={eventFormData.description}
+                  onChange={(e) => setEventFormData(prev => ({...prev, description: e.target.value}))}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Event Type</label>
+                <select
+                  value={eventFormData.eventType}
+                  onChange={(e) => setEventFormData(prev => ({...prev, eventType: e.target.value}))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                >
+                  <option value="meeting">Meeting</option>
+                  <option value="appointment">Appointment</option>
+                  <option value="deadline">Deadline</option>
+                  <option value="reminder">Reminder</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Start Time *</label>
+                  <input
+                    type="datetime-local"
+                    required
+                    value={eventFormData.startTime}
+                    onChange={(e) => setEventFormData(prev => ({...prev, startTime: e.target.value}))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">End Time *</label>
+                  <input
+                    type="datetime-local"
+                    required
+                    value={eventFormData.endTime}
+                    onChange={(e) => setEventFormData(prev => ({...prev, endTime: e.target.value}))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                <input
+                  type="text"
+                  value={eventFormData.location}
+                  onChange={(e) => setEventFormData(prev => ({...prev, location: e.target.value}))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  placeholder="Meeting room, address, or online link"
+                />
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="submit"
+                  className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700"
+                >
+                  Create Event
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowEventForm(false)}
+                  className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

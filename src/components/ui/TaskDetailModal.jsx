@@ -100,7 +100,7 @@ const TaskDetailModal = ({
       .toUpperCase() || '?';
   };
 
-  if (!isOpen || !task) return null;
+  if (!isOpen || !task || !taskDetails) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -207,7 +207,7 @@ const TaskDetailModal = ({
               )}
 
               {/* Status Actions */}
-              {taskDetails.status !== 'completed' && taskDetails.status !== 'cancelled' && (
+              {taskDetails && taskDetails.status !== 'completed' && taskDetails.status !== 'cancelled' && (
                 <div>
                   <h5 className="text-sm font-medium text-gray-900 mb-3">Update Status</h5>
                   <div className="flex space-x-2">

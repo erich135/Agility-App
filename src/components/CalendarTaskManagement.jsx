@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import CalendarTaskService from '../lib/CalendarTaskService';
 import Calendar from './Calendar';
 import UserSelector from './ui/UserSelector';
+import TaskDetailModal from './ui/TaskDetailModal';
+import EventDetailModal from './ui/EventDetailModal';
 import { useAuth } from '../contexts/AuthContext';
 
 const CalendarTaskManagement = () => {
@@ -50,6 +52,12 @@ const CalendarTaskManagement = () => {
     clientId: '',
     attendees: [] // Array of selected users
   });
+
+  // Modal states
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [showEventModal, setShowEventModal] = useState(false);
 
   // Load data on component mount
   useEffect(() => {
@@ -352,6 +360,85 @@ const CalendarTaskManagement = () => {
     return `inline-flex px-2 py-1 text-xs font-medium rounded-full ${config[status]?.bgColor} ${config[status]?.textColor}`;
   };
 
+  // Click handlers for tasks and events
+  const handleTaskClick = (task) => {
+    setSelectedTask(task);
+    setShowTaskModal(true);
+  };
+
+  const handleEventClick = (event) => {
+    setSelectedEvent(event);
+    setShowEventModal(true);
+  };
+
+  const handleTaskStatusChange = (taskId, newStatus) => {
+    setTasks(prev => 
+      prev.map(task => 
+        task.id === taskId 
+          ? { ...task, status: newStatus }
+          : task
+      )
+    );
+    // Refresh dashboard stats
+    loadDashboardData();
+  };
+
+  const handleTaskEdit = (task) => {
+    setEditingTask(task);
+    setTaskFormData({
+      title: task.title,
+      description: task.description,
+      taskType: task.task_type,
+      priority: task.priority,
+      dueDate: task.due_date ? task.due_date.slice(0, 16) : '',
+      clientId: task.client_id || '',
+      assignees: [] // TODO: Load existing assignees
+    });
+    setShowTaskForm(true);
+    setShowTaskModal(false);
+  };
+
+  const handleEventEdit = (event) => {
+    setEventFormData({
+      title: event.title,
+      description: event.description,
+      eventType: event.event_type,
+      startTime: event.start_time ? event.start_time.slice(0, 16) : '',
+      endTime: event.end_time ? event.end_time.slice(0, 16) : '',
+      location: event.location || '',
+      clientId: event.client_id || '',
+      attendees: [] // TODO: Load existing attendees
+    });
+    setShowEventForm(true);
+    setShowEventModal(false);
+  };
+
+  const handleTaskDelete = async (taskId) => {
+    if (window.confirm('Are you sure you want to delete this task?')) {
+      try {
+        await CalendarTaskService.deleteTask(taskId, user?.id);
+        setTasks(prev => prev.filter(task => task.id !== taskId));
+        setShowTaskModal(false);
+        loadDashboardData();
+      } catch (error) {
+        console.error('Error deleting task:', error);
+      }
+    }
+  };
+
+  const handleEventDelete = async (eventId) => {
+    if (window.confirm('Are you sure you want to delete this event?')) {
+      try {
+        await CalendarTaskService.deleteCalendarEvent(eventId, user?.id);
+        setCalendarEvents(prev => prev.filter(event => event.id !== eventId));
+        setShowEventModal(false);
+        loadDashboardData();
+      } catch (error) {
+        console.error('Error deleting event:', error);
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -494,7 +581,11 @@ const CalendarTaskManagement = () => {
                   ) : (
                     <div className="space-y-4">
                       {tasks.slice(0, 5).map((task) => (
-                        <div key={task.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+                        <div 
+                          key={task.id} 
+                          className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer"
+                          onClick={() => handleTaskClick(task)}
+                        >
                           <div className="flex-1">
                             <p className="font-medium text-gray-900">{task.title}</p>
                             <div className="flex items-center space-x-2 mt-1">
@@ -513,7 +604,10 @@ const CalendarTaskManagement = () => {
                           </div>
                           {task.status === 'pending' && (
                             <button
-                              onClick={() => handleTaskStatusUpdate(task.id, 'completed')}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleTaskStatusUpdate(task.id, 'completed');
+                              }}
                               className="ml-4 text-green-600 hover:text-green-800"
                               title="Mark as completed"
                             >
@@ -584,7 +678,11 @@ const CalendarTaskManagement = () => {
               <p className="text-gray-600 mb-4">Full task management interface will be implemented here.</p>
               <div className="space-y-4">
                 {tasks.map((task) => (
-                  <div key={task.id} className="border border-gray-200 rounded-lg p-4">
+                  <div 
+                    key={task.id} 
+                    className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer"
+                    onClick={() => handleTaskClick(task)}
+                  >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <h4 className="font-medium text-gray-900">{task.title}</h4>
@@ -654,6 +752,7 @@ const CalendarTaskManagement = () => {
               <Calendar 
                 events={calendarEvents} 
                 onDateSelect={setSelectedDate} 
+                onEventClick={handleEventClick}
                 selectedDate={selectedDate}
               />
             </div>
@@ -922,6 +1021,25 @@ const CalendarTaskManagement = () => {
           </div>
         </div>
       )}
+
+      {/* Task Detail Modal */}
+      <TaskDetailModal
+        task={selectedTask}
+        isOpen={showTaskModal}
+        onClose={() => setShowTaskModal(false)}
+        onEdit={handleTaskEdit}
+        onDelete={handleTaskDelete}
+        onStatusChange={handleTaskStatusChange}
+      />
+
+      {/* Event Detail Modal */}
+      <EventDetailModal
+        event={selectedEvent}
+        isOpen={showEventModal}
+        onClose={() => setShowEventModal(false)}
+        onEdit={handleEventEdit}
+        onDelete={handleEventDelete}
+      />
     </div>
   );
 };

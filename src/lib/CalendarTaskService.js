@@ -303,6 +303,50 @@ class CalendarTaskService {
   }
 
   /**
+   * Update task status specifically
+   */
+  static async updateTaskStatus(taskId, status, userId = null) {
+    try {
+      const updates = { 
+        status,
+        updated_at: new Date().toISOString()
+      };
+
+      // Add completion timestamp if marking as completed
+      if (status === 'completed') {
+        updates.completed_at = new Date().toISOString();
+      }
+
+      const { data, error } = await supabase
+        .from('tasks')
+        .update(updates)
+        .eq('id', taskId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Log status update
+      if (userId) {
+        await ActivityLogger.log({
+          userId,
+          userName: 'User',
+          action: 'task_status_update',
+          entityType: 'task',
+          entityId: taskId,
+          entityName: data.title,
+          details: { old_status: data.status, new_status: status }
+        });
+      }
+
+      return { success: true, task: data };
+    } catch (error) {
+      console.error('Error updating task status:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
    * Delete a task
    */
   static async deleteTask(taskId, userId = null) {
@@ -480,6 +524,43 @@ class CalendarTaskService {
       return { success: true };
     } catch (error) {
       console.error('Error updating attendee response:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Delete a calendar event
+   */
+  static async deleteCalendarEvent(eventId, userId = null) {
+    try {
+      const { data: event } = await supabase
+        .from('calendar_events')
+        .select('title')
+        .eq('id', eventId)
+        .single();
+
+      const { error } = await supabase
+        .from('calendar_events')
+        .delete()
+        .eq('id', eventId);
+
+      if (error) throw error;
+
+      // Log event deletion
+      if (userId && event) {
+        await ActivityLogger.log({
+          userId,
+          userName: 'User',
+          action: 'calendar_event_delete',
+          entityType: 'calendar_event',
+          entityId: eventId,
+          entityName: event.title
+        });
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting calendar event:', error);
       return { success: false, error: error.message };
     }
   }

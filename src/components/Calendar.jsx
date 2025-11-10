@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
 
-const Calendar = ({ events = [], onDateSelect, selectedDate = new Date() }) => {
+const Calendar = ({ events = [], onDateSelect, onEventClick, selectedDate = new Date() }) => {
   const [currentDate, setCurrentDate] = useState(new Date(selectedDate));
   const [viewMode, setViewMode] = useState('month'); // month, week, day
 
@@ -85,6 +85,57 @@ const Calendar = ({ events = [], onDateSelect, selectedDate = new Date() }) => {
     });
   };
 
+  // Get week days for week view
+  const getWeekDays = () => {
+    const startOfWeek = new Date(currentDate);
+    const day = startOfWeek.getDay();
+    startOfWeek.setDate(startOfWeek.getDate() - day);
+    
+    const weekDays = [];
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(startOfWeek);
+      date.setDate(startOfWeek.getDate() + i);
+      weekDays.push(date);
+    }
+    return weekDays;
+  };
+
+  // Get hours for day/week view
+  const getHours = () => {
+    const hours = [];
+    for (let i = 0; i < 24; i++) {
+      hours.push(i);
+    }
+    return hours;
+  };
+
+  // Navigation functions for week/day
+  const navigateWeek = (direction) => {
+    const newDate = new Date(currentDate);
+    newDate.setDate(newDate.getDate() + (direction * 7));
+    setCurrentDate(newDate);
+  };
+
+  const navigateDay = (direction) => {
+    const newDate = new Date(currentDate);
+    newDate.setDate(newDate.getDate() + direction);
+    setCurrentDate(newDate);
+  };
+
+  // Get events for a specific hour on a date
+  const getEventsForHour = (date, hour) => {
+    return events.filter(event => {
+      const eventDate = new Date(event.start_time);
+      const eventHour = eventDate.getHours();
+      return (
+        eventDate.getDate() === date.getDate() &&
+        eventDate.getMonth() === date.getMonth() &&
+        eventDate.getFullYear() === date.getFullYear() &&
+        eventHour === hour
+      );
+    });
+  };
+
   // Get event color based on type
   const getEventColor = (eventType) => {
     const colors = {
@@ -103,13 +154,24 @@ const Calendar = ({ events = [], onDateSelect, selectedDate = new Date() }) => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <h2 className="text-xl font-semibold text-gray-900">
-              {months[month]} {year}
+              {viewMode === 'month' && `${months[month]} ${year}`}
+              {viewMode === 'week' && `Week of ${getWeekDays()[0].toLocaleDateString()}`}
+              {viewMode === 'day' && currentDate.toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}
             </h2>
             <div className="flex items-center space-x-2">
               <button
-                onClick={() => navigateMonth(-1)}
+                onClick={() => {
+                  if (viewMode === 'month') navigateMonth(-1);
+                  else if (viewMode === 'week') navigateWeek(-1);
+                  else if (viewMode === 'day') navigateDay(-1);
+                }}
                 className="p-2 hover:bg-gray-100 rounded-md transition-colors"
-                title="Previous month"
+                title={`Previous ${viewMode}`}
               >
                 <ChevronLeftIcon className="w-4 h-4" />
               </button>
@@ -120,9 +182,13 @@ const Calendar = ({ events = [], onDateSelect, selectedDate = new Date() }) => {
                 Today
               </button>
               <button
-                onClick={() => navigateMonth(1)}
+                onClick={() => {
+                  if (viewMode === 'month') navigateMonth(1);
+                  else if (viewMode === 'week') navigateWeek(1);
+                  else if (viewMode === 'day') navigateDay(1);
+                }}
                 className="p-2 hover:bg-gray-100 rounded-md transition-colors"
-                title="Next month"
+                title={`Next ${viewMode}`}
               >
                 <ChevronRightIcon className="w-4 h-4" />
               </button>
@@ -186,10 +252,16 @@ const Calendar = ({ events = [], onDateSelect, selectedDate = new Date() }) => {
                         <div
                           key={eventIndex}
                           className={`
-                            text-xs px-1 py-0.5 rounded text-white truncate
+                            text-xs px-1 py-0.5 rounded text-white truncate cursor-pointer hover:opacity-80 transition-opacity
                             ${getEventColor(event.event_type)}
                           `}
                           title={`${formatTime(event.start_time)} - ${event.title}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onEventClick) {
+                              onEventClick(event);
+                            }
+                          }}
                         >
                           {formatTime(event.start_time)} {event.title}
                         </div>
@@ -207,19 +279,187 @@ const Calendar = ({ events = [], onDateSelect, selectedDate = new Date() }) => {
           </div>
         )}
 
-        {/* Week View (simplified) */}
+        {/* Week View */}
         {viewMode === 'week' && (
-          <div className="text-center py-8 text-gray-500">
-            <p>Week view coming soon...</p>
-            <p className="text-sm mt-2">Switch to Month view to see calendar events</p>
+          <div>
+            {/* Week Navigation */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => navigateWeek(-1)}
+                  className="p-2 hover:bg-gray-100 rounded-md transition-colors"
+                  title="Previous week"
+                >
+                  <ChevronLeftIcon className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => navigateWeek(1)}
+                  className="p-2 hover:bg-gray-100 rounded-md transition-colors"
+                  title="Next week"
+                >
+                  <ChevronRightIcon className="w-4 h-4" />
+                </button>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900">
+                Week of {getWeekDays()[0].toLocaleDateString()}
+              </h3>
+            </div>
+
+            {/* Week Grid */}
+            <div className="grid grid-cols-8 gap-1">
+              {/* Time column header */}
+              <div className="p-2 text-center text-sm font-medium text-gray-500 border-r">
+                Time
+              </div>
+
+              {/* Day headers */}
+              {getWeekDays().map((date, index) => {
+                const isCurrentMonthDate = isCurrentMonth(date);
+                const isTodayDate = isToday(date);
+                return (
+                  <div
+                    key={index}
+                    className={`p-2 text-center text-sm border-r ${
+                      isTodayDate
+                        ? 'bg-blue-50 text-blue-600 font-semibold'
+                        : isCurrentMonthDate
+                        ? 'text-gray-900'
+                        : 'text-gray-400'
+                    }`}
+                  >
+                    <div className="font-medium">{daysOfWeek[date.getDay()]}</div>
+                    <div className={`text-xs ${isTodayDate ? 'text-blue-600' : 'text-gray-500'}`}>
+                      {date.getDate()}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Time slots and events */}
+              {getHours().slice(6, 22).map((hour) => (
+                <React.Fragment key={hour}>
+                  {/* Time label */}
+                  <div className="p-2 text-xs text-gray-500 text-center border-r border-b">
+                    {hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`}
+                  </div>
+                  
+                  {/* Day cells */}
+                  {getWeekDays().map((date, dayIndex) => {
+                    const hourEvents = getEventsForHour(date, hour);
+                    return (
+                      <div
+                        key={`${hour}-${dayIndex}`}
+                        className="relative p-1 min-h-[60px] border-r border-b hover:bg-gray-50 cursor-pointer"
+                        onClick={() => handleDateClick(date)}
+                      >
+                        {hourEvents.map((event, eventIndex) => (
+                          <div
+                            key={eventIndex}
+                            className={`
+                              text-xs p-1 mb-1 rounded text-white truncate cursor-pointer hover:opacity-80
+                              ${getEventColor(event.event_type)}
+                            `}
+                            title={`${formatTime(event.start_time)} - ${event.title}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (onEventClick) {
+                                onEventClick(event);
+                              }
+                            }}
+                          >
+                            {event.title}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </React.Fragment>
+              ))}
+            </div>
           </div>
         )}
 
-        {/* Day View (simplified) */}
+        {/* Day View */}
         {viewMode === 'day' && (
-          <div className="text-center py-8 text-gray-500">
-            <p>Day view coming soon...</p>
-            <p className="text-sm mt-2">Switch to Month view to see calendar events</p>
+          <div>
+            {/* Day Navigation */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => navigateDay(-1)}
+                  className="p-2 hover:bg-gray-100 rounded-md transition-colors"
+                  title="Previous day"
+                >
+                  <ChevronLeftIcon className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => navigateDay(1)}
+                  className="p-2 hover:bg-gray-100 rounded-md transition-colors"
+                  title="Next day"
+                >
+                  <ChevronRightIcon className="w-4 h-4" />
+                </button>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900">
+                {currentDate.toLocaleDateString('en-US', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </h3>
+            </div>
+
+            {/* Day Schedule */}
+            <div className="grid grid-cols-1 gap-1 max-h-[600px] overflow-y-auto">
+              {getHours().map((hour) => {
+                const hourEvents = getEventsForHour(currentDate, hour);
+                return (
+                  <div
+                    key={hour}
+                    className="flex border-b border-gray-200 min-h-[80px] hover:bg-gray-50"
+                  >
+                    {/* Time column */}
+                    <div className="w-20 p-3 text-sm text-gray-500 text-center border-r">
+                      {hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`}
+                    </div>
+                    
+                    {/* Events column */}
+                    <div 
+                      className="flex-1 p-2 cursor-pointer"
+                      onClick={() => handleDateClick(currentDate)}
+                    >
+                      {hourEvents.map((event, eventIndex) => (
+                        <div
+                          key={eventIndex}
+                          className={`
+                            mb-2 p-3 rounded-lg cursor-pointer hover:shadow-md transition-shadow
+                            ${getEventColor(event.event_type)} text-white
+                          `}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onEventClick) {
+                              onEventClick(event);
+                            }
+                          }}
+                        >
+                          <div className="font-medium">{event.title}</div>
+                          <div className="text-xs opacity-90 mt-1">
+                            {formatTime(event.start_time)} - {formatTime(event.end_time)}
+                          </div>
+                          {event.location && (
+                            <div className="text-xs opacity-80 mt-1">📍 {event.location}</div>
+                          )}
+                          {event.description && (
+                            <div className="text-xs opacity-90 mt-2">{event.description}</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>

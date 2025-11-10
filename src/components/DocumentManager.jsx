@@ -450,7 +450,7 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl modal-dialog">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl h-[90vh] flex flex-col">
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex-shrink-0">
           <div className="flex items-center justify-between">
@@ -473,19 +473,18 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
           </div>
         </div>
 
-        {/* Content - With improved scrolling */}
+        {/* Content - With forced scrolling */}
         <div 
-          className="modal-content scrollable-content px-6 py-4"
+          className="flex-1 overflow-y-scroll px-6 py-4"
           style={{ 
-            maxHeight: 'calc(90vh - 200px)', /* Reserve space for header and footer */
-            scrollbarWidth: 'thin',
-            scrollbarColor: '#cbd5e1 #f1f5f9',
-            scrollBehavior: 'smooth'
+            height: 'calc(90vh - 160px)',
+            overflowY: 'scroll',
+            overflowX: 'hidden',
+            minHeight: '600px' /* Force minimum height to ensure scrolling */
           }}
-          tabIndex={0} /* Make it focusable for keyboard navigation */
-          role="region"
-          aria-label="Document management content"
         >
+          {/* Scrolling test content */}
+          <div style={{ minHeight: '1200px' }}>
           {/* Error Display */}
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
@@ -858,9 +857,10 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
               </div>
             )}
           </div>
+          </div> {/* Close test content div */}
         </div>
 
-        {/* Footer */}
+        {/* Footer - Fixed at bottom */}
         <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex-shrink-0">
           <div className="flex justify-between items-center gap-4">
             <div className="text-sm text-gray-600">

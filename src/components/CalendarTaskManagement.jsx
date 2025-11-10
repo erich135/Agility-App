@@ -406,14 +406,16 @@ const CalendarTaskManagement = () => {
   };
 
   const handleTaskEdit = (task) => {
+    if (!task) return; // Guard clause for null task
+    
     setEditingTask(task);
     setTaskFormData({
-      title: task.title,
-      description: task.description,
-      taskType: task.task_type,
-      priority: task.priority,
-      dueDate: task.due_date ? task.due_date.slice(0, 16) : '',
-      clientId: task.client_id || '',
+      title: task?.title || '',
+      description: task?.description || '',
+      taskType: task?.task_type || 'general',
+      priority: task?.priority || 'medium',
+      dueDate: task?.due_date ? task.due_date.slice(0, 16) : '',
+      clientId: task?.client_id || '',
       assignees: [] // TODO: Load existing assignees
     });
     setShowTaskForm(true);
@@ -421,14 +423,16 @@ const CalendarTaskManagement = () => {
   };
 
   const handleEventEdit = (event) => {
+    if (!event) return; // Guard clause for null event
+    
     setEventFormData({
-      title: event.title,
-      description: event.description,
-      eventType: event.event_type,
-      startTime: event.start_time ? event.start_time.slice(0, 16) : '',
-      endTime: event.end_time ? event.end_time.slice(0, 16) : '',
-      location: event.location || '',
-      clientId: event.client_id || '',
+      title: event?.title || '',
+      description: event?.description || '',
+      eventType: event?.event_type || 'meeting',
+      startTime: event?.start_time ? event.start_time.slice(0, 16) : '',
+      endTime: event?.end_time ? event.end_time.slice(0, 16) : '',
+      location: event?.location || '',
+      clientId: event?.client_id || '',
       attendees: [] // TODO: Load existing attendees
     });
     setShowEventForm(true);
@@ -707,9 +711,9 @@ const CalendarTaskManagement = () => {
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <h4 className="font-medium text-gray-900">{task.title}</h4>
-                        {task.description && (
-                          <p className="text-gray-600 text-sm mt-1">{task.description}</p>
+                        <h4 className="font-medium text-gray-900">{task?.title || 'Untitled Task'}</h4>
+                        {task?.description && (
+                          <p className="text-gray-600 text-sm mt-1">{task?.description}</p>
                         )}
                         <div className="flex items-center space-x-2 mt-2">
                           <span className={getPriorityBadgeClasses(task.priority || 'medium')}>

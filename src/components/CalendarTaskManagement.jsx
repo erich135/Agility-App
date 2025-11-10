@@ -25,6 +25,17 @@ const CalendarTaskManagement = () => {
   const [showEventForm, setShowEventForm] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
 
+  // Calendar state
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showDateActionMenu, setShowDateActionMenu] = useState(false);
+  
+  // Calendar filter state (MUST be before useMemo that uses it)
+  const [calendarFilter, setCalendarFilter] = useState('mine'); // 'mine', 'all', or user ID
+  const [availableUsers, setAvailableUsers] = useState([]);
+
+  // Document deadlines
+  const [documentDeadlines, setDocumentDeadlines] = useState([]);
+
   // Combine tasks and events for calendar display
   const calendarItems = useMemo(() => {
     // Filter function based on calendar filter selection
@@ -78,17 +89,6 @@ const CalendarTaskManagement = () => {
 
     return [...taskEvents, ...events];
   }, [tasks, calendarEvents, calendarFilter, user?.id]);
-
-  // Document deadlines
-  const [documentDeadlines, setDocumentDeadlines] = useState([]);
-  
-  // Calendar state
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [showDateActionMenu, setShowDateActionMenu] = useState(false);
-  
-  // Calendar filter state
-  const [calendarFilter, setCalendarFilter] = useState('mine'); // 'mine', 'all', or user ID
-  const [availableUsers, setAvailableUsers] = useState([]);
 
   // Form states
   const [taskFormData, setTaskFormData] = useState({

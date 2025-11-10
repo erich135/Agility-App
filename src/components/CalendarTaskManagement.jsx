@@ -598,11 +598,11 @@ const CalendarTaskManagement = () => {
                   <h3 className="text-lg font-medium text-gray-900">Recent Tasks</h3>
                 </div>
                 <div className="p-6">
-                  {tasks.slice(0, 5).length === 0 ? (
+                  {tasks.filter(task => task && task.id).slice(0, 5).length === 0 ? (
                     <p className="text-gray-500 text-center py-4">No tasks found</p>
                   ) : (
                     <div className="space-y-4">
-                      {tasks.slice(0, 5).map((task) => (
+                      {tasks.filter(task => task && task.id).slice(0, 5).map((task) => (
                         <div 
                           key={task.id} 
                           className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer"
@@ -649,11 +649,11 @@ const CalendarTaskManagement = () => {
                   <h3 className="text-lg font-medium text-gray-900">Upcoming Deadlines</h3>
                 </div>
                 <div className="p-6">
-                  {documentDeadlines.slice(0, 5).length === 0 ? (
+                  {documentDeadlines.filter(deadline => deadline && deadline.id).slice(0, 5).length === 0 ? (
                     <p className="text-gray-500 text-center py-4">No upcoming deadlines</p>
                   ) : (
                     <div className="space-y-4">
-                      {documentDeadlines.slice(0, 5).map((deadline) => (
+                      {documentDeadlines.filter(deadline => deadline && deadline.id).slice(0, 5).map((deadline) => (
                         <div key={deadline.id} className={`p-3 border rounded-lg ${
                           CalendarTaskService.isOverdue(deadline.deadline_date) ? 'border-red-200 bg-red-50' : 'border-gray-200'
                         }`}>
@@ -699,7 +699,7 @@ const CalendarTaskManagement = () => {
             <div className="p-6">
               <p className="text-gray-600 mb-4">Full task management interface will be implemented here.</p>
               <div className="space-y-4">
-                {tasks.map((task) => (
+                {tasks.filter(task => task && task.id).map((task) => (
                   <div 
                     key={task.id} 
                     className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer"

@@ -36,10 +36,21 @@ class TwilioService {
 
       // First check if we're in development mode
       const isDevelopment = window.location.hostname === 'localhost' || 
-                           window.location.hostname.includes('vercel.app');
+                           window.location.hostname.includes('127.0.0.1');
 
       if (isDevelopment) {
         console.log('🚧 Development Mode - OTP:', otp);
+        console.log('🔐 LOGIN OTP for', formattedPhone + ':', otp);
+        
+        // Show OTP in alert for easier access in development
+        alert(`DEVELOPMENT MODE: Your OTP is ${otp}\n\nCheck console for details.`);
+        
+        // Return success in development mode
+        return {
+          success: true,
+          messageSid: 'dev-mode-' + Date.now(),
+          developmentMode: true
+        };
       }
 
       const response = await fetch(this.apiEndpoint, {

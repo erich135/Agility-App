@@ -473,18 +473,14 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
           </div>
         </div>
 
-        {/* Content - With forced scrolling */}
+        {/* Content - With proper scrolling */}
         <div 
           className="flex-1 overflow-y-scroll px-6 py-4"
           style={{ 
             height: 'calc(90vh - 160px)',
-            overflowY: 'scroll',
-            overflowX: 'hidden',
-            minHeight: '600px' /* Force minimum height to ensure scrolling */
+            overflowY: 'scroll'
           }}
         >
-          {/* Scrolling test content */}
-          <div style={{ minHeight: '1200px' }}>
           {/* Error Display */}
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
@@ -857,7 +853,6 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
               </div>
             )}
           </div>
-          </div> {/* Close test content div */}
         </div>
 
         {/* Footer - Fixed at bottom */}

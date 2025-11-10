@@ -237,18 +237,21 @@ const SmartDocumentUpload = ({ clientId, onUploadComplete }) => {
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors relative">
             <input
               type="file"
               multiple
               accept=".pdf,.jpg,.jpeg,.png,.tiff,.doc,.docx"
               onChange={handleFileSelect}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              className="hidden"
+              id="smart-file-input"
               disabled={processing}
             />
-            <Upload className="h-8 w-8 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 mb-2">Drop files here or click to upload</p>
-            <p className="text-sm text-gray-500">Supports PDF, images, and documents</p>
+            <label htmlFor="smart-file-input" className="cursor-pointer block">
+              <Upload className="h-8 w-8 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600 mb-2">Drop files here or click to upload</p>
+              <p className="text-sm text-gray-500">Supports PDF, images, and documents</p>
+            </label>
           </div>
 
           {selectedFiles.length > 0 && (

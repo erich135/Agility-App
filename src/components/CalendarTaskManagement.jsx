@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import CalendarTaskService from '../lib/CalendarTaskService';
 import Calendar from './Calendar';
 import UserSelector from './ui/UserSelector';
@@ -26,7 +26,7 @@ const CalendarTaskManagement = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
 
   // Combine tasks and events for calendar display
-  const calendarItems = React.useMemo(() => {
+  const calendarItems = useMemo(() => {
     // Filter function based on calendar filter selection
     const shouldIncludeItem = (item, sourceType) => {
       if (calendarFilter === 'all') return true;

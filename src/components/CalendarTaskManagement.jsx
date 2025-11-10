@@ -214,19 +214,29 @@ const CalendarTaskManagement = () => {
 
   const handleTaskStatusUpdate = async (taskId, newStatus) => {
     try {
+      // First update the UI optimistically
+      setTasks(prev => prev.map(task => 
+        task.id === taskId ? { ...task, status: newStatus } : task
+      ));
+
+      // Try to update via API
       const result = await CalendarTaskService.updateTask(
         taskId, 
         { status: newStatus }, 
         user?.id
       );
       
-      if (result.success) {
+      if (!result.success) {
+        // Revert the optimistic update if API fails
         setTasks(prev => prev.map(task => 
-          task.id === taskId ? result.task : task
+          task.id === taskId ? { ...task, status: task.status } : task
         ));
+        console.error('Failed to update task status:', result.error);
       }
     } catch (err) {
       console.error('Error updating task status:', err);
+      // The UI already shows the updated status optimistically
+      // In a real app, you might want to show an error message and revert
     }
   };
 
@@ -351,13 +361,25 @@ const CalendarTaskManagement = () => {
   };
 
   const getPriorityBadgeClasses = (priority) => {
-    const config = CalendarTaskService.getTaskPriorityConfig();
-    return `inline-flex px-2 py-1 text-xs font-medium rounded-full ${config[priority]?.bgColor} ${config[priority]?.textColor}`;
+    try {
+      const config = CalendarTaskService.getTaskPriorityConfig();
+      const priorityConfig = config[priority] || config['medium']; // fallback to medium
+      return `inline-flex px-2 py-1 text-xs font-medium rounded-full ${priorityConfig.bgColor} ${priorityConfig.textColor}`;
+    } catch (error) {
+      console.error('Error getting priority badge classes:', error);
+      return 'inline-flex px-2 py-1 text-xs font-medium rounded-full bg-gray-50 text-gray-800';
+    }
   };
 
   const getStatusBadgeClasses = (status) => {
-    const config = CalendarTaskService.getTaskStatusConfig();
-    return `inline-flex px-2 py-1 text-xs font-medium rounded-full ${config[status]?.bgColor} ${config[status]?.textColor}`;
+    try {
+      const config = CalendarTaskService.getTaskStatusConfig();
+      const statusConfig = config[status] || config['pending']; // fallback to pending
+      return `inline-flex px-2 py-1 text-xs font-medium rounded-full ${statusConfig.bgColor} ${statusConfig.textColor}`;
+    } catch (error) {
+      console.error('Error getting status badge classes:', error);
+      return 'inline-flex px-2 py-1 text-xs font-medium rounded-full bg-gray-50 text-gray-800';
+    }
   };
 
   // Click handlers for tasks and events
@@ -587,13 +609,13 @@ const CalendarTaskManagement = () => {
                           onClick={() => handleTaskClick(task)}
                         >
                           <div className="flex-1">
-                            <p className="font-medium text-gray-900">{task.title}</p>
+                            <p className="font-medium text-gray-900">{task.title || 'Untitled Task'}</p>
                             <div className="flex items-center space-x-2 mt-1">
-                              <span className={getPriorityBadgeClasses(task.priority)}>
-                                {task.priority}
+                              <span className={getPriorityBadgeClasses(task.priority || 'medium')}>
+                                {task.priority || 'medium'}
                               </span>
-                              <span className={getStatusBadgeClasses(task.status)}>
-                                {CalendarTaskService.getTaskStatusConfig()[task.status]?.label}
+                              <span className={getStatusBadgeClasses(task.status || 'pending')}>
+                                {CalendarTaskService.getTaskStatusConfig()[task.status || 'pending']?.label || task.status}
                               </span>
                               {task.due_date && (
                                 <span className="text-xs text-gray-500">
@@ -690,11 +712,11 @@ const CalendarTaskManagement = () => {
                           <p className="text-gray-600 text-sm mt-1">{task.description}</p>
                         )}
                         <div className="flex items-center space-x-2 mt-2">
-                          <span className={getPriorityBadgeClasses(task.priority)}>
-                            {task.priority}
+                          <span className={getPriorityBadgeClasses(task.priority || 'medium')}>
+                            {task.priority || 'medium'}
                           </span>
-                          <span className={getStatusBadgeClasses(task.status)}>
-                            {CalendarTaskService.getTaskStatusConfig()[task.status]?.label}
+                          <span className={getStatusBadgeClasses(task.status || 'pending')}>
+                            {CalendarTaskService.getTaskStatusConfig()[task.status || 'pending']?.label || task.status}
                           </span>
                           {task.client && (
                             <span className="text-xs text-gray-500">

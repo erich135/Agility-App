@@ -26,6 +26,13 @@ const EventDetailModal = ({
   const loadEventDetails = async () => {
     setLoading(true);
     try {
+      // Validate event object
+      if (!event || !event.id) {
+        console.error('Invalid event object:', event);
+        setLoading(false);
+        return;
+      }
+
       // Load event attendees
       const eventAttendees = await CalendarTaskService.getEventAttendees(event.id);
       setAttendees(eventAttendees);

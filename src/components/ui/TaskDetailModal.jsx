@@ -27,6 +27,13 @@ const TaskDetailModal = ({
   const loadTaskDetails = async () => {
     setLoading(true);
     try {
+      // Validate task object
+      if (!task || !task.id) {
+        console.error('Invalid task object:', task);
+        setLoading(false);
+        return;
+      }
+
       // Load task assignees
       const taskAssignees = await CalendarTaskService.getTaskAssignees(task.id);
       setAssignees(taskAssignees);
@@ -121,18 +128,18 @@ const TaskDetailModal = ({
               {/* Title and Priority */}
               <div>
                 <div className="flex items-start justify-between mb-2">
-                  <h4 className="text-xl font-semibold text-gray-900">{taskDetails.title}</h4>
+                  <h4 className="text-xl font-semibold text-gray-900">{taskDetails?.title || 'Untitled Task'}</h4>
                   <div className="flex space-x-2">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getPriorityColor(taskDetails.priority)}`}>
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getPriorityColor(taskDetails?.priority || 'medium')}`}>
                       <Flag size={12} className="mr-1" />
-                      {taskDetails.priority}
+                      {taskDetails?.priority || 'medium'}
                     </span>
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(taskDetails.status)}`}>
-                      {taskDetails.status.replace('_', ' ')}
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(taskDetails?.status || 'pending')}`}>
+                      {(taskDetails?.status || 'pending').replace('_', ' ')}
                     </span>
                   </div>
                 </div>
-                {taskDetails.description && (
+                {taskDetails?.description && (
                   <p className="text-gray-600">{taskDetails.description}</p>
                 )}
               </div>
@@ -143,13 +150,13 @@ const TaskDetailModal = ({
                   <div className="flex items-center text-sm">
                     <Calendar size={16} className="text-gray-400 mr-2" />
                     <span className="text-gray-500 mr-2">Due Date:</span>
-                    <span className="text-gray-900">{formatDate(taskDetails.due_date)}</span>
+                    <span className="text-gray-900">{formatDate(taskDetails?.due_date)}</span>
                   </div>
                   
                   <div className="flex items-center text-sm">
                     <FileText size={16} className="text-gray-400 mr-2" />
                     <span className="text-gray-500 mr-2">Type:</span>
-                    <span className="text-gray-900 capitalize">{taskDetails.task_type?.replace('_', ' ')}</span>
+                    <span className="text-gray-900 capitalize">{taskDetails?.task_type?.replace('_', ' ') || 'general'}</span>
                   </div>
                 </div>
 
@@ -157,10 +164,10 @@ const TaskDetailModal = ({
                   <div className="flex items-center text-sm">
                     <Clock size={16} className="text-gray-400 mr-2" />
                     <span className="text-gray-500 mr-2">Created:</span>
-                    <span className="text-gray-900">{formatDate(taskDetails.created_at)}</span>
+                    <span className="text-gray-900">{formatDate(taskDetails?.created_at)}</span>
                   </div>
                   
-                  {taskDetails.completed_at && (
+                  {taskDetails?.completed_at && (
                     <div className="flex items-center text-sm">
                       <Clock size={16} className="text-gray-400 mr-2" />
                       <span className="text-gray-500 mr-2">Completed:</span>

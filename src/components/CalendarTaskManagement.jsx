@@ -624,7 +624,7 @@ const CalendarTaskManagement = () => {
                               )}
                             </div>
                           </div>
-                          {task.status === 'pending' && (
+                          {task?.status === 'pending' && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -670,7 +670,7 @@ const CalendarTaskManagement = () => {
                                 {CalendarTaskService.formatDate(deadline.deadline_date)}
                               </p>
                             </div>
-                            {deadline.status === 'pending' && (
+                            {deadline?.status === 'pending' && (
                               <button
                                 onClick={() => handleCompleteDeadline(deadline.id)}
                                 className="ml-4 text-green-600 hover:text-green-800"
@@ -731,7 +731,7 @@ const CalendarTaskManagement = () => {
                         </div>
                       </div>
                       <div className="ml-4 flex space-x-2">
-                        {task.status === 'pending' && (
+                        {task?.status === 'pending' && (
                           <>
                             <button
                               onClick={() => handleTaskStatusUpdate(task.id, 'in_progress')}
@@ -747,7 +747,7 @@ const CalendarTaskManagement = () => {
                             </button>
                           </>
                         )}
-                        {task.status === 'in_progress' && (
+                        {task?.status === 'in_progress' && (
                           <button
                             onClick={() => handleTaskStatusUpdate(task.id, 'completed')}
                             className="text-green-600 hover:text-green-800 text-sm"
@@ -792,7 +792,7 @@ const CalendarTaskManagement = () => {
                 {documentDeadlines.map((deadline) => (
                   <div key={deadline.id} className={`border rounded-lg p-4 ${
                     CalendarTaskService.isOverdue(deadline.deadline_date) ? 'border-red-200 bg-red-50' : 
-                    deadline.status === 'completed' ? 'border-green-200 bg-green-50' : 'border-gray-200'
+                    deadline?.status === 'completed' ? 'border-green-200 bg-green-50' : 'border-gray-200'
                   }`}>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -808,16 +808,16 @@ const CalendarTaskManagement = () => {
                             {CalendarTaskService.formatDate(deadline.deadline_date)}
                           </span>
                           <span className={`text-xs px-2 py-1 rounded-full ${
-                            deadline.status === 'completed' ? 'bg-green-100 text-green-800' :
+                            deadline?.status === 'completed' ? 'bg-green-100 text-green-800' :
                             CalendarTaskService.isOverdue(deadline.deadline_date) ? 'bg-red-100 text-red-800' : 
                             'bg-yellow-100 text-yellow-800'
                           }`}>
-                            {deadline.status === 'completed' ? '✅ Completed' :
+                            {deadline?.status === 'completed' ? '✅ Completed' :
                              CalendarTaskService.isOverdue(deadline.deadline_date) ? '⚠️ Overdue' : '⏳ Pending'}
                           </span>
                         </div>
                       </div>
-                      {deadline.status === 'pending' && (
+                      {deadline?.status === 'pending' && (
                         <button
                           onClick={() => handleCompleteDeadline(deadline.id)}
                           className="ml-4 bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"

@@ -645,22 +645,28 @@ const CalendarTaskManagement = () => {
                         .slice(0, 5)
                         .map(task => validateTask(task))
                         .filter(task => task)
-                        .map((task) => (
+                        .map((task) => {
+                          // Direct safety check
+                          if (!task || !task.id || typeof task !== 'object') {
+                            return null;
+                          }
+                          
+                          return (
                         <div 
                           key={task.id} 
                           className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer"
                           onClick={() => handleTaskClick(task)}
                         >
                           <div className="flex-1">
-                            <p className="font-medium text-gray-900">{task.title || 'Untitled Task'}</p>
+                            <p className="font-medium text-gray-900">{task?.title || 'Untitled Task'}</p>
                             <div className="flex items-center space-x-2 mt-1">
-                              <span className={getPriorityBadgeClasses(task.priority || 'medium')}>
-                                {task.priority || 'medium'}
+                              <span className={getPriorityBadgeClasses(task?.priority || 'medium')}>
+                                {task?.priority || 'medium'}
                               </span>
-                              <span className={getStatusBadgeClasses(task.status || 'pending')}>
-                                {CalendarTaskService.getTaskStatusConfig()[task.status || 'pending']?.label || task.status}
+                              <span className={getStatusBadgeClasses(task?.status || 'pending')}>
+                                {CalendarTaskService.getTaskStatusConfig()[task?.status || 'pending']?.label || task?.status}
                               </span>
-                              {task.due_date && (
+                              {task?.due_date && (
                                 <span className="text-xs text-gray-500">
                                   Due: {CalendarTaskService.formatDate(task.due_date)}
                                 </span>
@@ -680,7 +686,8 @@ const CalendarTaskManagement = () => {
                             </button>
                           )}
                         </div>
-                      ))}
+                          );
+                        }).filter(Boolean)}
                     </div>
                   )}
                 </div>
@@ -764,20 +771,20 @@ const CalendarTaskManagement = () => {
                           <p className="text-gray-600 text-sm mt-1">{task?.description}</p>
                         )}
                         <div className="flex items-center space-x-2 mt-2">
-                          <span className={getPriorityBadgeClasses(task.priority || 'medium')}>
-                            {task.priority || 'medium'}
+                          <span className={getPriorityBadgeClasses(task?.priority || 'medium')}>
+                            {task?.priority || 'medium'}
                           </span>
-                          <span className={getStatusBadgeClasses(task.status || 'pending')}>
-                            {CalendarTaskService.getTaskStatusConfig()[task.status || 'pending']?.label || task.status}
+                          <span className={getStatusBadgeClasses(task?.status || 'pending')}>
+                            {CalendarTaskService.getTaskStatusConfig()[task?.status || 'pending']?.label || task?.status}
                           </span>
-                          {task.client && (
+                          {task?.client && (
                             <span className="text-xs text-gray-500">
-                              Client: {task.client.client_name}
+                              Client: {task?.client.client_name}
                             </span>
                           )}
-                          {task.due_date && (
+                          {task?.due_date && (
                             <span className="text-xs text-gray-500">
-                              Due: {CalendarTaskService.formatDate(task.due_date)}
+                              Due: {CalendarTaskService.formatDate(task?.due_date)}
                             </span>
                           )}
                         </div>
@@ -786,13 +793,13 @@ const CalendarTaskManagement = () => {
                         {task?.status === 'pending' && (
                           <>
                             <button
-                              onClick={() => handleTaskStatusUpdate(task.id, 'in_progress')}
+                              onClick={() => handleTaskStatusUpdate(task?.id, 'in_progress')}
                               className="text-blue-600 hover:text-blue-800 text-sm"
                             >
                               Start
                             </button>
                             <button
-                              onClick={() => handleTaskStatusUpdate(task.id, 'completed')}
+                              onClick={() => handleTaskStatusUpdate(task?.id, 'completed')}
                               className="text-green-600 hover:text-green-800 text-sm"
                             >
                               Complete
@@ -801,7 +808,7 @@ const CalendarTaskManagement = () => {
                         )}
                         {task?.status === 'in_progress' && (
                           <button
-                            onClick={() => handleTaskStatusUpdate(task.id, 'completed')}
+                            onClick={() => handleTaskStatusUpdate(task?.id, 'completed')}
                             className="text-green-600 hover:text-green-800 text-sm"
                           >
                             Complete

@@ -30,6 +30,7 @@ const CalendarTaskManagement = () => {
   
   // Calendar state
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showDateActionMenu, setShowDateActionMenu] = useState(false);
 
   // Form states
   const [taskFormData, setTaskFormData] = useState({
@@ -38,6 +39,8 @@ const CalendarTaskManagement = () => {
     taskType: 'general',
     priority: 'medium',
     dueDate: '',
+    startTime: '',
+    endTime: '',
     clientId: '',
     assignees: [] // Array of selected users
   });
@@ -258,6 +261,32 @@ const CalendarTaskManagement = () => {
   const handleCreateTask = async (e) => {
     e.preventDefault();
     try {
+      // Validate user availability if assignees and times are provided
+      if (taskFormData.assignees.length > 0 && taskFormData.startTime && taskFormData.endTime) {
+        const validation = validateAssigneeAvailability(
+          taskFormData.assignees,
+          taskFormData.startTime,
+          taskFormData.endTime
+        );
+
+        if (!validation.valid) {
+          const conflictMessages = validation.conflicts.map(uc => {
+            const conflictList = uc.conflicts.map(c => 
+              `  - ${c.title} (${new Date(c.start).toLocaleString()} - ${new Date(c.end).toLocaleString()})`
+            ).join('\n');
+            return `User has conflicts:\n${conflictList}`;
+          }).join('\n\n');
+
+          const proceed = window.confirm(
+            `⚠️ SCHEDULING CONFLICT DETECTED\n\n${conflictMessages}\n\nDo you want to create this task anyway?`
+          );
+
+          if (!proceed) {
+            return;
+          }
+        }
+      }
+
       // Temporarily use mock success instead of API call
       console.log('Creating task with mock success...', taskFormData);
       
@@ -269,6 +298,8 @@ const CalendarTaskManagement = () => {
         task_type: taskFormData.taskType,
         priority: taskFormData.priority,
         due_date: taskFormData.dueDate,
+        start_time: taskFormData.startTime,
+        end_time: taskFormData.endTime,
         status: 'pending',
         created_at: new Date().toISOString()
       };
@@ -280,6 +311,8 @@ const CalendarTaskManagement = () => {
         taskType: 'general',
         priority: 'medium',
         dueDate: '',
+        startTime: '',
+        endTime: '',
         clientId: '',
         assignees: []
       });
@@ -328,6 +361,33 @@ const CalendarTaskManagement = () => {
   const handleCreateEvent = async (e) => {
     e.preventDefault();
     try {
+      // Validate attendee availability if attendees and times are provided
+      if (eventFormData.attendees.length > 0 && eventFormData.startTime && eventFormData.endTime) {
+        const attendeeIds = eventFormData.attendees.map(user => user.id);
+        const validation = validateAssigneeAvailability(
+          attendeeIds,
+          eventFormData.startTime,
+          eventFormData.endTime
+        );
+
+        if (!validation.valid) {
+          const conflictMessages = validation.conflicts.map(uc => {
+            const conflictList = uc.conflicts.map(c => 
+              `  - ${c.title} (${new Date(c.start).toLocaleString()} - ${new Date(c.end).toLocaleString()})`
+            ).join('\n');
+            return `User has conflicts:\n${conflictList}`;
+          }).join('\n\n');
+
+          const proceed = window.confirm(
+            `⚠️ SCHEDULING CONFLICT DETECTED\n\n${conflictMessages}\n\nDo you want to create this event anyway?`
+          );
+
+          if (!proceed) {
+            return;
+          }
+        }
+      }
+
       const result = await CalendarTaskService.createCalendarEvent({
         title: eventFormData.title,
         description: eventFormData.description,
@@ -497,6 +557,111 @@ const CalendarTaskManagement = () => {
         console.error('Error deleting event:', error);
       }
     }
+  };
+
+  // Handle date selection from calendar - show action menu
+  const handleDateSelect = (date) => {
+    setSelectedDate(date);
+    setShowDateActionMenu(true);
+  };
+
+  // Check if a user has conflicting tasks/events at the specified time
+  const checkUserConflicts = (userId, startTime, endTime, excludeId = null) => {
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    
+    const conflicts = [];
+
+    // Check tasks
+    tasks.forEach(task => {
+      if (task.id === excludeId) return;
+      if (!task.start_time || !task.end_time) return;
+      if (!task.assigned_to || !task.assigned_to.includes(userId)) return;
+
+      const taskStart = new Date(task.start_time);
+      const taskEnd = new Date(task.end_time);
+
+      // Check for overlap
+      if ((start < taskEnd && end > taskStart)) {
+        conflicts.push({
+          type: 'task',
+          title: task.title,
+          start: task.start_time,
+          end: task.end_time
+        });
+      }
+    });
+
+    // Check events
+    calendarEvents.forEach(event => {
+      if (event.id === excludeId) return;
+      if (!event.start_time || !event.end_time) return;
+      if (!event.attendees || !event.attendees.includes(userId)) return;
+
+      const eventStart = new Date(event.start_time);
+      const eventEnd = new Date(event.end_time);
+
+      // Check for overlap
+      if ((start < eventEnd && end > eventStart)) {
+        conflicts.push({
+          type: 'event',
+          title: event.title,
+          start: event.start_time,
+          end: event.end_time
+        });
+      }
+    });
+
+    return conflicts;
+  };
+
+  // Validate all assignees for conflicts
+  const validateAssigneeAvailability = (assignees, startTime, endTime) => {
+    if (!startTime || !endTime) {
+      return { valid: true, conflicts: [] };
+    }
+
+    const allConflicts = [];
+
+    assignees.forEach(userId => {
+      const userConflicts = checkUserConflicts(userId, startTime, endTime);
+      if (userConflicts.length > 0) {
+        allConflicts.push({
+          userId,
+          conflicts: userConflicts
+        });
+      }
+    });
+
+    return {
+      valid: allConflicts.length === 0,
+      conflicts: allConflicts
+    };
+  };
+
+  // Open task form with pre-filled date
+  const handleCreateTaskFromDate = () => {
+    const dateStr = selectedDate.toISOString().slice(0, 16);
+    setTaskFormData(prev => ({
+      ...prev,
+      dueDate: dateStr,
+      startTime: dateStr,
+      endTime: dateStr
+    }));
+    setShowDateActionMenu(false);
+    setShowTaskForm(true);
+  };
+
+  // Open event form with pre-filled date
+  const handleCreateEventFromDate = () => {
+    const dateStr = selectedDate.toISOString().slice(0, 16);
+    setEventFormData(prev => ({
+      ...prev,
+      startTime: dateStr,
+      endTime: dateStr
+    }));
+    setShowDateActionMenu(false);
+    setShowEventForm(true);
   };
 
   if (loading) {
@@ -832,7 +997,7 @@ const CalendarTaskManagement = () => {
             <div className="h-full">
               <Calendar 
                 events={calendarEvents} 
-                onDateSelect={setSelectedDate} 
+                onDateSelect={handleDateSelect} 
                 onEventClick={handleEventClick}
                 selectedDate={selectedDate}
               />
@@ -961,6 +1126,27 @@ const CalendarTaskManagement = () => {
                   onChange={(e) => setTaskFormData(prev => ({...prev, dueDate: e.target.value}))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+                  <input
+                    type="datetime-local"
+                    value={taskFormData.startTime}
+                    onChange={(e) => setTaskFormData(prev => ({...prev, startTime: e.target.value}))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+                  <input
+                    type="datetime-local"
+                    value={taskFormData.endTime}
+                    onChange={(e) => setTaskFormData(prev => ({...prev, endTime: e.target.value}))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
               </div>
 
               <div>
@@ -1121,6 +1307,44 @@ const CalendarTaskManagement = () => {
         onEdit={handleEventEdit}
         onDelete={handleEventDelete}
       />
+
+      {/* Date Action Menu - Choose to create Task or Event */}
+      {showDateActionMenu && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-sm mx-4 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Create for {selectedDate.toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}
+            </h3>
+            <div className="space-y-3">
+              <button
+                onClick={handleCreateTaskFromDate}
+                className="w-full flex items-center justify-center space-x-2 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <span className="text-lg">✓</span>
+                <span>Create Task</span>
+              </button>
+              <button
+                onClick={handleCreateEventFromDate}
+                className="w-full flex items-center justify-center space-x-2 bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors"
+              >
+                <span className="text-lg">📅</span>
+                <span>Create Event</span>
+              </button>
+              <button
+                onClick={() => setShowDateActionMenu(false)}
+                className="w-full bg-gray-300 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-400 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

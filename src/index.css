@@ -1,0 +1,104 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* small UI helper styles */
+:root{
+	--bg: #ffffff;
+	--muted: #6b7280;
+}
+
+.dark {
+	--bg: #0b1220;
+	--muted: #9ca3af;
+	--card-bg: #071024;
+	--input-bg: #1f2937;
+	--text: #e5eef8;
+	--muted-text: #9ca3af;
+	color-scheme: dark;
+}
+
+#app-header.scrolled {
+	box-shadow: 0 8px 28px rgba(2,6,23,0.12);
+}
+
+.client-card-hover:hover { transform: translateY(-3px); }
+
+.btn-primary{ background: #16a34a; color:white; padding:0.5rem 0.9rem; border-radius:6px }
+.btn-ghost{ background:transparent; padding:0.4rem 0.7rem; border-radius:6px }
+
+/* typography */
+body { font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; background: var(--bg); color: var(--text, #111827); }
+
+/* dark-mode specific UI tweaks */
+.dark #app-header { background: rgba(8,11,18,0.7); }
+.dark .rounded-lg { background: var(--card-bg); }
+.dark input[type="text"], .dark select, .dark input[type="date"] { background: var(--input-bg); color: var(--text); border-color: rgba(255,255,255,0.06); }
+.dark .px-3.py-1.rounded.text-white.bg\[\#0000FF\] { box-shadow: none; }
+
+@keyframes overduePulse {
+	0% { box-shadow: 0 0 0 0 rgba(255,0,0,0.26); }
+	70% { box-shadow: 0 0 0 14px rgba(255,0,0,0); }
+	100% { box-shadow: 0 0 0 0 rgba(255,0,0,0); }
+}
+
+.overdue-pulse { animation: overduePulse 1.8s ease-out infinite; }
+
+/* focus-visible for accessibility */
+*:focus { outline: none; }
+*:focus-visible { outline: 3px solid rgba(99,102,241,0.5); outline-offset: 2px; }
+
+/* Custom scrollbar styles for better visibility */
+/* Webkit browsers (Chrome, Safari, Edge) */
+.scrollable-content::-webkit-scrollbar,
+.overflow-y-auto::-webkit-scrollbar {
+  width: 14px;
+  display: block !important;
+}
+
+.scrollable-content::-webkit-scrollbar-track,
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 6px;
+}
+
+.scrollable-content::-webkit-scrollbar-thumb,
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 6px;
+  border: 2px solid #f1f5f9;
+}
+
+.scrollable-content::-webkit-scrollbar-thumb:hover,
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Firefox */
+.scrollable-content,
+.overflow-y-auto {
+  scrollbar-width: auto !important;
+  scrollbar-color: #94a3b8 #f1f5f9;
+}
+
+/* Modal content should always show scrollbar when content overflows */
+.modal-content {
+  scrollbar-width: auto;
+  scrollbar-color: #94a3b8 #f1f5f9;
+}
+
+/* Ensure modal content can scroll properly */
+.modal-content {
+  max-height: calc(90vh - 120px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  padding-bottom: 2rem; /* Extra padding to ensure scrolling to bottom works */
+}
+
+/* Ensure dialog doesn't interfere with scrolling */
+.modal-dialog {
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+}

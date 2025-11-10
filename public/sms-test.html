@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quick SMS Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+        .result { margin: 20px 0; padding: 15px; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        button { padding: 10px 20px; background: #007cba; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        input { padding: 8px; width: 200px; margin: 10px; }
+    </style>
+</head>
+<body>
+    <h1>🚀 Quick SMS Test</h1>
+    <p>Test the new simple SMS API without npm dependencies</p>
+    
+    <div>
+        <input type="text" id="phone" value="+27836504028" placeholder="Phone number">
+        <button onclick="testSMS()">Send Test SMS</button>
+    </div>
+    
+    <div id="result"></div>
+
+    <script>
+        async function testSMS() {
+            const phone = document.getElementById('phone').value;
+            const resultDiv = document.getElementById('result');
+            
+            resultDiv.innerHTML = '<div class="result">Sending SMS...</div>';
+            
+            try {
+                const response = await fetch('/api/send-sms-simple', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        phoneNumber: phone,
+                        otp: 'TEST123'
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="result success">
+                            ✅ SMS Sent Successfully!<br>
+                            Message SID: ${result.messageSid}<br>
+                            Method: ${result.method}<br>
+                            Check your phone for the test message.
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="result error">
+                            ❌ SMS Failed<br>
+                            Error: ${result.error}<br>
+                            Details: ${result.details}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="result error">
+                        ❌ Test Failed<br>
+                        Error: ${error.message}
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

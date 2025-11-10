@@ -450,7 +450,7 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[95vh] flex flex-col">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl modal-dialog">
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex-shrink-0">
           <div className="flex items-center justify-between">
@@ -473,8 +473,19 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
           </div>
         </div>
 
-        {/* Content - Now with proper scrolling */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 pb-6 min-h-0">
+        {/* Content - With improved scrolling */}
+        <div 
+          className="modal-content scrollable-content px-6 py-4"
+          style={{ 
+            maxHeight: 'calc(90vh - 200px)', /* Reserve space for header and footer */
+            scrollbarWidth: 'thin',
+            scrollbarColor: '#cbd5e1 #f1f5f9',
+            scrollBehavior: 'smooth'
+          }}
+          tabIndex={0} /* Make it focusable for keyboard navigation */
+          role="region"
+          aria-label="Document management content"
+        >
           {/* Error Display */}
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
@@ -850,7 +861,7 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-6 border-t border-gray-200 bg-gray-50 flex-shrink-0">
+        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex-shrink-0">
           <div className="flex justify-between items-center gap-4">
             <div className="text-sm text-gray-600">
               <p><strong>Supported formats:</strong> PDF, JPG, PNG (max 10MB each)</p>

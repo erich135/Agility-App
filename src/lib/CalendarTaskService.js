@@ -14,14 +14,24 @@ class CalendarTaskService {
    */
   static async getAllUsers() {
     try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('is_active', true)
+      const { data, error} = await supabase
+        .from('users')
+        .select('id, email, full_name, phone, role')
         .order('full_name');
 
       if (error) throw error;
-      return data;
+      
+      // Map the users table fields to match expected format
+      return data.map(user => ({
+        id: user.id,
+        email: user.email,
+        full_name: user.full_name,
+        phone: user.phone,
+        role: user.role,
+        department: null, // users table doesn't have department
+        avatar_url: null,
+        is_active: true
+      }));
     } catch (error) {
       console.error('Error fetching users:', error);
       // Return mock users for development
@@ -60,13 +70,24 @@ class CalendarTaskService {
   static async getUserById(userId) {
     try {
       const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
+        .from('users')
+        .select('id, email, full_name, phone, role')
         .eq('id', userId)
         .single();
 
       if (error) throw error;
-      return data;
+      
+      // Map to expected format
+      return {
+        id: data.id,
+        email: data.email,
+        full_name: data.full_name,
+        phone: data.phone,
+        role: data.role,
+        department: null,
+        avatar_url: null,
+        is_active: true
+      };
     } catch (error) {
       console.error('Error fetching user:', error);
       return null;

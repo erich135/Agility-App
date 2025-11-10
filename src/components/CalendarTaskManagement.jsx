@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import CalendarTaskService from '../lib/CalendarTaskService';
+import Calendar from './Calendar';
+import UserSelector from './ui/UserSelector';
 import { useAuth } from '../contexts/AuthContext';
 
 const CalendarTaskManagement = () => {
@@ -23,6 +25,9 @@ const CalendarTaskManagement = () => {
 
   // Document deadlines
   const [documentDeadlines, setDocumentDeadlines] = useState([]);
+  
+  // Calendar state
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
   // Form states
   const [taskFormData, setTaskFormData] = useState({
@@ -31,7 +36,8 @@ const CalendarTaskManagement = () => {
     taskType: 'general',
     priority: 'medium',
     dueDate: '',
-    clientId: ''
+    clientId: '',
+    assignees: [] // Array of selected users
   });
 
   const [eventFormData, setEventFormData] = useState({
@@ -41,7 +47,8 @@ const CalendarTaskManagement = () => {
     startTime: '',
     endTime: '',
     location: '',
-    clientId: ''
+    clientId: '',
+    attendees: [] // Array of selected users
   });
 
   // Load data on component mount
@@ -110,6 +117,46 @@ const CalendarTaskManagement = () => {
           start_time: '2025-11-11T09:00:00Z',
           end_time: '2025-11-11T10:00:00Z',
           location: 'Conference Room A',
+          created_at: '2025-11-10T08:00:00Z'
+        },
+        {
+          id: '2',
+          title: 'Team Planning Meeting',
+          description: 'Weekly team sync',
+          event_type: 'meeting',
+          start_time: '2025-11-12T14:00:00Z',
+          end_time: '2025-11-12T15:00:00Z',
+          location: 'Main Office',
+          created_at: '2025-11-10T08:00:00Z'
+        },
+        {
+          id: '3',
+          title: 'VAT Filing Deadline',
+          description: 'Submit VAT returns',
+          event_type: 'deadline',
+          start_time: '2025-11-15T17:00:00Z',
+          end_time: '2025-11-15T17:00:00Z',
+          location: 'Online',
+          created_at: '2025-11-10T08:00:00Z'
+        },
+        {
+          id: '4',
+          title: 'Client Follow-up Call',
+          description: 'Check on document status',
+          event_type: 'reminder',
+          start_time: '2025-11-13T10:30:00Z',
+          end_time: '2025-11-13T11:00:00Z',
+          location: 'Phone',
+          created_at: '2025-11-10T08:00:00Z'
+        },
+        {
+          id: '5',
+          title: 'New Client Onboarding',
+          description: 'Welcome meeting for DEF Corp',
+          event_type: 'appointment',
+          start_time: '2025-11-14T11:00:00Z',
+          end_time: '2025-11-14T12:00:00Z',
+          location: 'Conference Room B',
           created_at: '2025-11-10T08:00:00Z'
         }
       ]);
@@ -215,7 +262,8 @@ const CalendarTaskManagement = () => {
         taskType: 'general',
         priority: 'medium',
         dueDate: '',
-        clientId: ''
+        clientId: '',
+        assignees: []
       });
       setShowTaskForm(false);
       
@@ -234,6 +282,7 @@ const CalendarTaskManagement = () => {
         taskType: taskFormData.taskType,
         priority: taskFormData.priority,
         dueDate: taskFormData.dueDate || null,
+        assignees: taskFormData.assignees.map(user => user.id),
         clientId: taskFormData.clientId || null,
         createdBy: user?.id
       });
@@ -246,7 +295,8 @@ const CalendarTaskManagement = () => {
           taskType: 'general',
           priority: 'medium',
           dueDate: '',
-          clientId: ''
+          clientId: '',
+          assignees: []
         });
         setShowTaskForm(false);
         await loadDashboardData(); // Refresh dashboard stats
@@ -267,6 +317,7 @@ const CalendarTaskManagement = () => {
         startTime: eventFormData.startTime,
         endTime: eventFormData.endTime,
         location: eventFormData.location,
+        attendees: eventFormData.attendees.map(user => user.id),
         clientId: eventFormData.clientId || null,
         createdBy: user?.id
       });
@@ -280,7 +331,8 @@ const CalendarTaskManagement = () => {
           startTime: '',
           endTime: '',
           location: '',
-          clientId: ''
+          clientId: '',
+          attendees: []
         });
         setShowEventForm(false);
         await loadDashboardData(); // Refresh dashboard stats
@@ -594,25 +646,16 @@ const CalendarTaskManagement = () => {
 
         {/* Calendar Tab */}
         {activeTab === 'calendar' && (
-          <div className="bg-white rounded-lg shadow">
+          <div className="bg-white rounded-lg shadow h-full">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">Calendar Events</h3>
+              <h3 className="text-lg font-medium text-gray-900">Calendar</h3>
             </div>
-            <div className="p-6">
-              <p className="text-gray-600 mb-4">Calendar view will be implemented here with a proper calendar component.</p>
-              <div className="grid gap-4">
-                {calendarEvents.map((event) => (
-                  <div key={event.id} className="border border-gray-200 rounded-lg p-4">
-                    <h4 className="font-medium text-gray-900">{event.title}</h4>
-                    <p className="text-gray-600 text-sm">{event.description}</p>
-                    <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
-                      <span>📅 {CalendarTaskService.formatDate(event.start_time, true)}</span>
-                      <span>🕒 {CalendarTaskService.formatDate(event.end_time, true)}</span>
-                      {event.location && <span>📍 {event.location}</span>}
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <div className="h-full">
+              <Calendar 
+                events={calendarEvents} 
+                onDateSelect={setSelectedDate} 
+                selectedDate={selectedDate}
+              />
             </div>
           </div>
         )}
@@ -740,6 +783,17 @@ const CalendarTaskManagement = () => {
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Assign to Users</label>
+                <UserSelector
+                  selectedUsers={taskFormData.assignees}
+                  onSelectionChange={(users) => setTaskFormData(prev => ({...prev, assignees: users}))}
+                  placeholder="Select team members for this task..."
+                  className="w-full"
+                />
+                <p className="text-xs text-gray-500 mt-1">You can assign this task to multiple team members</p>
+              </div>
+
               <div className="flex space-x-3 pt-4">
                 <button
                   type="submit"
@@ -836,6 +890,17 @@ const CalendarTaskManagement = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   placeholder="Meeting room, address, or online link"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Event Attendees</label>
+                <UserSelector
+                  selectedUsers={eventFormData.attendees}
+                  onSelectionChange={(users) => setEventFormData(prev => ({...prev, attendees: users}))}
+                  placeholder="Select attendees for this event..."
+                  className="w-full"
+                />
+                <p className="text-xs text-gray-500 mt-1">Invite team members to attend this event</p>
               </div>
 
               <div className="flex space-x-3 pt-4">

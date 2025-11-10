@@ -3,19 +3,86 @@ import ActivityLogger from './ActivityLogger';
 
 /**
  * Calendar & Task Management Service
- * Handles tasks, calendar events, and document deadlines
+ * Handles tasks, calendar events, document deadlines, and multi-user assignments
  */
 class CalendarTaskService {
+
+  // ========== USER MANAGEMENT ==========
+  
+  /**
+   * Get all available users for assignment
+   */
+  static async getAllUsers() {
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('is_active', true)
+        .order('full_name');
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      // Return mock users for development
+      return [
+        {
+          id: '00000000-0000-0000-0000-000000000001',
+          email: 'john.doe@example.com',
+          full_name: 'John Doe',
+          department: 'Accounting',
+          role: 'Senior Accountant',
+          avatar_url: null
+        },
+        {
+          id: '00000000-0000-0000-0000-000000000002',
+          email: 'jane.smith@example.com',
+          full_name: 'Jane Smith',
+          department: 'Administration',
+          role: 'Office Manager',
+          avatar_url: null
+        },
+        {
+          id: '00000000-0000-0000-0000-000000000003',
+          email: 'mike.wilson@example.com',
+          full_name: 'Mike Wilson',
+          department: 'Compliance',
+          role: 'Compliance Officer',
+          avatar_url: null
+        }
+      ];
+    }
+  }
+
+  /**
+   * Get user by ID
+   */
+  static async getUserById(userId) {
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      return null;
+    }
+  }
 
   // ========== TASK MANAGEMENT ==========
   
   /**
-   * Create a new task
+   * Create a new task with multiple assignees
    */
   static async createTask({
     title,
     description = '',
-    assignedTo = null,
+    assignedTo = null, // Primary assignee (for backward compatibility)
+    assignees = [], // Array of user IDs for multiple assignees
     clientId = null,
     taskType = 'general',
     priority = 'medium',
@@ -37,13 +104,18 @@ class CalendarTaskService {
         status: 'pending'
       };
 
-      const { data, error } = await supabase
+      const { data: task, error } = await supabase
         .from('tasks')
         .insert([taskData])
         .select()
         .single();
 
       if (error) throw error;
+
+      // Add multiple assignees if provided
+      if (assignees && assignees.length > 0) {
+        await this.addTaskAssignees(task.id, assignees, createdBy);
+      }
 
       // Log task creation
       if (createdBy) {
@@ -52,15 +124,88 @@ class CalendarTaskService {
           userName: 'User',
           action: 'task_create',
           entityType: 'task',
-          entityId: data.id,
+          entityId: task.id,
           entityName: title,
           details: { task_type: taskType, priority, due_date: dueDate }
         });
       }
 
-      return { success: true, task: data };
+      return { success: true, task: task };
     } catch (error) {
       console.error('Error creating task:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Add multiple assignees to a task
+   */
+  static async addTaskAssignees(taskId, userIds, assignedBy = null, role = 'assignee') {
+    try {
+      const { error } = await supabase.rpc('add_task_assignees', {
+        p_task_id: taskId,
+        p_user_ids: userIds,
+        p_assigned_by: assignedBy,
+        p_role: role
+      });
+
+      if (error) throw error;
+      return { success: true };
+    } catch (error) {
+      console.error('Error adding task assignees:', error);
+      // Fallback to manual insertion for development
+      const assignments = userIds.map(userId => ({
+        task_id: taskId,
+        user_id: userId,
+        role: role,
+        assigned_by: assignedBy
+      }));
+
+      const { error: insertError } = await supabase
+        .from('task_assignments')
+        .upsert(assignments);
+
+      if (insertError) {
+        return { success: false, error: insertError.message };
+      }
+      return { success: true };
+    }
+  }
+
+  /**
+   * Get task assignees
+   */
+  static async getTaskAssignees(taskId) {
+    try {
+      const { data, error } = await supabase
+        .from('task_assignments_with_users')
+        .select('*')
+        .eq('task_id', taskId)
+        .order('assigned_at');
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching task assignees:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Remove assignee from task
+   */
+  static async removeTaskAssignee(taskId, userId) {
+    try {
+      const { error } = await supabase
+        .from('task_assignments')
+        .delete()
+        .eq('task_id', taskId)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+      return { success: true };
+    } catch (error) {
+      console.error('Error removing task assignee:', error);
       return { success: false, error: error.message };
     }
   }
@@ -198,7 +343,7 @@ class CalendarTaskService {
   // ========== CALENDAR EVENTS ==========
 
   /**
-   * Create a calendar event
+   * Create a calendar event with multiple attendees
    */
   static async createCalendarEvent({
     title,
@@ -208,7 +353,7 @@ class CalendarTaskService {
     endTime,
     location = '',
     clientId = null,
-    attendees = [],
+    attendees = [], // Array of user IDs for the new attendee system
     isAllDay = false,
     recurrenceRule = null,
     metadata = {},
@@ -223,20 +368,25 @@ class CalendarTaskService {
         end_time: endTime,
         location: location.trim(),
         client_id: clientId,
-        attendees: JSON.stringify(attendees),
+        attendees: JSON.stringify(attendees), // Keep for backward compatibility
         is_all_day: isAllDay,
         recurrence_rule: recurrenceRule,
         metadata,
         created_by: createdBy
       };
 
-      const { data, error } = await supabase
+      const { data: event, error } = await supabase
         .from('calendar_events')
         .insert([eventData])
         .select()
         .single();
 
       if (error) throw error;
+
+      // Add attendees to the new event_attendees table
+      if (attendees && attendees.length > 0) {
+        await this.addEventAttendees(event.id, attendees, createdBy);
+      }
 
       // Log event creation
       if (createdBy) {
@@ -245,15 +395,91 @@ class CalendarTaskService {
           userName: 'User',
           action: 'calendar_event_create',
           entityType: 'calendar_event',
-          entityId: data.id,
+          entityId: event.id,
           entityName: title,
           details: { event_type: eventType, start_time: startTime }
         });
       }
 
-      return { success: true, event: data };
+      return { success: true, event: event };
     } catch (error) {
       console.error('Error creating calendar event:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Add multiple attendees to an event
+   */
+  static async addEventAttendees(eventId, userIds, invitedBy = null, role = 'attendee') {
+    try {
+      const { error } = await supabase.rpc('add_event_attendees', {
+        p_event_id: eventId,
+        p_user_ids: userIds,
+        p_invited_by: invitedBy,
+        p_role: role
+      });
+
+      if (error) throw error;
+      return { success: true };
+    } catch (error) {
+      console.error('Error adding event attendees:', error);
+      // Fallback to manual insertion for development
+      const attendees = userIds.map(userId => ({
+        event_id: eventId,
+        user_id: userId,
+        role: role,
+        invited_by: invitedBy
+      }));
+
+      const { error: insertError } = await supabase
+        .from('event_attendees')
+        .upsert(attendees);
+
+      if (insertError) {
+        return { success: false, error: insertError.message };
+      }
+      return { success: true };
+    }
+  }
+
+  /**
+   * Get event attendees
+   */
+  static async getEventAttendees(eventId) {
+    try {
+      const { data, error } = await supabase
+        .from('event_attendees_with_users')
+        .select('*')
+        .eq('event_id', eventId)
+        .order('invited_at');
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching event attendees:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Update attendee response status
+   */
+  static async updateAttendeeResponse(eventId, userId, status) {
+    try {
+      const { error } = await supabase
+        .from('event_attendees')
+        .update({ 
+          response_status: status, 
+          response_at: new Date().toISOString() 
+        })
+        .eq('event_id', eventId)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+      return { success: true };
+    } catch (error) {
+      console.error('Error updating attendee response:', error);
       return { success: false, error: error.message };
     }
   }

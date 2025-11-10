@@ -13,12 +13,13 @@ const EventDetailModal = ({
   onEdit, 
   onDelete 
 }) => {
-  const [eventDetails, setEventDetails] = useState(event);
+  const [eventDetails, setEventDetails] = useState(event || {});
   const [attendees, setAttendees] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen && event) {
+      setEventDetails(event);
       loadEventDetails();
     }
   }, [isOpen, event]);
@@ -125,7 +126,7 @@ const EventDetailModal = ({
   };
 
   const getDuration = () => {
-    if (!eventDetails.start_time || !eventDetails.end_time) return '';
+    if (!eventDetails?.start_time || !eventDetails?.end_time) return '';
     const start = new Date(eventDetails.start_time);
     const end = new Date(eventDetails.end_time);
     const durationMs = end - start;
@@ -151,6 +152,9 @@ const EventDetailModal = ({
   };
 
   if (!isOpen || !event) return null;
+
+  // Ensure eventDetails has valid data
+  const safeEventDetails = eventDetails || event || {};
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -178,13 +182,13 @@ const EventDetailModal = ({
               {/* Title and Type */}
               <div>
                 <div className="flex items-start justify-between mb-2">
-                  <h4 className="text-xl font-semibold text-gray-900">{eventDetails.title}</h4>
-                  <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getEventTypeColor(eventDetails.event_type)}`}>
-                    {eventDetails.event_type}
+                  <h4 className="text-xl font-semibold text-gray-900">{safeEventDetails?.title || 'Untitled Event'}</h4>
+                  <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getEventTypeColor(safeEventDetails?.event_type)}`}>
+                    {safeEventDetails?.event_type || 'event'}
                   </span>
                 </div>
-                {eventDetails.description && (
-                  <p className="text-gray-600">{eventDetails.description}</p>
+                {safeEventDetails?.description && (
+                  <p className="text-gray-600">{safeEventDetails.description}</p>
                 )}
               </div>
 
@@ -194,32 +198,32 @@ const EventDetailModal = ({
                   <div className="flex items-center text-sm">
                     <Calendar size={16} className="text-gray-400 mr-2" />
                     <span className="text-gray-500 mr-2">Date:</span>
-                    <span className="text-gray-900">{formatDate(eventDetails.start_time)}</span>
+                    <span className="text-gray-900">{formatDate(safeEventDetails?.start_time)}</span>
                   </div>
                   
                   <div className="flex items-center text-sm">
                     <Clock size={16} className="text-gray-400 mr-2" />
                     <span className="text-gray-500 mr-2">Time:</span>
                     <span className="text-gray-900">
-                      {formatTime(eventDetails.start_time)} - {formatTime(eventDetails.end_time)}
+                      {formatTime(safeEventDetails?.start_time)} - {formatTime(safeEventDetails?.end_time)}
                       {getDuration() && (
                         <span className="text-gray-500 ml-2">({getDuration()})</span>
                       )}
                     </span>
                   </div>
 
-                  {eventDetails.location && (
+                  {safeEventDetails?.location && (
                     <div className="flex items-center text-sm">
                       <MapPin size={16} className="text-gray-400 mr-2" />
                       <span className="text-gray-500 mr-2">Location:</span>
-                      <span className="text-gray-900">{eventDetails.location}</span>
+                      <span className="text-gray-900">{safeEventDetails.location}</span>
                     </div>
                   )}
 
                   <div className="flex items-center text-sm">
                     <Clock size={16} className="text-gray-400 mr-2" />
                     <span className="text-gray-500 mr-2">Created:</span>
-                    <span className="text-gray-900">{formatDateTime(eventDetails.created_at)}</span>
+                    <span className="text-gray-900">{formatDateTime(safeEventDetails?.created_at)}</span>
                   </div>
                 </div>
               </div>

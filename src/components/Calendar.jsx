@@ -144,7 +144,8 @@ const Calendar = ({ events = [], onDateSelect, onEventClick, selectedDate = new 
       meeting: 'bg-blue-500',
       appointment: 'bg-green-500',
       deadline: 'bg-red-500',
-      reminder: 'bg-yellow-500'
+      reminder: 'bg-yellow-500',
+      task: 'bg-purple-500' // Add task color
     };
     return colors[eventType] || 'bg-gray-500';
   };
@@ -495,6 +496,10 @@ const Calendar = ({ events = [], onDateSelect, onEventClick, selectedDate = new 
             <div className="flex items-center space-x-1">
               <div className="w-3 h-3 bg-yellow-500 rounded"></div>
               <span className="text-gray-600">Reminder</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <div className="w-3 h-3 bg-purple-500 rounded"></div>
+              <span className="text-gray-600">Task</span>
             </div>
           </div>
         </div>

@@ -25,6 +25,34 @@ const CalendarTaskManagement = () => {
   const [showEventForm, setShowEventForm] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
 
+  // Combine tasks and events for calendar display
+  const calendarItems = React.useMemo(() => {
+    // Convert tasks to event format for calendar display
+    const taskEvents = tasks
+      .filter(task => task.start_time && task.end_time) // Only show tasks with time slots
+      .map(task => ({
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        start_time: task.start_time,
+        end_time: task.end_time,
+        event_type: 'task', // Mark as task for different styling
+        location: null,
+        created_at: task.created_at,
+        _sourceType: 'task', // Internal marker
+        _originalData: task
+      }));
+
+    // Calendar events already in correct format
+    const events = calendarEvents.map(event => ({
+      ...event,
+      _sourceType: 'event',
+      _originalData: event
+    }));
+
+    return [...taskEvents, ...events];
+  }, [tasks, calendarEvents]);
+
   // Document deadlines
   const [documentDeadlines, setDocumentDeadlines] = useState([]);
   
@@ -841,7 +869,7 @@ const CalendarTaskManagement = () => {
             </div>
             <div className="h-full">
               <Calendar 
-                events={calendarEvents} 
+                events={calendarItems} 
                 onDateSelect={handleDateSelect} 
                 onEventClick={handleEventClick}
                 selectedDate={selectedDate}

@@ -265,13 +265,24 @@ class CalendarTaskService {
   static async getTaskAssignees(taskId) {
     try {
       const { data, error } = await supabase
-        .from('task_assignments_with_users')
-        .select('*')
-        .eq('task_id', taskId)
-        .order('assigned_at');
+        .from('task_assignments')
+        .select(`
+          *,
+          user:user_id(id, email, full_name, phone, role)
+        `)
+        .eq('task_id', taskId);
 
       if (error) throw error;
-      return data || [];
+      
+      // Map to expected format
+      return (data || []).map(assignment => ({
+        id: assignment.user?.id,
+        full_name: assignment.user?.full_name,
+        email: assignment.user?.email,
+        phone: assignment.user?.phone,
+        role: assignment.role,
+        assigned_at: assignment.assigned_at
+      }));
     } catch (error) {
       console.error('Error fetching task assignees:', error);
       return [];
@@ -571,13 +582,26 @@ class CalendarTaskService {
   static async getEventAttendees(eventId) {
     try {
       const { data, error } = await supabase
-        .from('event_attendees_with_users')
-        .select('*')
-        .eq('event_id', eventId)
-        .order('invited_at');
+        .from('event_attendees')
+        .select(`
+          *,
+          user:user_id(id, email, full_name, phone, role)
+        `)
+        .eq('event_id', eventId);
 
       if (error) throw error;
-      return data || [];
+      
+      // Map to expected format
+      return (data || []).map(attendee => ({
+        id: attendee.user?.id,
+        full_name: attendee.user?.full_name,
+        email: attendee.user?.email,
+        phone: attendee.user?.phone,
+        role: attendee.role,
+        response_status: attendee.response_status || 'pending',
+        invited_at: attendee.invited_at,
+        response_at: attendee.response_at
+      }));
     } catch (error) {
       console.error('Error fetching event attendees:', error);
       return [];

@@ -360,6 +360,40 @@ const CalendarTaskManagement = () => {
     }
   };
 
+  // Utility function to validate and sanitize task data
+  const validateTask = (task) => {
+    if (!task || typeof task !== 'object') return null;
+    
+    return {
+      id: task.id || '',
+      title: task.title || 'Untitled Task',
+      description: task.description || '',
+      task_type: task.task_type || 'general',
+      priority: task.priority || 'medium',
+      status: task.status || 'pending',
+      due_date: task.due_date || null,
+      created_at: task.created_at || new Date().toISOString(),
+      client_id: task.client_id || null,
+      assigned_to: task.assigned_to || null
+    };
+  };
+
+  // Utility function to validate and sanitize deadline data
+  const validateDeadline = (deadline) => {
+    if (!deadline || typeof deadline !== 'object') return null;
+    
+    return {
+      id: deadline.id || '',
+      document_type: deadline.document_type || 'unknown',
+      deadline_date: deadline.deadline_date || new Date().toISOString().split('T')[0],
+      description: deadline.description || 'No description',
+      status: deadline.status || 'pending',
+      priority: deadline.priority || 'medium',
+      created_at: deadline.created_at || new Date().toISOString(),
+      client_id: deadline.client_id || null
+    };
+  };
+
   const getPriorityBadgeClasses = (priority) => {
     try {
       const config = CalendarTaskService.getTaskPriorityConfig();
@@ -606,7 +640,12 @@ const CalendarTaskManagement = () => {
                     <p className="text-gray-500 text-center py-4">No tasks found</p>
                   ) : (
                     <div className="space-y-4">
-                      {tasks.filter(task => task && task.id).slice(0, 5).map((task) => (
+                      {tasks
+                        .filter(task => task && task.id)
+                        .slice(0, 5)
+                        .map(task => validateTask(task))
+                        .filter(task => task)
+                        .map((task) => (
                         <div 
                           key={task.id} 
                           className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer"
@@ -657,7 +696,12 @@ const CalendarTaskManagement = () => {
                     <p className="text-gray-500 text-center py-4">No upcoming deadlines</p>
                   ) : (
                     <div className="space-y-4">
-                      {documentDeadlines.filter(deadline => deadline && deadline.id).slice(0, 5).map((deadline) => (
+                      {documentDeadlines
+                        .filter(deadline => deadline && deadline.id)
+                        .slice(0, 5)
+                        .map(deadline => validateDeadline(deadline))
+                        .filter(deadline => deadline)
+                        .map((deadline) => (
                         <div key={deadline.id} className={`p-3 border rounded-lg ${
                           CalendarTaskService.isOverdue(deadline.deadline_date) ? 'border-red-200 bg-red-50' : 'border-gray-200'
                         }`}>
@@ -703,7 +747,11 @@ const CalendarTaskManagement = () => {
             <div className="p-6">
               <p className="text-gray-600 mb-4">Full task management interface will be implemented here.</p>
               <div className="space-y-4">
-                {tasks.filter(task => task && task.id).map((task) => (
+                {tasks
+                  .filter(task => task && task.id)
+                  .map(task => validateTask(task))
+                  .filter(task => task)
+                  .map((task) => (
                   <div 
                     key={task.id} 
                     className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer"

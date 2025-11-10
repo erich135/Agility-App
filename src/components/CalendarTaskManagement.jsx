@@ -53,6 +53,70 @@ const CalendarTaskManagement = () => {
     try {
       setLoading(true);
       
+      // Temporarily use mock data instead of API calls
+      console.log('Loading dashboard with mock data...');
+      
+      // Mock dashboard stats
+      setDashboardStats({
+        tasks: { pending: 3, overdue: 1 },
+        deadlines: { thisWeek: 2 },
+        calendar: { todayEvents: 1 }
+      });
+
+      // Mock tasks
+      setTasks([
+        {
+          id: '1',
+          title: 'Review Client Onboarding Process',
+          description: 'Review and update workflow',
+          task_type: 'general',
+          priority: 'medium',
+          status: 'pending',
+          due_date: '2025-11-15T10:00:00Z',
+          created_at: '2025-11-10T08:00:00Z'
+        },
+        {
+          id: '2', 
+          title: 'CIPC Filing Deadline',
+          description: 'File annual returns',
+          task_type: 'filing_deadline',
+          priority: 'urgent',
+          status: 'in_progress',
+          due_date: '2025-11-12T17:00:00Z',
+          created_at: '2025-11-09T09:00:00Z'
+        }
+      ]);
+
+      // Mock deadlines
+      setDocumentDeadlines([
+        {
+          id: '1',
+          document_type: 'vat_return',
+          deadline_date: '2025-11-17',
+          description: 'VAT Return Filing Due',
+          status: 'pending',
+          priority: 'high',
+          created_at: '2025-11-10T08:00:00Z'
+        }
+      ]);
+
+      // Mock calendar events
+      setCalendarEvents([
+        {
+          id: '1',
+          title: 'Client Consultation',
+          description: 'Meeting with ABC Corp',
+          event_type: 'appointment',
+          start_time: '2025-11-11T09:00:00Z',
+          end_time: '2025-11-11T10:00:00Z',
+          location: 'Conference Room A',
+          created_at: '2025-11-10T08:00:00Z'
+        }
+      ]);
+
+      console.log('Mock data loaded successfully');
+      
+      /* ORIGINAL API CALLS - COMMENTED OUT UNTIL DB IS FIXED
       // Load dashboard stats
       const statsResult = await CalendarTaskService.getDashboardStats(user?.id);
       if (statsResult.success) {
@@ -83,8 +147,10 @@ const CalendarTaskManagement = () => {
       if (eventsResult.success) {
         setCalendarEvents(eventsResult.events);
       }
+      */
 
     } catch (err) {
+      console.error('Error loading dashboard data:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -127,6 +193,41 @@ const CalendarTaskManagement = () => {
   const handleCreateTask = async (e) => {
     e.preventDefault();
     try {
+      // Temporarily use mock success instead of API call
+      console.log('Creating task with mock success...', taskFormData);
+      
+      // Mock successful task creation
+      const mockTask = {
+        id: Date.now().toString(),
+        title: taskFormData.title,
+        description: taskFormData.description,
+        task_type: taskFormData.taskType,
+        priority: taskFormData.priority,
+        due_date: taskFormData.dueDate,
+        status: 'pending',
+        created_at: new Date().toISOString()
+      };
+
+      setTasks(prev => [mockTask, ...prev]);
+      setTaskFormData({
+        title: '',
+        description: '',
+        taskType: 'general',
+        priority: 'medium',
+        dueDate: '',
+        clientId: ''
+      });
+      setShowTaskForm(false);
+      
+      // Update dashboard stats
+      setDashboardStats(prev => ({
+        ...prev,
+        tasks: { ...prev.tasks, pending: (prev.tasks?.pending || 0) + 1 }
+      }));
+      
+      console.log('Mock task created successfully');
+
+      /* ORIGINAL API CALL - COMMENTED OUT
       const result = await CalendarTaskService.createTask({
         title: taskFormData.title,
         description: taskFormData.description,
@@ -150,6 +251,7 @@ const CalendarTaskManagement = () => {
         setShowTaskForm(false);
         await loadDashboardData(); // Refresh dashboard stats
       }
+      */
     } catch (err) {
       console.error('Error creating task:', err);
     }

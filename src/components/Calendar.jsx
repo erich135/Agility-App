@@ -255,7 +255,7 @@ const Calendar = ({ events = [], onDateSelect, onEventClick, selectedDate = new 
                             text-xs px-1 py-0.5 rounded text-white truncate cursor-pointer hover:opacity-80 transition-opacity
                             ${getEventColor(event.event_type)}
                           `}
-                          title={`${formatTime(event.start_time)} - ${event.title}`}
+                          title={`${formatTime(event?.start_time)} - ${event?.title || 'Untitled Event'}`}
                           onClick={(e) => {
                             e.stopPropagation();
                             if (onEventClick) {
@@ -263,7 +263,7 @@ const Calendar = ({ events = [], onDateSelect, onEventClick, selectedDate = new 
                             }
                           }}
                         >
-                          {formatTime(event.start_time)} {event.title}
+                          {formatTime(event?.start_time)} {event?.title || 'Untitled Event'}
                         </div>
                       ))}
                       {dayEvents.length > 3 && (
@@ -359,7 +359,7 @@ const Calendar = ({ events = [], onDateSelect, onEventClick, selectedDate = new 
                               text-xs p-1 mb-1 rounded text-white truncate cursor-pointer hover:opacity-80
                               ${getEventColor(event.event_type)}
                             `}
-                            title={`${formatTime(event.start_time)} - ${event.title}`}
+                            title={`${formatTime(event?.start_time)} - ${event?.title || 'Untitled Event'}`}
                             onClick={(e) => {
                               e.stopPropagation();
                               if (onEventClick) {
@@ -367,7 +367,7 @@ const Calendar = ({ events = [], onDateSelect, onEventClick, selectedDate = new 
                               }
                             }}
                           >
-                            {event.title}
+                            {event?.title || 'Untitled Event'}
                           </div>
                         ))}
                       </div>
@@ -443,11 +443,11 @@ const Calendar = ({ events = [], onDateSelect, onEventClick, selectedDate = new 
                             }
                           }}
                         >
-                          <div className="font-medium">{event.title}</div>
+                          <div className="font-medium">{event?.title || 'Untitled Event'}</div>
                           <div className="text-xs opacity-90 mt-1">
-                            {formatTime(event.start_time)} - {formatTime(event.end_time)}
+                            {formatTime(event?.start_time)} - {formatTime(event?.end_time)}
                           </div>
-                          {event.location && (
+                          {event?.location && (
                             <div className="text-xs opacity-80 mt-1">📍 {event.location}</div>
                           )}
                           {event.description && (

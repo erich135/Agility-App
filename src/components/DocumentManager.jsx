@@ -450,7 +450,7 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl h-[90vh] flex flex-col">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl h-[85vh] flex flex-col">
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex-shrink-0">
           <div className="flex items-center justify-between">
@@ -473,14 +473,17 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
           </div>
         </div>
 
-        {/* Content - With proper scrolling */}
+        {/* Content - Scrollable area */}
         <div 
-          className="flex-1 overflow-y-scroll px-6 py-4"
+          className="flex-1 overflow-y-auto px-6 py-4"
           style={{ 
-            height: 'calc(90vh - 160px)',
-            overflowY: 'scroll'
+            minHeight: 0,
+            maxHeight: 'calc(85vh - 200px)',
+            height: 'calc(85vh - 200px)' /* Force fixed height for scrolling */
           }}
         >
+          {/* Content wrapper with minimum height for scrolling */}
+          <div style={{ minHeight: '800px' }}>
           {/* Error Display */}
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
@@ -854,6 +857,7 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
             )}
           </div>
         </div>
+        </div> {/* Close content wrapper */}
 
         {/* Footer - Fixed at bottom */}
         <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex-shrink-0">

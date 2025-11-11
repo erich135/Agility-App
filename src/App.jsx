@@ -10,6 +10,7 @@ import AIInsights from './components/AIInsights';
 import LoginPage from './components/LoginPage';
 import DashboardAnalytics from './components/DashboardAnalytics';
 import ClientPortal from './components/ClientPortal';
+import ChatWidget from './components/ChatWidget';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -35,75 +36,78 @@ const ProtectedRoute = ({ children }) => {
 
 // Main App Content
 const AppContent = () => {
-  const { login } = useAuth();
+  const { login, isLoggedIn } = useAuth();
   
   return (
-    <Routes>
-      <Route 
-        path="/login" 
-        element={<LoginPage onLoginSuccess={login} />} 
-      />
-      <Route 
-        path="/" 
-        element={
-          <ProtectedRoute>
-            <HomePage />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/cipc" 
-        element={
-          <ProtectedRoute>
-            <CIPCManagement />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/customers" 
-        element={
-          <ProtectedRoute>
-            <CustomerManagement />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/management" 
-        element={
-          <ProtectedRoute>
-            <SystemManagement />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/calendar" 
-        element={
-          <ProtectedRoute>
-            <CalendarTaskManagement />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/ai-insights" 
-        element={
-          <ProtectedRoute>
-            <AIInsights />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/dashboard" 
-        element={
-          <ProtectedRoute>
-            <DashboardAnalytics />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/client-portal" 
-        element={<ClientPortal />} 
-      />
-    </Routes>
+    <>
+      <Routes>
+        <Route 
+          path="/login" 
+          element={<LoginPage onLoginSuccess={login} />} 
+        />
+        <Route 
+          path="/" 
+          element={
+            <ProtectedRoute>
+              <HomePage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/cipc" 
+          element={
+            <ProtectedRoute>
+              <CIPCManagement />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/customers" 
+          element={
+            <ProtectedRoute>
+              <CustomerManagement />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/management" 
+          element={
+            <ProtectedRoute>
+              <SystemManagement />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/calendar" 
+          element={
+            <ProtectedRoute>
+              <CalendarTaskManagement />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/ai-insights" 
+          element={
+            <ProtectedRoute>
+              <AIInsights />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/dashboard" 
+          element={
+            <ProtectedRoute>
+              <DashboardAnalytics />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/client-portal" 
+          element={<ClientPortal />} 
+        />
+      </Routes>
+      {isLoggedIn() && <ChatWidget />}
+    </>
   );
 };
 

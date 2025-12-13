@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import supabase from '../lib/SupabaseClient';
-import twilioService from '../services/TwilioService';
+import emailOTPService from '../services/EmailOTPService';
 import ActivityLogger from '../lib/ActivityLogger';
 
 const LoginPage = ({ onLoginSuccess }) => {
   const [step, setStep] = useState('email'); // 'email' or 'otp'
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -24,7 +23,7 @@ const LoginPage = ({ onLoginSuccess }) => {
       // Check if user exists in database
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('id, email, phone, role, is_active, full_name')
+        .select('id, email, role, is_active, full_name')
         .eq('email', email.toLowerCase().trim())
         .single();
 
@@ -45,12 +44,6 @@ const LoginPage = ({ onLoginSuccess }) => {
       if (!userData.is_active) {
         throw new Error('Your account is inactive. Please contact your administrator.');
       }
-
-      if (!userData.phone) {
-        throw new Error('No phone number on file. Please contact your administrator.');
-      }
-
-      setPhone(userData.phone);
 
       // Generate 6-digit OTP
       const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -81,30 +74,31 @@ const LoginPage = ({ onLoginSuccess }) => {
       await ActivityLogger.logOTPGenerated(
         userData.id,
         userData.full_name || userData.email,
-        userData.phone,
+        userData.email,
         { email: userData.email, otp_length: otpCode.length }
       );
 
       // Always show OTP in console for development/testing
-      console.log(`🔐 LOGIN OTP for ${userData.phone}: ${otpCode}`);
+      console.log(`🔐 LOGIN OTP for ${userData.email}: ${otpCode}`);
 
-      // Try to send SMS
+      // Try to send Email
       try {
-        console.log('📱 Attempting to send SMS...');
-        const smsResult = await twilioService.sendOTP(userData.phone, otpCode);
+        console.log('📧 Attempting to send email OTP...');
+        const emailResult = await emailOTPService.sendOTP(userData.email, otpCode);
         
-        if (smsResult.success) {
-          console.log('✅ SMS sent successfully');
-          setError(`OTP sent to ${userData.phone.replace(/(\d{3})\d{4}(\d{3})/, '$1****$2')}. Check console for development OTP.`);
+        if (emailResult.success) {
+          console.log('✅ Email sent successfully');
+          const maskedEmail = userData.email.replace(/(.)(.*)(@.*)/, '$1***$3');
+          setError(`OTP sent to ${maskedEmail}. Check console for development OTP.`);
         } else {
-          console.log('❌ SMS failed, using fallback');
+          console.log('❌ Email failed, using fallback');
           console.log(`🚨 IMPORTANT: Your OTP is ${otpCode} - Use this to login!`);
-          setError(`SMS delivery failed. Your OTP is: ${otpCode}`);
+          setError(`Email delivery failed. Your OTP is: ${otpCode}`);
         }
-      } catch (smsError) {
-        console.error('SMS service error:', smsError);
+      } catch (emailError) {
+        console.error('Email service error:', emailError);
         console.log(`🚨 IMPORTANT: Your OTP is ${otpCode} - Use this to login!`);
-        setError(`SMS service unavailable. Your OTP is: ${otpCode}`);
+        setError(`Email service unavailable. Your OTP is: ${otpCode}`);
       }
       
       setStep('otp');

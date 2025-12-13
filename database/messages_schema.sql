@@ -23,24 +23,21 @@ DROP POLICY IF EXISTS "Users can view their own messages" ON messages;
 DROP POLICY IF EXISTS "Users can send messages" ON messages;
 DROP POLICY IF EXISTS "Users can update their received messages" ON messages;
 
--- Create RLS policies
--- Users can view messages they sent or received
+-- Create permissive RLS policies (since using custom auth, not Supabase Auth)
+-- Users can view all messages
 CREATE POLICY "Users can view their own messages" ON messages
     FOR SELECT
-    USING (
-        auth.uid() = sender_id OR 
-        auth.uid() = receiver_id
-    );
+    USING (true);
 
 -- Users can send messages
 CREATE POLICY "Users can send messages" ON messages
     FOR INSERT
-    WITH CHECK (auth.uid() = sender_id);
+    WITH CHECK (true);
 
--- Users can update messages they received (e.g., mark as read)
+-- Users can update messages
 CREATE POLICY "Users can update their received messages" ON messages
     FOR UPDATE
-    USING (auth.uid() = receiver_id);
+    USING (true);
 
 -- Create updated_at trigger
 CREATE OR REPLACE FUNCTION update_messages_updated_at()

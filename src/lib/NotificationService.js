@@ -1,6 +1,6 @@
 // Enhanced Notification Service with Multi-channel Support
 import supabase from './SupabaseClient';
-import TwilioService from '../services/TwilioService';
+import EmailOTPService from '../services/EmailOTPService';
 
 class NotificationService {
   /**
@@ -81,12 +81,38 @@ class NotificationService {
   }
 
   /**
-   * Send SMS notification
+   * Send SMS notification (now via email)
    */
   async sendSMS(notification) {
     try {
-      const result = await TwilioService.sendSMS(
+      // Convert SMS to email notification
+      const result = await EmailOTPService.sendEmail(
         notification.recipient_contact,
+        notification.subject || 'SMS Notification',
+        notification.message
+      );
+
+      await this.updateNotificationStatus(notification.id, {
+        status: 'sent',
+        sent_at: new Date().toISOString(),
+        metadata: { provider_response: result, converted_to_email: true }
+      });
+
+      return result;
+    } catch (error) {
+      await this.markAsFailed(notification.id, error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Send Email notification
+   */
+  async sendEmail(notification) {
+    try {
+      const result = await EmailOTPService.sendEmail(
+        notification.recipient_contact,
+        notification.subject,
         notification.message
       );
 
@@ -104,53 +130,21 @@ class NotificationService {
   }
 
   /**
-   * Send Email notification
-   */
-  async sendEmail(notification) {
-    try {
-      // TODO: Integrate with email service (SendGrid, AWS SES, etc.)
-      // For now, we'll use a serverless function
-      const response = await fetch('/api/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: notification.recipient_contact,
-          subject: notification.subject,
-          body: notification.message
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to send email');
-      }
-
-      await this.updateNotificationStatus(notification.id, {
-        status: 'sent',
-        sent_at: new Date().toISOString()
-      });
-
-      return await response.json();
-    } catch (error) {
-      await this.markAsFailed(notification.id, error.message);
-      throw error;
-    }
-  }
-
-  /**
-   * Send WhatsApp notification
+   * Send WhatsApp notification (converted to email)
    */
   async sendWhatsApp(notification) {
     try {
-      // WhatsApp via Twilio
-      const result = await TwilioService.sendWhatsApp(
+      // Convert WhatsApp to email notification
+      const result = await EmailOTPService.sendEmail(
         notification.recipient_contact,
-        notification.message
+        notification.subject || 'WhatsApp Message',
+        `WhatsApp Message:\n\n${notification.message}`
       );
 
       await this.updateNotificationStatus(notification.id, {
         status: 'sent',
         sent_at: new Date().toISOString(),
-        metadata: { provider_response: result }
+        metadata: { provider_response: result, converted_to_email: true }
       });
 
       return result;

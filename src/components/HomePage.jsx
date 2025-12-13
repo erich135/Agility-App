@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../App';
 import NotificationCenter from './NotificationCenter';
 
 const HomePage = () => {
@@ -198,13 +198,16 @@ const HomePage = () => {
             </div>
           </Link>
 
-          {/* AI Insights Card */}
+          {/* Timesheet & Billing Card - NEW */}
           <Link
-            to="/ai-insights"
-            className="group block bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+            to="/timesheet"
+            className="group block bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 ring-2 ring-green-400 ring-offset-2"
           >
-            <div className="p-8">
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center mb-6 group-hover:from-purple-600 group-hover:to-pink-600 transition-colors">
+            <div className="p-8 relative">
+              <div className="absolute top-4 right-4 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">
+                NEW
+              </div>
+              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center mb-6 group-hover:from-green-600 group-hover:to-emerald-700 transition-colors">
                 <svg 
                   className="w-8 h-8 text-white" 
                   fill="none" 
@@ -215,16 +218,55 @@ const HomePage = () => {
                     strokeLinecap="round" 
                     strokeLinejoin="round" 
                     strokeWidth={2} 
-                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" 
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" 
                   />
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-3">AI Insights</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-3">Timesheet & Billing</h2>
               <p className="text-gray-600 leading-relaxed">
-                Smart document processing with OCR, automatic classification, and intelligent business insights.
+                Track billable hours with timer or manual entry. Project management, invoicing workflow, and comprehensive reports.
               </p>
-              <div className="mt-6 flex items-center text-purple-500 group-hover:text-purple-600">
-                <span className="font-medium">Explore AI Features</span>
+              <div className="mt-6 flex items-center text-green-500 group-hover:text-green-600">
+                <span className="font-medium">Track Time</span>
+                <svg 
+                  className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+              </div>
+            </div>
+          </Link>
+
+          {/* Financial Statements Card */}
+          <Link
+            to="/financial-statements"
+            className="group block bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+          >
+            <div className="p-8">
+              <div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-green-500 rounded-lg flex items-center justify-center mb-6 group-hover:from-teal-600 group-hover:to-green-600 transition-colors">
+                <svg 
+                  className="w-8 h-8 text-white" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" 
+                  />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-3">Financial Statements</h2>
+              <p className="text-gray-600 leading-relaxed">
+                Generate South African compliant annual financial statements from trial balance data. IFRS for SMEs compliance.
+              </p>
+              <div className="mt-6 flex items-center text-teal-500 group-hover:text-teal-600">
+                <span className="font-medium">Generate Statements</span>
                 <svg 
                   className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" 
                   fill="none" 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import supabase from '../lib/SupabaseClient';
 import ActivityLogger from '../lib/ActivityLogger';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../App';
 
 const CustomerForm = ({ customerId, onClose, onSave }) => {
   const { user } = useAuth();
@@ -13,7 +13,7 @@ const CustomerForm = ({ customerId, onClose, onSave }) => {
     client_name: '',
     registration_number: '',
     
-    // New customer management fields
+    // New customer management fields bte Erich's ass 
     company_income_tax_number: '',
     company_vat_number: '',
     company_paye_number: '',

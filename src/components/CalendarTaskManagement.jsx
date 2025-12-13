@@ -4,7 +4,7 @@ import Calendar from './Calendar';
 import UserSelector from './ui/UserSelector';
 import TaskDetailModal from './ui/TaskDetailModal';
 import EventDetailModal from './ui/EventDetailModal';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../App';
 
 const CalendarTaskManagement = () => {
   const { user } = useAuth();

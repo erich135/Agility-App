@@ -1,123 +1,83 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
 import HomePage from './components/HomePage';
 import CIPCManagement from './components/CIPCManagement';
 import CustomerManagement from './components/CustomerManagement';
 import SystemManagement from './components/SystemManagement';
 import CalendarTaskManagement from './components/CalendarTaskManagement';
-import AIInsights from './components/AIInsights';
-import LoginPage from './components/LoginPage';
 import DashboardAnalytics from './components/DashboardAnalytics';
 import ClientPortal from './components/ClientPortal';
-import ChatWidget from './components/ChatWidget';
+import FinancialStatements from './components/FinancialStatements';
+import Timesheet from './components/Timesheet';
 
-// Protected Route Component
-const ProtectedRoute = ({ children }) => {
-  const { isLoggedIn, loading, login } = useAuth();
-  
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-  
-  if (!isLoggedIn()) {
-    return <LoginPage onLoginSuccess={login} />;
-  }
-  
-  return children;
+// TODO: Re-enable authentication later using lead-management-system approach
+// import { AuthProvider, useAuth } from './contexts/AuthContext';
+// import LoginPage from './components/LoginPage';
+// import ChatWidget from './components/ChatWidget';
+
+// Mock user for development - uses fixed UUID that matches database consultant
+const mockUser = {
+  id: 'a0000000-0000-0000-0000-000000000001',  // Must match consultant in database
+  email: 'dev@agility.co.za',
+  full_name: 'Development User',
+  role: 'admin'
 };
 
-// Main App Content
-const AppContent = () => {
-  const { login, isLoggedIn } = useAuth();
-  
+// Simple wrapper that provides mock user context
+const DevAuthProvider = ({ children }) => {
+  const contextValue = {
+    user: mockUser,
+    isLoggedIn: () => true,
+    isAdmin: () => true,
+    login: () => {},
+    logout: () => {},
+    loading: false
+  };
+
   return (
-    <>
-      <Routes>
-        <Route 
-          path="/login" 
-          element={<LoginPage onLoginSuccess={login} />} 
-        />
-        <Route 
-          path="/" 
-          element={
-            <ProtectedRoute>
-              <HomePage />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/cipc" 
-          element={
-            <ProtectedRoute>
-              <CIPCManagement />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/customers" 
-          element={
-            <ProtectedRoute>
-              <CustomerManagement />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/management" 
-          element={
-            <ProtectedRoute>
-              <SystemManagement />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/calendar" 
-          element={
-            <ProtectedRoute>
-              <CalendarTaskManagement />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/ai-insights" 
-          element={
-            <ProtectedRoute>
-              <AIInsights />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/dashboard" 
-          element={
-            <ProtectedRoute>
-              <DashboardAnalytics />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/client-portal" 
-          element={<ClientPortal />} 
-        />
-      </Routes>
-      {isLoggedIn() && <ChatWidget />}
-    </>
+    <DevAuthContext.Provider value={contextValue}>
+      {children}
+    </DevAuthContext.Provider>
   );
+};
+
+// Create a simple context for development
+const DevAuthContext = React.createContext(null);
+
+// Export hook for components that need user info
+export const useAuth = () => {
+  const context = React.useContext(DevAuthContext);
+  if (!context) {
+    // Return mock values if not in provider
+    return {
+      user: mockUser,
+      isLoggedIn: () => true,
+      isAdmin: () => true,
+      login: () => {},
+      logout: () => {},
+      loading: false
+    };
+  }
+  return context;
 };
 
 function App() {
   return (
-    <AuthProvider>
+    <DevAuthProvider>
       <Router>
-        <AppContent />
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/cipc" element={<CIPCManagement />} />
+          <Route path="/customers" element={<CustomerManagement />} />
+          <Route path="/management" element={<SystemManagement />} />
+          <Route path="/calendar" element={<CalendarTaskManagement />} />
+          <Route path="/timesheet" element={<Timesheet />} />
+          <Route path="/dashboard" element={<DashboardAnalytics />} />
+          <Route path="/client-portal" element={<ClientPortal />} />
+          <Route path="/financial-statements" element={<FinancialStatements />} />
+        </Routes>
       </Router>
-    </AuthProvider>
+    </DevAuthProvider>
   );
 }
 

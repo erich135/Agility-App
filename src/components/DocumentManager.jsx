@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import supabase from '../lib/SupabaseClient';
 import ActivityLogger from '../lib/ActivityLogger';
 import SmartDocumentUpload from './SmartDocumentUpload';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../App';
 
 const DocumentManager = ({ customerId, customerName, onClose }) => {
   const { user } = useAuth();

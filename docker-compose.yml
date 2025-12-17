@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  supabase:
+    image: supabase/supabase:latest
+    ports:
+      - "3000:3000"  # Studio (GUI)
+      - "5433:5433"  # Postgres API
+      - "8000:8000"  # Auth
+    environment:
+      POSTGRES_PASSWORD: postgres
+      SUPABASE_JWT_SECRET: your-super-secret-jwt-token-change-me-in-production
+      SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1cGFiYXNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NzQ0MDI0MDAsImV4cCI6MTY5MDk3NDQwMH0.rw_8k4Jm-_Z_3Q1Z_Z_Z_Z_Z_Z_Z_Z_Z_Z_Z_Z_Z_Z_Z_Z
+      SUPABASE_SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1cGFiYXNlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTY3NDQwMjQwMCwiZXhwIjoxNjkwOTc0NDAwfQ.rw_8k4Jm-_Z_3Q1Z_Z_Z_Z_Z_Z_Z_Z_Z_Z_Z_Z_Z_Z_Z_Z
+      SUPABASE_URL: http://localhost:3000
+      SUPABASE_PUBLIC_URL: http://localhost:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./database:/docker-entrypoint-initdb.d
+
+volumes:
+  postgres_data:

@@ -279,6 +279,162 @@ const HomePage = () => {
             </div>
           </Link>
 
+          {/* My Timesheets Card */}
+          <Link
+            to="/my-timesheets"
+            className="group block bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+          >
+            <div className="p-8">
+              <div className="w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center mb-6 group-hover:from-amber-600 group-hover:to-orange-700 transition-colors">
+                <svg 
+                  className="w-8 h-8 text-white" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" 
+                  />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-3">My Timesheets</h2>
+              <p className="text-gray-600 leading-relaxed">
+                View, edit, and manage your personal time entries. Track hours logged and billable status.
+              </p>
+              <div className="mt-6 flex items-center text-amber-500 group-hover:text-amber-600">
+                <span className="font-medium">View Entries</span>
+                <svg 
+                  className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+              </div>
+            </div>
+          </Link>
+
+          {/* Project Management Card */}
+          <Link
+            to="/projects"
+            className="group block bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+          >
+            <div className="p-8">
+              <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center mb-6 group-hover:from-indigo-600 group-hover:to-purple-700 transition-colors">
+                <svg 
+                  className="w-8 h-8 text-white" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M12 6V4m6 2a9 9 0 11-18 0 9 9 0 0118 0zM12 9v3m0 0v3" 
+                  />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-3">Projects</h2>
+              <p className="text-gray-600 leading-relaxed">
+                Create and manage client projects. Track job types, billing dates, and project status.
+              </p>
+              <div className="mt-6 flex items-center text-indigo-500 group-hover:text-indigo-600">
+                <span className="font-medium">Manage Projects</span>
+                <svg 
+                  className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+              </div>
+            </div>
+          </Link>
+
+          {/* Billing Dashboard Card */}
+          <Link
+            to="/billing"
+            className="group block bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+          >
+            <div className="p-8">
+              <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg flex items-center justify-center mb-6 group-hover:from-emerald-600 group-hover:to-teal-700 transition-colors">
+                <svg 
+                  className="w-8 h-8 text-white" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
+                  />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-3">Billing Dashboard</h2>
+              <p className="text-gray-600 leading-relaxed">
+                Track completed projects, billable hours, and manage invoice creation for the accounts team.
+              </p>
+              <div className="mt-6 flex items-center text-emerald-500 group-hover:text-emerald-600">
+                <span className="font-medium">View Dashboard</span>
+                <svg 
+                  className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+              </div>
+            </div>
+          </Link>
+
+          {/* Billing Reports Card */}
+          <Link
+            to="/reports"
+            className="group block bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+          >
+            <div className="p-8">
+              <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-rose-600 rounded-lg flex items-center justify-center mb-6 group-hover:from-pink-600 group-hover:to-rose-700 transition-colors">
+                <svg 
+                  className="w-8 h-8 text-white" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" 
+                  />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-3">Billing Reports</h2>
+              <p className="text-gray-600 leading-relaxed">
+                Comprehensive billing analytics with charts, filters, and export capabilities. CSV downloads available.
+              </p>
+              <div className="mt-6 flex items-center text-pink-500 group-hover:text-pink-600">
+                <span className="font-medium">View Reports</span>
+                <svg 
+                  className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+              </div>
+            </div>
+          </Link>
+
           {/* Management Card - Admin Only */}
           {isAdmin() && (
             <Link 

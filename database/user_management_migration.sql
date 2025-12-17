@@ -13,6 +13,9 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS password_set_at TIMESTAMPTZ;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS created_by UUID;
 
+-- Make full_name nullable (we use first_name/last_name now)
+ALTER TABLE users ALTER COLUMN full_name DROP NOT NULL;
+
 -- Update role column to have proper check constraint (if needed)
 -- First drop existing constraint if any
 ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;

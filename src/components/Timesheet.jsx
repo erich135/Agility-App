@@ -369,7 +369,7 @@ const StartTimerModal = ({ isOpen, onClose, clients, onStart }) => {
               value={selectedProject}
               onChange={(e) => setSelectedProject(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              disabled={!selectedClient}
+              disabled={!selectedClient || projects.length === 0}
             >
               <option value="">Select project...</option>
               {projects.map(project => (
@@ -378,6 +378,9 @@ const StartTimerModal = ({ isOpen, onClose, clients, onStart }) => {
                 </option>
               ))}
             </select>
+            {selectedClient && projects.length === 0 && (
+              <p className="text-sm text-orange-600 mt-1">No active projects for this client. Create a project first.</p>
+            )}
           </div>
 
           <div>
@@ -778,6 +781,10 @@ const Timesheet = () => {
 
   const handleStartTimer = async (projectId, description) => {
     if (!consultant) return;
+    if (!projectId) {
+      setError('Please select a valid project');
+      return;
+    }
     
     const { data, error } = await TimeEntryService.startTimer(
       projectId, 
@@ -786,7 +793,7 @@ const Timesheet = () => {
     );
     
     if (error) {
-      setError('Failed to start timer');
+      setError('Failed to start timer. The project may have been deleted.');
       return;
     }
     

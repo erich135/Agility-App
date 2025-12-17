@@ -216,227 +216,226 @@ export default function UserManagement() {
         >
           <UserPlus className="w-4 h-4" />
           Invite User
-          </button>
-        </div>
+        </button>
+      </div>
 
-        {/* Invite Form Modal */}
-        {showInviteForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full">
-              <h2 className="text-2xl font-bold mb-4">Invite New User</h2>
+      {/* Invite Form Modal */}
+      {showInviteForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h2 className="text-2xl font-bold mb-4">Invite New User</h2>
 
-              <form onSubmit={handleInviteUser}>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      First Name *
-                    </label>
-                    <input
-                      type="text"
-                      value={inviteForm.first_name}
-                      onChange={(e) => setInviteForm({...inviteForm, first_name: e.target.value})}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Last Name *
-                    </label>
-                    <input
-                      type="text"
-                      value={inviteForm.last_name}
-                      onChange={(e) => setInviteForm({...inviteForm, last_name: e.target.value})}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Email *
-                    </label>
-                    <input
-                      type="email"
-                      value={inviteForm.email}
-                      onChange={(e) => setInviteForm({...inviteForm, email: e.target.value})}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Role *
-                    </label>
-                    <select
-                      value={inviteForm.role}
-                      onChange={(e) => setInviteForm({...inviteForm, role: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-                    >
-                      <option value="user">User</option>
-                      <option value="consultant">Consultant</option>
-                      <option value="accounts">Accounts</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                  </div>
+            <form onSubmit={handleInviteUser}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    First Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={inviteForm.first_name}
+                    onChange={(e) => setInviteForm({...inviteForm, first_name: e.target.value})}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  />
                 </div>
 
-                <div className="flex gap-3 justify-end mt-6">
-                  <button
-                    type="button"
-                    onClick={() => setShowInviteForm(false)}
-                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                  >
-                    Send Invitation
-                  </button>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Last Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={inviteForm.last_name}
+                    onChange={(e) => setInviteForm({...inviteForm, last_name: e.target.value})}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  />
                 </div>
-              </form>
-            </div>
-          </div>
-        )}
 
-        {/* Permissions Modal */}
-        {showPermissions && selectedUser && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-            <div className="bg-white rounded-lg p-6 max-w-3xl w-full my-8">
-              <h2 className="text-2xl font-bold mb-4">
-                Manage Permissions: {selectedUser.first_name} {selectedUser.last_name}
-              </h2>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Email *
+                  </label>
+                  <input
+                    type="email"
+                    value={inviteForm.email}
+                    onChange={(e) => setInviteForm({...inviteForm, email: e.target.value})}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  />
+                </div>
 
-              <div className="space-y-6 max-h-96 overflow-y-auto">
-                {Object.entries(permissionCategories).map(([category, perms]) => (
-                  <div key={category} className="border-b pb-4">
-                    <h3 className="font-semibold text-lg mb-3 capitalize">{category}</h3>
-                    <div className="space-y-2">
-                      {perms.map(perm => {
-                        const isEnabled = selectedUser.permissions?.includes(perm.key);
-                        return (
-                          <div key={perm.key} className="flex items-center justify-between p-3 bg-gray-50 rounded">
-                            <div>
-                              <p className="font-medium text-gray-900">{perm.name}</p>
-                              <p className="text-sm text-gray-600">{perm.description}</p>
-                            </div>
-                            <button
-                              onClick={() => handleTogglePermission(perm.key, isEnabled)}
-                              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                                isEnabled
-                                  ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                                  : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                              }`}
-                            >
-                              {isEnabled ? <CheckCircle className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Role *
+                  </label>
+                  <select
+                    value={inviteForm.role}
+                    onChange={(e) => setInviteForm({...inviteForm, role: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  >
+                    <option value="user">User</option>
+                    <option value="consultant">Consultant</option>
+                    <option value="accounts">Accounts</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
               </div>
 
-              <div className="flex justify-end mt-6">
+              <div className="flex gap-3 justify-end mt-6">
                 <button
-                  onClick={() => {
-                    setShowPermissions(false);
-                    setSelectedUser(null);
-                  }}
+                  type="button"
+                  onClick={() => setShowInviteForm(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
-                  Done
+                  Send Invitation
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Permissions Modal */}
+      {showPermissions && selectedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 max-w-3xl w-full my-8">
+            <h2 className="text-2xl font-bold mb-4">
+              Manage Permissions: {selectedUser.first_name} {selectedUser.last_name}
+            </h2>
+
+            <div className="space-y-6 max-h-96 overflow-y-auto">
+              {Object.entries(permissionCategories).map(([category, perms]) => (
+                <div key={category} className="border-b pb-4">
+                  <h3 className="font-semibold text-lg mb-3 capitalize">{category}</h3>
+                  <div className="space-y-2">
+                    {perms.map(perm => {
+                      const isEnabled = selectedUser.permissions?.includes(perm.key);
+                      return (
+                        <div key={perm.key} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                          <div>
+                            <p className="font-medium text-gray-900">{perm.name}</p>
+                            <p className="text-sm text-gray-600">{perm.description}</p>
+                          </div>
+                          <button
+                            onClick={() => handleTogglePermission(perm.key, isEnabled)}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                              isEnabled
+                                ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                                : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                            }`}
+                          >
+                            {isEnabled ? <CheckCircle className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end mt-6">
+              <button
+                onClick={() => {
+                  setShowPermissions(false);
+                  setSelectedUser(null);
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Done
+              </button>
             </div>
           </div>
-        )}
-
-        {/* Users Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          {users.length === 0 ? (
-            <div className="p-12 text-center">
-              <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-600">No users yet. Invite your first user!</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">User</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Email</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Role</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Last Login</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {users.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                        {user.first_name} {user.last_name}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{user.email}</td>
-                      <td className="px-6 py-4 text-sm">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${roleColors[user.role]}`}>
-                          {user.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        {user.password_hash ? (
-                          <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
-                            Active
-                          </span>
-                        ) : (
-                          <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium flex items-center gap-1">
-                            <Mail className="w-3 h-3" />
-                            Pending
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {user.last_login_at 
-                          ? new Date(user.last_login_at).toLocaleDateString()
-                          : '-'
-                        }
-                      </td>
-                      <td className="px-6 py-4 text-sm space-x-2">
-                        <button
-                          onClick={() => handleShowPermissions(user)}
-                          className="text-blue-600 hover:text-blue-900"
-                          title="Manage Permissions"
-                        >
-                          <Shield className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleToggleActive(user.id, user.is_active)}
-                          className={user.is_active ? 'text-orange-600 hover:text-orange-900' : 'text-green-600 hover:text-green-900'}
-                          title={user.is_active ? 'Deactivate' : 'Activate'}
-                        >
-                          <Key className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteUser(user.id)}
-                          className="text-red-600 hover:text-red-900"
-                          title="Delete User"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
         </div>
+      )}
+
+      {/* Users Table */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        {users.length === 0 ? (
+          <div className="p-12 text-center">
+            <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-600">No users yet. Invite your first user!</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">User</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Role</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Last Login</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {users.map((user) => (
+                  <tr key={user.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                      {user.first_name} {user.last_name}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{user.email}</td>
+                    <td className="px-6 py-4 text-sm">
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${roleColors[user.role]}`}>
+                        {user.role}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm">
+                      {user.password_hash ? (
+                        <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                          Active
+                        </span>
+                      ) : (
+                        <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium flex items-center gap-1">
+                          <Mail className="w-3 h-3" />
+                          Pending
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {user.last_login_at 
+                        ? new Date(user.last_login_at).toLocaleDateString()
+                        : '-'
+                      }
+                    </td>
+                    <td className="px-6 py-4 text-sm space-x-2">
+                      <button
+                        onClick={() => handleShowPermissions(user)}
+                        className="text-blue-600 hover:text-blue-900"
+                        title="Manage Permissions"
+                      >
+                        <Shield className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleToggleActive(user.id, user.is_active)}
+                        className={user.is_active ? 'text-orange-600 hover:text-orange-900' : 'text-green-600 hover:text-green-900'}
+                        title={user.is_active ? 'Deactivate' : 'Activate'}
+                      >
+                        <Key className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteUser(user.id)}
+                        className="text-red-600 hover:text-red-900"
+                        title="Delete User"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

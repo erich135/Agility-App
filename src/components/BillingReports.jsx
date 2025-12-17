@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { TrendingUp, Download, Filter } from 'lucide-react';
+import { TrendingUp, Download, Filter, ArrowLeft } from 'lucide-react';
 import { ReportingService, ProjectService, ClientService } from '../services/TimesheetService';
 
 export default function BillingReports() {
+  const navigate = useNavigate();
   const [monthlyData, setMonthlyData] = useState([]);
   const [clientData, setClientData] = useState([]);
   const [consultantData, setConsultantData] = useState([]);
@@ -81,6 +83,15 @@ export default function BillingReports() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
+        {/* Back Button */}
+        <button
+          onClick={() => navigate('/')}
+          className="mb-4 flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          Back to Home
+        </button>
+
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>

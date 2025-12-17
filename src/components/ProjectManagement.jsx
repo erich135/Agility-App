@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Briefcase, Plus, Edit2, Trash2, CheckCircle, Clock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Briefcase, Plus, Edit2, Trash2, CheckCircle, Clock, ArrowLeft } from 'lucide-react';
 import { ProjectService, ClientService, JobTypeService } from '../services/TimesheetService';
 
 export default function ProjectManagement() {
+  const navigate = useNavigate();
   const [projects, setProjects] = useState([]);
   const [clients, setClients] = useState([]);
   const [jobTypes, setJobTypes] = useState([]);
@@ -133,6 +135,15 @@ export default function ProjectManagement() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
+        {/* Back Button */}
+        <button
+          onClick={() => navigate('/')}
+          className="mb-4 flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          Back to Home
+        </button>
+
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>

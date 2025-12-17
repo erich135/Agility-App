@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Edit2, Trash2, Download, Filter, Plus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Clock, Edit2, Trash2, Download, Filter, ArrowLeft } from 'lucide-react';
 import { TimeEntryService, ProjectService, ClientService } from '../services/TimesheetService';
 
 export default function MyTimesheets() {
+  const navigate = useNavigate();
   const [entries, setEntries] = useState([]);
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -103,6 +105,30 @@ export default function MyTimesheets() {
       .toFixed(2);
   };
 
+  const exportToCSV = () => {
+    const filtered = getFilteredEntries();
+    const headers = ['Date', 'Project', 'Hours', 'Description', 'Billable', 'Entry Method'];
+    const csvContent = [
+      headers.join(','),
+      ...filtered.map(entry => [
+        entry.entry_date,
+        `"${projects.find(p => p.id === entry.project_id)?.project_name || 'Unknown'}"`,
+        entry.duration,
+        `"${(entry.description || '').replace(/"/g, '""')}"`,
+        entry.billable ? 'Yes' : 'No',
+        entry.entry_method || 'Manual'
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `my-timesheet-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   const filteredEntries = getFilteredEntries();
 
   if (loading) {
@@ -116,6 +142,15 @@ export default function MyTimesheets() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
+        {/* Back Button */}
+        <button
+          onClick={() => navigate('/')}
+          className="mb-4 flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          Back to Home
+        </button>
+
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
@@ -125,6 +160,13 @@ export default function MyTimesheets() {
             </h1>
             <p className="text-gray-600 mt-1">View and manage your time entries</p>
           </div>
+          <button
+            onClick={exportToCSV}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2"
+          >
+            <Download className="w-4 h-4" />
+            Export CSV
+          </button>
         </div>
 
         {/* Stats Cards */}

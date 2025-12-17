@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { DollarSign, TrendingUp, Clock, AlertCircle, CheckCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { DollarSign, TrendingUp, Clock, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react';
 import { ProjectService, ReportingService, TimeEntryService } from '../services/TimesheetService';
 
 export default function BillingDashboard() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     readyToBill: 0,
     totalBillableHours: 0,
@@ -82,6 +84,15 @@ export default function BillingDashboard() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
+        {/* Back Button */}
+        <button
+          onClick={() => navigate('/')}
+          className="mb-4 flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          Back to Home
+        </button>
+
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2 mb-2">

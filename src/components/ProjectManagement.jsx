@@ -211,7 +211,7 @@ export default function ProjectManagement() {
                     <option value="">Select job type</option>
                     {jobTypes.map(jt => (
                       <option key={jt.id} value={jt.id}>
-                        {jt.job_type_name}
+                        {jt.name}
                       </option>
                     ))}
                   </select>

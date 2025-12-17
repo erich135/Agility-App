@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import supabase from '../lib/SupabaseClient';
 import ActivityLogger from '../lib/ActivityLogger';
-import { useAuth } from '../App';
+import { useAuth } from '../contexts/AuthContext';
 
 const CustomerForm = ({ customerId, onClose, onSave }) => {
   const { user } = useAuth();

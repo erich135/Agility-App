@@ -18,7 +18,7 @@ import {
 import AIDocumentService from '../lib/AIDocumentService';
 import supabase from '../lib/SupabaseClient';
 import ActivityLogger from '../lib/ActivityLogger';
-import { useAuth } from '../App';
+import { useAuth } from '../contexts/AuthContext';
 
 const SmartDocumentUpload = ({ clientId, onUploadComplete }) => {
   const { user } = useAuth();

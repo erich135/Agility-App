@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ActivityLogger from '../lib/ActivityLogger';
-import { useAuth } from '../App';
+import { useAuth } from '../contexts/AuthContext';
 
 const ActivityLogs = () => {
   const { user, isAdmin } = useAuth();

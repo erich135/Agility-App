@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, Check, CheckCheck, X, AlertTriangle, Info, Calendar, FileText } from 'lucide-react';
-import { useAuth } from '../App';
+import { useAuth } from '../contexts/AuthContext';
 import NotificationService from '../lib/NotificationService';
 
 const NotificationCenter = () => {

@@ -4,7 +4,7 @@ import supabase from '../lib/SupabaseClient';
 import CustomerForm from './CustomerForm';
 import DocumentManager from './DocumentManager';
 import ActivityLogger from '../lib/ActivityLogger';
-import { useAuth } from '../App';
+import { useAuth } from '../contexts/AuthContext';
 
 const CustomerManagement = () => {
   const { user } = useAuth();

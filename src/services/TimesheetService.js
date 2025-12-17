@@ -108,6 +108,33 @@ export const JobTypeService = {
 };
 
 // ============================================
+// CLIENT OPERATIONS
+// ============================================
+
+export const ClientService = {
+  // Get all clients
+  async getAll() {
+    const { data, error } = await supabase
+      .from('clients')
+      .select('*')
+      .order('client_name');
+    
+    return { data, error };
+  },
+
+  // Get client by ID
+  async getById(id) {
+    const { data, error } = await supabase
+      .from('clients')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    return { data, error };
+  }
+};
+
+// ============================================
 // PROJECT OPERATIONS
 // ============================================
 

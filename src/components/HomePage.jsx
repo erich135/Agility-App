@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../App';
+import { useAuth } from '../contexts/AuthContext';
 import NotificationCenter from './NotificationCenter';
 
 const HomePage = () => {
@@ -434,6 +434,50 @@ const HomePage = () => {
               </div>
             </div>
           </Link>
+
+          {/* User Management Card - Admin Only */}
+          {isAdmin() && (
+            <Link 
+              to="/settings/users" 
+              className="group block bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 ring-2 ring-red-400 ring-offset-2"
+            >
+              <div className="p-8 relative">
+                <div className="absolute top-4 right-4 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                  ADMIN
+                </div>
+                <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-orange-600 rounded-lg flex items-center justify-center mb-6 group-hover:from-red-600 group-hover:to-orange-700 transition-colors">
+                  <svg 
+                    className="w-8 h-8 text-white" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" 
+                    />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-3">User Management</h2>
+                <p className="text-gray-600 leading-relaxed">
+                  Invite new users, manage permissions, and control access to different areas of the app.
+                </p>
+                <div className="mt-6 flex items-center text-red-500 group-hover:text-red-600">
+                  <span className="font-medium">Manage Users</span>
+                  <svg 
+                    className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                  </svg>
+                </div>
+              </div>
+            </Link>
+          )}
 
           {/* Management Card - Admin Only */}
           {isAdmin() && (

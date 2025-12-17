@@ -80,12 +80,28 @@ export const AuthProvider = ({ children }) => {
     return !!user;
   };
 
+  // Check if user has a specific permission
+  const hasPermission = (permissionKey) => {
+    if (!user) return false;
+    if (user.role === 'admin') return true; // Admins have all permissions
+    return user.permissions?.includes(permissionKey) || false;
+  };
+
+  // Check if user has any of the given permissions
+  const hasAnyPermission = (permissionKeys) => {
+    if (!user) return false;
+    if (user.role === 'admin') return true;
+    return permissionKeys.some(key => user.permissions?.includes(key));
+  };
+
   const value = {
     user,
     login,
     logout,
     isAdmin,
     isLoggedIn,
+    hasPermission,
+    hasAnyPermission,
     loading
   };
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { DollarSign, TrendingUp, Clock, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react';
+import { DollarSign, TrendingUp, Clock, AlertCircle, CheckCircle, ArrowLeft, AlertTriangle, Bell } from 'lucide-react';
 import { ProjectService, ReportingService, TimeEntryService } from '../services/TimesheetService';
 
 export default function BillingDashboard() {
@@ -9,9 +9,12 @@ export default function BillingDashboard() {
     readyToBill: 0,
     totalBillableHours: 0,
     completedProjects: 0,
-    pendingInvoices: 0
+    pendingInvoices: 0,
+    overdueCount: 0,
+    dueTodayCount: 0
   });
   const [projects, setProjects] = useState([]);
+  const [overdueProjects, setOverdueProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState('month');
 
@@ -26,6 +29,23 @@ export default function BillingDashboard() {
       const projectsRes = await ProjectService.getAll();
       const allProjects = projectsRes.data || [];
 
+      // Calculate billing urgency
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const overdue = allProjects.filter(p => {
+        if (p.status === 'Invoiced' || !p.expected_billing_date) return false;
+        const billingDate = new Date(p.expected_billing_date);
+        return billingDate < today;
+      });
+
+      const dueToday = allProjects.filter(p => {
+        if (p.status === 'Invoiced' || !p.expected_billing_date) return false;
+        const billingDate = new Date(p.expected_billing_date);
+        billingDate.setHours(0, 0, 0, 0);
+        return billingDate.getTime() === today.getTime();
+      });
+
       // Calculate stats
       const readyToBill = allProjects.filter(p => p.status === 'Completed').length;
       const completedProjects = allProjects.filter(p => p.status === 'Completed' || p.status === 'Invoiced').length;
@@ -39,8 +59,12 @@ export default function BillingDashboard() {
         readyToBill,
         totalBillableHours: report.total_billable_hours || 0,
         completedProjects,
-        pendingInvoices
+        pendingInvoices,
+        overdueCount: overdue.length,
+        dueTodayCount: dueToday.length
       });
+
+      setOverdueProjects(overdue);
 
       // Sort projects by expected billing date
       const sortedProjects = allProjects.sort((a, b) => {
@@ -101,6 +125,29 @@ export default function BillingDashboard() {
           </h1>
           <p className="text-gray-600">Track projects ready for invoicing</p>
         </div>
+
+        {/* Urgent Alert Banner */}
+        {(stats.overdueCount > 0 || stats.dueTodayCount > 0) && (
+          <div className={`mb-6 rounded-lg p-4 ${stats.overdueCount > 0 ? 'bg-red-50 border border-red-300' : 'bg-orange-50 border border-orange-300'}`}>
+            <div className="flex items-center gap-3">
+              <AlertTriangle className={`w-6 h-6 ${stats.overdueCount > 0 ? 'text-red-600' : 'text-orange-600'}`} />
+              <div className="flex-1">
+                <p className={`font-semibold ${stats.overdueCount > 0 ? 'text-red-800' : 'text-orange-800'}`}>
+                  {stats.overdueCount > 0 && `${stats.overdueCount} OVERDUE billing(s)!`}
+                  {stats.overdueCount > 0 && stats.dueTodayCount > 0 && ' • '}
+                  {stats.dueTodayCount > 0 && `${stats.dueTodayCount} due TODAY`}
+                </p>
+                {overdueProjects.length > 0 && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    {overdueProjects.slice(0, 3).map(p => p.project_name).join(', ')}
+                    {overdueProjects.length > 3 && ` +${overdueProjects.length - 3} more`}
+                  </p>
+                )}
+              </div>
+              <Bell className={`w-5 h-5 ${stats.overdueCount > 0 ? 'text-red-500 animate-bounce' : 'text-orange-500'}`} />
+            </div>
+          </div>
+        )}
 
         {/* Period Selector */}
         <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 mb-6">

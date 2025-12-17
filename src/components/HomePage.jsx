@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import NotificationCenter from './NotificationCenter';
+import BillingNotifications from './BillingNotifications';
 
 const HomePage = () => {
   const { user, logout, isAdmin } = useAuth();
@@ -24,6 +25,7 @@ const HomePage = () => {
             
             {/* User Info, Notifications & Logout */}
             <div className="flex items-center space-x-4">
+              <BillingNotifications />
               <NotificationCenter />
               <div className="text-right">
                 <p className="text-sm text-gray-600">Welcome back,</p>

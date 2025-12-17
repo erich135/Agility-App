@@ -32,30 +32,29 @@ export default function BillingDashboard() {
       today.setHours(0, 0, 0, 0);
       
       const overdue = allProjects.filter(p => {
-        if (p.status === 'Invoiced' || !p.expected_billing_date) return false;
-        const billingDate = new Date(p.expected_billing_date);
+        if (p.status === 'invoiced' || !p.billing_date) return false;
+        const billingDate = new Date(p.billing_date);
         return billingDate < today;
       });
 
       const dueToday = allProjects.filter(p => {
-        if (p.status === 'Invoiced' || !p.expected_billing_date) return false;
-        const billingDate = new Date(p.expected_billing_date);
+        if (p.status === 'invoiced' || !p.billing_date) return false;
+        const billingDate = new Date(p.billing_date);
         billingDate.setHours(0, 0, 0, 0);
         return billingDate.getTime() === today.getTime();
       });
 
       // Calculate stats
-      const readyToBill = allProjects.filter(p => p.status === 'Completed').length;
-      const completedProjects = allProjects.filter(p => p.status === 'Completed' || p.status === 'Invoiced').length;
-      const pendingInvoices = allProjects.filter(p => p.status === 'Completed').length;
+      const readyToBill = allProjects.filter(p => p.status === 'ready_to_bill').length;
+      const completedProjects = allProjects.filter(p => p.status === 'ready_to_bill' || p.status === 'invoiced').length;
+      const pendingInvoices = allProjects.filter(p => p.status === 'ready_to_bill').length;
 
-      // Get billing report
-      const reportRes = await ReportingService.getBillingReport({ period: selectedPeriod });
-      const report = reportRes.data || {};
+      // Calculate billable hours from projects
+      const totalBillableHours = allProjects.reduce((sum, p) => sum + (p.billable_hours || 0), 0);
 
       setStats({
         readyToBill,
-        totalBillableHours: report.total_billable_hours || 0,
+        totalBillableHours,
         completedProjects,
         pendingInvoices,
         overdueCount: overdue.length,
@@ -64,10 +63,10 @@ export default function BillingDashboard() {
 
       setOverdueProjects(overdue);
 
-      // Sort projects by expected billing date
+      // Sort projects by billing date
       const sortedProjects = allProjects.sort((a, b) => {
-        if (a.expected_billing_date && b.expected_billing_date) {
-          return new Date(a.expected_billing_date) - new Date(b.expected_billing_date);
+        if (a.billing_date && b.billing_date) {
+          return new Date(a.billing_date) - new Date(b.billing_date);
         }
         return 0;
       });
@@ -85,7 +84,7 @@ export default function BillingDashboard() {
     if (!invoiceNumber) return;
 
     const result = await ProjectService.update(projectId, {
-      status: 'Invoiced',
+      status: 'invoiced',
       invoice_number: invoiceNumber,
       invoice_date: new Date().toISOString().split('T')[0]
     });
@@ -129,7 +128,7 @@ export default function BillingDashboard() {
               </p>
               {overdueProjects.length > 0 && (
                 <p className="text-sm text-gray-600 mt-1">
-                  {overdueProjects.slice(0, 3).map(p => p.project_name).join(', ')}
+                  {overdueProjects.slice(0, 3).map(p => p.name).join(', ')}
                   {overdueProjects.length > 3 && ` +${overdueProjects.length - 3} more`}
                 </p>
               )}
@@ -230,17 +229,19 @@ export default function BillingDashboard() {
                 {projects.map((project) => (
                   <tr key={project.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                      {project.project_name}
+                      {project.name}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">
-                      {project.client_id}
+                      {project.client?.client_name || 'N/A'}
                     </td>
                     <td className="px-6 py-4 text-sm">
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        project.status === 'Completed' 
+                        project.status === 'ready_to_bill' 
                           ? 'bg-yellow-100 text-yellow-800'
-                          : project.status === 'Invoiced'
+                          : project.status === 'invoiced'
                           ? 'bg-green-100 text-green-800'
+                          : project.status === 'active'
+                          ? 'bg-blue-100 text-blue-800'
                           : 'bg-gray-100 text-gray-800'
                       }`}>
                         {project.status}
@@ -250,13 +251,13 @@ export default function BillingDashboard() {
                       {project.total_hours?.toFixed(2) || '0.00'}h
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">
-                      {project.expected_billing_date 
-                        ? new Date(project.expected_billing_date).toLocaleDateString()
+                      {project.billing_date 
+                        ? new Date(project.billing_date).toLocaleDateString()
                         : '-'
                       }
                     </td>
                     <td className="px-6 py-4 text-sm">
-                      {project.status === 'Completed' ? (
+                      {project.status === 'ready_to_bill' ? (
                         <button
                           onClick={() => handleMarkInvoiced(project.id)}
                           className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs"

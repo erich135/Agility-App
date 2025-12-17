@@ -42,11 +42,11 @@ const HomePage = () => {
       const weekAgo = new Date(today);
       weekAgo.setDate(weekAgo.getDate() - 7);
 
-      const activeProjects = projects.filter(p => p.status === 'Active').length;
-      const pendingInvoices = projects.filter(p => p.status === 'Completed').length;
+      const activeProjects = projects.filter(p => p.status === 'active').length;
+      const pendingInvoices = projects.filter(p => p.status === 'ready_to_bill').length;
       const overdueCount = projects.filter(p => {
-        if (p.status === 'Invoiced' || !p.expected_billing_date) return false;
-        return new Date(p.expected_billing_date) < today;
+        if (p.status === 'invoiced' || !p.billing_date) return false;
+        return new Date(p.billing_date) < today;
       }).length;
 
       setStats({
@@ -243,13 +243,14 @@ const HomePage = () => {
               <div key={project.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium text-gray-900">{project.project_name}</p>
-                    <p className="text-sm text-gray-500">{project.client?.business_name || 'No client'}</p>
+                    <p className="font-medium text-gray-900">{project.name}</p>
+                    <p className="text-sm text-gray-500">{project.client?.client_name || 'No client'}</p>
                   </div>
                   <span className={`px-3 py-1 text-xs font-medium rounded-full ${
-                    project.status === 'Active' ? 'bg-blue-100 text-blue-700' :
-                    project.status === 'Completed' ? 'bg-yellow-100 text-yellow-700' :
-                    project.status === 'Invoiced' ? 'bg-green-100 text-green-700' :
+                    project.status === 'active' ? 'bg-blue-100 text-blue-700' :
+                    project.status === 'ready_to_bill' ? 'bg-yellow-100 text-yellow-700' :
+                    project.status === 'invoiced' ? 'bg-green-100 text-green-700' :
+                    project.status === 'on_hold' ? 'bg-orange-100 text-orange-700' :
                     'bg-gray-100 text-gray-700'
                   }`}>
                     {project.status}

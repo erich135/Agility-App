@@ -115,39 +115,41 @@ const DashboardAnalytics = () => {
         console.log('Documents table not ready');
       }
 
-      // Tasks
+      // Tasks - use projects as tasks proxy since tasks table doesn't exist
       let taskCount = 0;
       try {
-        const { count } = await supabase
-          .from('tasks')
+        const { count, error } = await supabase
+          .from('projects')
           .select('*', { count: 'exact', head: true })
-          .in('status', ['todo', 'in_progress']);
-        taskCount = count || 0;
+          .in('status', ['active', 'on_hold']);
+        if (!error) taskCount = count || 0;
       } catch (e) {
-        console.log('Tasks table not ready');
+        console.log('Using projects as task count');
       }
 
-      // Billing (if tables exist)
+      // Billing - calculate from time_entries since billing_info table doesn't exist
       let totalRevenue = 0;
       let pendingPayments = 0;
       
       try {
-        const { data: billingData } = await supabase
-          .from('billing_info')
-          .select('amount, status');
+        const { data: timeEntries, error } = await supabase
+          .from('time_entries')
+          .select('duration_hours, is_billable, hourly_rate, status');
         
-        if (billingData) {
-          totalRevenue = billingData
-            .filter(b => b.status === 'paid')
-            .reduce((sum, b) => sum + parseFloat(b.amount || 0), 0);
+        if (!error && timeEntries) {
+          // Calculate from time entries - invoiced entries are "paid"
+          totalRevenue = timeEntries
+            .filter(t => t.status === 'invoiced' && t.is_billable)
+            .reduce((sum, t) => sum + (t.duration_hours || 0) * (t.hourly_rate || 500), 0);
           
-          pendingPayments = billingData
-            .filter(b => b.status === 'pending')
-            .reduce((sum, b) => sum + parseFloat(b.amount || 0), 0);
+          // Ready to bill entries are "pending"
+          pendingPayments = timeEntries
+            .filter(t => t.status !== 'invoiced' && t.is_billable)
+            .reduce((sum, t) => sum + (t.duration_hours || 0) * (t.hourly_rate || 500), 0);
         }
       } catch (e) {
-        // Billing table might not exist yet
-        console.log('Billing data not available yet');
+        console.log('Revenue data not available yet');
+      }
       }
 
       setStats({

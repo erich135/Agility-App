@@ -283,8 +283,13 @@ export const ProjectService = {
   // Get projects ready to bill
   async getReadyToBill() {
     const { data, error } = await supabase
-      .from('v_projects_ready_to_bill')
-      .select('*')
+      .from('projects')
+      .select(`
+        *,
+        client:clients(id, client_name),
+        job_type:job_types(id, name)
+      `)
+      .eq('status', 'ready_to_bill')
       .order('billing_date', { ascending: true, nullsFirst: false });
     
     return { data, error };
@@ -499,8 +504,13 @@ export const TimeEntryService = {
   // Get all active timers (for admin view)
   async getAllActiveTimers() {
     const { data, error } = await supabase
-      .from('v_active_timers')
-      .select('*');
+      .from('time_entries')
+      .select(`
+        *,
+        project:projects(id, project_number, name, client:clients(id, client_name)),
+        consultant:consultants(id, full_name)
+      `)
+      .eq('timer_active', true);
     
     return { data, error };
   }
@@ -508,123 +518,77 @@ export const TimeEntryService = {
 
 // ============================================
 // NOTIFICATION OPERATIONS
+// Note: timesheet_notifications table not created yet
+// These methods return empty data until table is created
 // ============================================
 
 export const TimesheetNotificationService = {
   // Get notifications for a user
   async getByRecipient(recipientId, unreadOnly = false) {
-    let query = supabase
-      .from('timesheet_notifications')
-      .select(`
-        *,
-        project:projects(id, project_number, name)
-      `)
-      .eq('recipient_id', recipientId)
-      .order('created_at', { ascending: false });
-
-    if (unreadOnly) {
-      query = query.eq('is_read', false);
-    }
-
-    const { data, error } = await query;
-    return { data, error };
+    // Table doesn't exist yet - return empty
+    // TODO: Create timesheet_notifications table
+    return { data: [], error: null };
   },
 
   // Get unread count
   async getUnreadCount(recipientId) {
-    const { count, error } = await supabase
-      .from('timesheet_notifications')
-      .select('*', { count: 'exact', head: true })
-      .eq('recipient_id', recipientId)
-      .eq('is_read', false);
-    
-    return { count, error };
+    return { count: 0, error: null };
   },
 
   // Mark notification as read
   async markRead(id) {
-    const { data, error } = await supabase
-      .from('timesheet_notifications')
-      .update({ 
-        is_read: true, 
-        read_at: new Date().toISOString() 
-      })
-      .eq('id', id)
-      .select()
-      .single();
-    
-    return { data, error };
+    return { data: null, error: null };
   },
 
   // Mark all as read for a user
   async markAllRead(recipientId) {
-    const { error } = await supabase
-      .from('timesheet_notifications')
-      .update({ 
-        is_read: true, 
-        read_at: new Date().toISOString() 
-      })
-      .eq('recipient_id', recipientId)
-      .eq('is_read', false);
-    
-    return { error };
+    return { error: null };
   },
 
   // Create notification
   async create(notification) {
-    const { data, error } = await supabase
-      .from('timesheet_notifications')
-      .insert(notification)
-      .select()
-      .single();
-    
-    return { data, error };
+    console.log('Notification would be created:', notification);
+    return { data: null, error: null };
   }
 };
 
 // ============================================
 // BILLING REMINDER OPERATIONS
+// Note: billing_reminders table not created yet
 // ============================================
 
 export const BillingReminderService = {
-  // Get upcoming reminders
+  // Get upcoming reminders - use projects with billing_date instead
   async getUpcoming(daysAhead = 7) {
+    const today = new Date();
+    const futureDate = new Date(today);
+    futureDate.setDate(today.getDate() + daysAhead);
+    
     const { data, error } = await supabase
-      .from('v_upcoming_reminders')
-      .select('*');
+      .from('projects')
+      .select(`
+        id,
+        name,
+        billing_date,
+        status,
+        client:clients(id, client_name)
+      `)
+      .gte('billing_date', today.toISOString().split('T')[0])
+      .lte('billing_date', futureDate.toISOString().split('T')[0])
+      .in('status', ['active', 'ready_to_bill'])
+      .order('billing_date');
     
     return { data, error };
   },
 
-  // Dismiss reminder
+  // Dismiss reminder - not applicable without table
   async dismiss(id, dismissedBy) {
-    const { data, error } = await supabase
-      .from('billing_reminders')
-      .update({
-        is_dismissed: true,
-        dismissed_at: new Date().toISOString(),
-        dismissed_by: dismissedBy
-      })
-      .eq('id', id)
-      .select()
-      .single();
-    
-    return { data, error };
+    return { data: null, error: null };
   },
 
-  // Mark as sent
+  // Mark as sent - not applicable without table
   async markSent(id) {
-    const { data, error } = await supabase
-      .from('billing_reminders')
-      .update({
-        is_sent: true,
-        sent_at: new Date().toISOString()
-      })
-      .eq('id', id)
-      .select()
-      .single();
-    
-    return { data, error };
+    return { data: null, error: null };
   }
 };
 
@@ -636,28 +600,120 @@ export const ReportingService = {
   // Get monthly billable hours
   async getMonthlyBillableHours(filters = {}) {
     let query = supabase
-      .from('v_monthly_billable_hours')
-      .select('*')
-      .order('month', { ascending: false });
+      .from('time_entries')
+      .select(`
+        *,
+        project:projects(id, name, client_id)
+      `)
+      .order('entry_date', { ascending: false });
 
     if (filters.client_id) {
-      query = query.eq('client_id', filters.client_id);
+      query = query.eq('project.client_id', filters.client_id);
     }
     if (filters.consultant_id) {
       query = query.eq('consultant_id', filters.consultant_id);
     }
-    if (filters.job_category) {
-      query = query.eq('job_category', filters.job_category);
-    }
     if (filters.month_from) {
-      query = query.gte('month', filters.month_from);
+      query = query.gte('entry_date', filters.month_from);
     }
     if (filters.month_to) {
-      query = query.lte('month', filters.month_to);
+      query = query.lte('entry_date', filters.month_to);
     }
 
     const { data, error } = await query;
     return { data, error };
+  },
+
+  // Get monthly billing report - aggregates time entries by week/day
+  async getMonthlyBillingReport(filters = {}) {
+    const month = filters.month || new Date().toISOString().slice(0, 7);
+    const startDate = `${month}-01`;
+    const endDate = new Date(parseInt(month.slice(0, 4)), parseInt(month.slice(5, 7)), 0)
+      .toISOString().split('T')[0];
+
+    const { data, error } = await supabase
+      .from('time_entries')
+      .select(`
+        *,
+        project:projects(id, name, client:clients(id, client_name))
+      `)
+      .gte('entry_date', startDate)
+      .lte('entry_date', endDate)
+      .order('entry_date');
+
+    if (error) return { data: [], error };
+
+    // Group by week
+    const weeklyData = {};
+    (data || []).forEach(entry => {
+      const date = new Date(entry.entry_date);
+      const weekNum = Math.ceil(date.getDate() / 7);
+      const weekKey = `Week ${weekNum}`;
+      
+      if (!weeklyData[weekKey]) {
+        weeklyData[weekKey] = { name: weekKey, hours: 0, billable_hours: 0, billable: true };
+      }
+      weeklyData[weekKey].hours += entry.duration_hours || 0;
+      if (entry.is_billable) {
+        weeklyData[weekKey].billable_hours += entry.duration_hours || 0;
+      }
+    });
+
+    return { data: Object.values(weeklyData), error: null };
+  },
+
+  // Get billing grouped by client
+  async getBillingByClient(filters = {}) {
+    const { data, error } = await supabase
+      .from('time_entries')
+      .select(`
+        duration_hours,
+        is_billable,
+        project:projects(client:clients(id, client_name))
+      `);
+
+    if (error) return { data: [], error };
+
+    // Group by client
+    const clientData = {};
+    (data || []).forEach(entry => {
+      const clientName = entry.project?.client?.client_name || 'Unknown';
+      const clientId = entry.project?.client?.id || 'unknown';
+      
+      if (!clientData[clientId]) {
+        clientData[clientId] = { name: clientName, hours: 0 };
+      }
+      clientData[clientId].hours += entry.duration_hours || 0;
+    });
+
+    return { data: Object.values(clientData), error: null };
+  },
+
+  // Get billing grouped by consultant
+  async getBillingByConsultant(filters = {}) {
+    const { data, error } = await supabase
+      .from('time_entries')
+      .select(`
+        duration_hours,
+        is_billable,
+        consultant:consultants(id, full_name)
+      `);
+
+    if (error) return { data: [], error };
+
+    // Group by consultant
+    const consultantData = {};
+    (data || []).forEach(entry => {
+      const name = entry.consultant?.full_name || 'Unknown';
+      const id = entry.consultant?.id || 'unknown';
+      
+      if (!consultantData[id]) {
+        consultantData[id] = { name, hours: 0 };
+      }
+      consultantData[id].hours += entry.duration_hours || 0;
+    });
+
+    return { data: Object.values(consultantData), error: null };
   },
 
   // Get dashboard stats

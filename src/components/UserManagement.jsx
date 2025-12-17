@@ -31,13 +31,9 @@ export default function UserManagement() {
 
       if (!usersError) setUsers(usersData || []);
 
-      // Load all permissions
-      const { data: permsData, error: permsError } = await supabase
-        .from('permissions')
-        .select('*')
-        .order('category', { ascending: true });
-
-      if (!permsError) setPermissions(permsData || []);
+      // Permissions table doesn't exist yet - use role-based defaults
+      // TODO: Create permissions table when needed
+      setPermissions([]);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -68,11 +64,8 @@ export default function UserManagement() {
 
       if (error) throw error;
 
-      // Grant default permissions based on role
-      await supabase.rpc('grant_default_permissions_by_role', {
-        user_id: newUser.id,
-        user_role: inviteForm.role
-      });
+      // Note: Permissions are role-based for now (handled in AuthContext)
+      // TODO: Create user_permissions table when granular permissions needed
 
       // Send invitation email via API
       const inviteLink = `${window.location.origin}/setup-password?token=${token}`;
@@ -128,54 +121,16 @@ export default function UserManagement() {
   const handleShowPermissions = async (user) => {
     setSelectedUser(user);
     
-    // Load user's current permissions
-    const { data, error } = await supabase
-      .from('user_permissions')
-      .select('permission_key')
-      .eq('user_id', user.id)
-      .eq('enabled', true);
-
-    if (!error) {
-      user.permissions = (data || []).map(p => p.permission_key);
-    }
+    // Permissions are role-based for now
+    // TODO: Load from user_permissions table when created
+    user.permissions = [];
     
     setShowPermissions(true);
   };
 
   const handleTogglePermission = async (permissionKey, currentlyEnabled) => {
-    if (!selectedUser) return;
-
-    try {
-      if (currentlyEnabled) {
-        // Disable permission
-        await supabase
-          .from('user_permissions')
-          .delete()
-          .eq('user_id', selectedUser.id)
-          .eq('permission_key', permissionKey);
-      } else {
-        // Enable permission
-        await supabase
-          .from('user_permissions')
-          .insert({
-            user_id: selectedUser.id,
-            permission_key: permissionKey,
-            enabled: true
-          });
-      }
-
-      // Reload user permissions
-      const { data } = await supabase
-        .from('user_permissions')
-        .select('permission_key')
-        .eq('user_id', selectedUser.id)
-        .eq('enabled', true);
-
-      selectedUser.permissions = (data || []).map(p => p.permission_key);
-      setSelectedUser({...selectedUser});
-    } catch (error) {
-      console.error('Error toggling permission:', error);
-    }
+    // Permissions table doesn't exist yet - show message
+    alert('Granular permissions coming soon! Currently using role-based permissions.');
   };
 
   const roleColors = {

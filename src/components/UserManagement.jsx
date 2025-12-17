@@ -58,6 +58,7 @@ export default function UserManagement() {
         .insert({
           ...inviteForm,
           full_name: `${inviteForm.first_name} ${inviteForm.last_name}`,
+          phone: '',
           invitation_token: token,
           invitation_sent_at: new Date().toISOString(),
           is_active: true

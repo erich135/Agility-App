@@ -12,11 +12,11 @@ export default function ProjectManagement() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [formData, setFormData] = useState({
     client_id: '',
-    project_name: '',
+    name: '',
     job_type_id: '',
-    status: 'Active',
-    expected_billing_date: '',
-    notes: ''
+    status: 'active',
+    billing_date: '',
+    internal_notes: ''
   });
 
   useEffect(() => {
@@ -48,9 +48,12 @@ export default function ProjectManagement() {
     e.preventDefault();
     
     const data = {
-      ...formData,
-      client_id: parseInt(formData.client_id),
-      job_type_id: parseInt(formData.job_type_id)
+      client_id: formData.client_id,
+      name: formData.name,
+      job_type_id: formData.job_type_id,
+      status: formData.status,
+      billing_date: formData.billing_date || null,
+      internal_notes: formData.internal_notes || null
     };
 
     try {
@@ -77,12 +80,12 @@ export default function ProjectManagement() {
 
   const handleEdit = (project) => {
     setFormData({
-      client_id: project.client_id.toString(),
-      project_name: project.project_name,
-      job_type_id: project.job_type_id.toString(),
+      client_id: project.client_id,
+      name: project.name,
+      job_type_id: project.job_type_id,
       status: project.status,
-      expected_billing_date: project.expected_billing_date || '',
-      notes: project.notes || ''
+      billing_date: project.billing_date || '',
+      internal_notes: project.internal_notes || ''
     });
     setEditingId(project.id);
     setShowForm(true);
@@ -102,11 +105,11 @@ export default function ProjectManagement() {
   const resetForm = () => {
     setFormData({
       client_id: '',
-      project_name: '',
+      name: '',
       job_type_id: '',
-      status: 'Active',
-      expected_billing_date: '',
-      notes: ''
+      status: 'active',
+      billing_date: '',
+      internal_notes: ''
     });
     setEditingId(null);
   };
@@ -117,9 +120,11 @@ export default function ProjectManagement() {
   };
 
   const statusColors = {
-    'Active': 'bg-blue-100 text-blue-800',
-    'Completed': 'bg-green-100 text-green-800',
-    'Invoiced': 'bg-purple-100 text-purple-800'
+    'active': 'bg-blue-100 text-blue-800',
+    'on_hold': 'bg-yellow-100 text-yellow-800',
+    'ready_to_bill': 'bg-orange-100 text-orange-800',
+    'invoiced': 'bg-purple-100 text-purple-800',
+    'completed': 'bg-green-100 text-green-800'
   };
 
   if (loading) {
@@ -190,8 +195,8 @@ export default function ProjectManagement() {
                   </label>
                   <input
                     type="text"
-                    value={formData.project_name}
-                    onChange={(e) => setFormData({...formData, project_name: e.target.value})}
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
                     required
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
                     placeholder="e.g., Annual Tax Return 2025"
@@ -226,20 +231,21 @@ export default function ProjectManagement() {
                     onChange={(e) => setFormData({...formData, status: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
                   >
-                    <option value="Active">Active</option>
-                    <option value="Completed">Completed</option>
-                    <option value="Invoiced">Invoiced</option>
+                    <option value="active">Active</option>
+                    <option value="on_hold">On Hold</option>
+                    <option value="ready_to_bill">Ready to Bill</option>
+                    <option value="invoiced">Invoiced</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Expected Billing Date
+                    Billing Date
                   </label>
                   <input
                     type="date"
-                    value={formData.expected_billing_date}
-                    onChange={(e) => setFormData({...formData, expected_billing_date: e.target.value})}
+                    value={formData.billing_date}
+                    onChange={(e) => setFormData({...formData, billing_date: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
                   />
                 </div>
@@ -250,8 +256,8 @@ export default function ProjectManagement() {
                   Notes
                 </label>
                 <textarea
-                  value={formData.notes}
-                  onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                  value={formData.internal_notes}
+                  onChange={(e) => setFormData({...formData, internal_notes: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
                   rows="3"
                 />
@@ -306,7 +312,7 @@ export default function ProjectManagement() {
             <div key={project.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition">
               <div className="flex justify-between items-start mb-4">
                 <h3 className="text-lg font-semibold text-gray-900 flex-1">
-                  {project.project_name}
+                  {project.name}
                 </h3>
                 <span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[project.status] || 'bg-gray-100'}`}>
                   {project.status}
@@ -318,11 +324,11 @@ export default function ProjectManagement() {
                   <span className="font-medium">Client:</span> {clients.find(c => c.id === project.client_id)?.client_name}
                 </p>
                 <p className="text-sm text-gray-600">
-                  <span className="font-medium">Type:</span> {jobTypes.find(j => j.id === project.job_type_id)?.job_type_name}
+                  <span className="font-medium">Type:</span> {jobTypes.find(j => j.id === project.job_type_id)?.name}
                 </p>
-                {project.expected_billing_date && (
+                {project.billing_date && (
                   <p className="text-sm text-gray-600">
-                    <span className="font-medium">Billing Date:</span> {new Date(project.expected_billing_date).toLocaleDateString()}
+                    <span className="font-medium">Billing Date:</span> {new Date(project.billing_date).toLocaleDateString()}
                   </p>
                 )}
                 <p className="text-sm text-gray-600">
@@ -330,9 +336,9 @@ export default function ProjectManagement() {
                 </p>
               </div>
 
-              {project.notes && (
+              {project.internal_notes && (
                 <p className="text-sm text-gray-600 mb-4 p-3 bg-gray-50 rounded">
-                  {project.notes}
+                  {project.internal_notes}
                 </p>
               )}
 

@@ -51,9 +51,9 @@ export default function MyTimesheets() {
     if (!editData) return;
     
     const result = await TimeEntryService.update(editingId, {
-      duration: parseFloat(editData.duration),
+      duration_hours: parseFloat(editData.duration_hours),
       description: editData.description,
-      billable: editData.billable
+      is_billable: editData.is_billable
     });
 
     if (!result.error) {
@@ -70,7 +70,7 @@ export default function MyTimesheets() {
 
     // Filter by project
     if (filterProject !== 'all') {
-      filtered = filtered.filter(e => e.project_id === parseInt(filterProject));
+      filtered = filtered.filter(e => e.project_id === filterProject);
     }
 
     // Filter by date
@@ -93,13 +93,13 @@ export default function MyTimesheets() {
   };
 
   const getTotalHours = () => {
-    return getFilteredEntries().reduce((sum, e) => sum + (e.duration || 0), 0).toFixed(2);
+    return getFilteredEntries().reduce((sum, e) => sum + (e.duration_hours || 0), 0).toFixed(2);
   };
 
   const getTotalBillable = () => {
     return getFilteredEntries()
-      .filter(e => e.billable)
-      .reduce((sum, e) => sum + (e.duration || 0), 0)
+      .filter(e => e.is_billable)
+      .reduce((sum, e) => sum + (e.duration_hours || 0), 0)
       .toFixed(2);
   };
 
@@ -110,10 +110,10 @@ export default function MyTimesheets() {
       headers.join(','),
       ...filtered.map(entry => [
         entry.entry_date,
-        `"${projects.find(p => p.id === entry.project_id)?.project_name || 'Unknown'}"`,
-        entry.duration,
+        `"${projects.find(p => p.id === entry.project_id)?.name || 'Unknown'}"`,
+        entry.duration_hours,
         `"${(entry.description || '').replace(/"/g, '""')}"`,
-        entry.billable ? 'Yes' : 'No',
+        entry.is_billable ? 'Yes' : 'No',
         entry.entry_method || 'Manual'
       ].join(','))
     ].join('\n');
@@ -187,7 +187,7 @@ export default function MyTimesheets() {
               <option value="all">All Projects</option>
               {projects.map(p => (
                 <option key={p.id} value={p.id}>
-                  {p.project_name}
+                  {p.name}
                 </option>
               ))}
             </select>
@@ -239,13 +239,13 @@ export default function MyTimesheets() {
                         {new Date(entry.entry_date).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
-                        {projects.find(p => p.id === entry.project_id)?.project_name}
+                        {projects.find(p => p.id === entry.project_id)?.name}
                       </td>
                       <td className="px-6 py-4">
                         <input
                           type="number"
-                          value={editData?.duration || 0}
-                          onChange={(e) => setEditData({...editData, duration: e.target.value})}
+                          value={editData?.duration_hours || 0}
+                          onChange={(e) => setEditData({...editData, duration_hours: e.target.value})}
                           className="w-24 px-2 py-1 border border-gray-300 rounded"
                           step="0.1"
                         />
@@ -261,8 +261,8 @@ export default function MyTimesheets() {
                       <td className="px-6 py-4">
                         <input
                           type="checkbox"
-                          checked={editData?.billable || false}
-                          onChange={(e) => setEditData({...editData, billable: e.target.checked})}
+                          checked={editData?.is_billable || false}
+                          onChange={(e) => setEditData({...editData, is_billable: e.target.checked})}
                           className="w-4 h-4"
                         />
                       </td>
@@ -287,16 +287,16 @@ export default function MyTimesheets() {
                         {new Date(entry.entry_date).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
-                        {projects.find(p => p.id === entry.project_id)?.project_name}
+                        {projects.find(p => p.id === entry.project_id)?.name}
                       </td>
                       <td className="px-6 py-4 text-sm font-medium text-blue-600">
-                        {entry.duration.toFixed(2)}h
+                        {(entry.duration_hours || 0).toFixed(2)}h
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600">
                         {entry.description}
                       </td>
                       <td className="px-6 py-4 text-sm">
-                        {entry.billable ? (
+                        {entry.is_billable ? (
                           <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
                             Billable
                           </span>

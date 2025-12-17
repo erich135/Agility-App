@@ -351,8 +351,12 @@ export const TimeEntryService = {
         *,
         project:projects(id, project_number, name, client:clients(id, client_name))
       `)
-      .eq('consultant_id', consultantId)
       .order('entry_date', { ascending: false });
+
+    // Only filter by consultant if ID is provided
+    if (consultantId) {
+      query = query.eq('consultant_id', consultantId);
+    }
 
     if (dateFrom) {
       query = query.gte('entry_date', dateFrom);

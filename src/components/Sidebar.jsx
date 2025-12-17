@@ -6,7 +6,7 @@ import {
   Clock,
   FileText,
   Briefcase,
-  DollarSign,
+  Banknote,
   BarChart3,
   Users,
   Settings,
@@ -108,7 +108,7 @@ export default function Sidebar() {
       items: [
         { 
           path: '/billing', 
-          icon: DollarSign, 
+          icon: Banknote, 
           label: 'Billing Dashboard',
           permission: 'access_billing_dashboard'
         },

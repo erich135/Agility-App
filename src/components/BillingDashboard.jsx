@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { DollarSign, TrendingUp, Clock, AlertCircle, CheckCircle, AlertTriangle, Bell } from 'lucide-react';
+import { Banknote, TrendingUp, Clock, AlertCircle, CheckCircle, AlertTriangle, Bell } from 'lucide-react';
 import { ProjectService, ReportingService, TimeEntryService } from '../services/TimesheetService';
 
 export default function BillingDashboard() {
@@ -109,7 +109,7 @@ export default function BillingDashboard() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <DollarSign className="w-7 h-7 text-green-600" />
+            <Banknote className="w-7 h-7 text-green-600" />
             Billing Dashboard
           </h1>
           <p className="text-gray-600 mt-1">Track projects ready for invoicing</p>
@@ -210,7 +210,7 @@ export default function BillingDashboard() {
 
         {projects.length === 0 ? (
           <div className="p-12 text-center">
-            <DollarSign className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+            <Banknote className="w-12 h-12 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-600">No projects to display</p>
           </div>
         ) : (

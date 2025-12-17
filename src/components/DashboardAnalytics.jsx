@@ -7,7 +7,7 @@ import {
   AlertTriangle, 
   CheckCircle, 
   Clock, 
-  DollarSign,
+  Banknote,
   Users,
   FileText,
   Calendar,
@@ -385,7 +385,7 @@ const DashboardAnalytics = () => {
           <StatCard
             title="Total Revenue"
             value={formatCurrency(stats.totalRevenue)}
-            icon={DollarSign}
+            icon={Banknote}
             color="bg-emerald-500"
             trend={12}
             subtext="Year to date"

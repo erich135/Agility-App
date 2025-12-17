@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, AlertTriangle, Calendar, Clock, X, CheckCircle, DollarSign } from 'lucide-react';
+import { Bell, AlertTriangle, Calendar, Clock, X, CheckCircle, Banknote } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { ProjectService } from '../services/TimesheetService';
 
@@ -155,7 +155,7 @@ export default function BillingNotifications() {
       default:
         return {
           bg: 'bg-blue-50 border-blue-300',
-          icon: <DollarSign className="w-5 h-5 text-blue-600" />,
+          icon: <Banknote className="w-5 h-5 text-blue-600" />,
           badge: 'bg-blue-500'
         };
     }
@@ -177,7 +177,7 @@ export default function BillingNotifications() {
         className="relative p-2 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 rounded-lg transition-colors"
         title="Billing Reminders"
       >
-        <DollarSign className="w-6 h-6" />
+        <Banknote className="w-6 h-6" />
         {totalCount > 0 && (
           <span className={`absolute -top-1 -right-1 flex items-center justify-center min-w-[20px] h-5 px-1 text-xs font-bold text-white rounded-full ${urgentCount > 0 ? 'bg-red-500 animate-pulse' : 'bg-orange-500'}`}>
             {totalCount > 9 ? '9+' : totalCount}
@@ -200,7 +200,7 @@ export default function BillingNotifications() {
             <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <DollarSign className="w-5 h-5 text-green-600" />
+                  <Banknote className="w-5 h-5 text-green-600" />
                   <h3 className="text-lg font-bold text-gray-900">Billing Reminders</h3>
                 </div>
                 <button

@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { ProjectService, ReportingService, TimeEntryService } from '../services/TimesheetService';
 import {
   Clock,
-  DollarSign,
+  Banknote,
   Briefcase,
   TrendingUp,
   AlertTriangle,
@@ -93,7 +93,7 @@ const HomePage = () => {
     {
       title: 'Billing',
       description: 'View projects ready to bill',
-      icon: DollarSign,
+      icon: Banknote,
       link: '/billing',
       color: 'bg-green-500',
       permission: 'access_billing_dashboard'
@@ -170,7 +170,7 @@ const HomePage = () => {
               <p className="text-3xl font-bold text-gray-900 mt-1">{stats.pendingInvoices}</p>
             </div>
             <div className="p-3 bg-green-100 rounded-xl">
-              <DollarSign className="w-6 h-6 text-green-600" />
+              <Banknote className="w-6 h-6 text-green-600" />
             </div>
           </div>
         </div>

@@ -32,6 +32,8 @@ export default function ProjectManagement() {
         JobTypeService.getAll()
       ]);
 
+      console.log('Job Types Response:', jobTypesRes);
+      
       if (!projectsRes.error) setProjects(projectsRes.data || []);
       if (!clientsRes.error) setClients(clientsRes.data || []);
       if (!jobTypesRes.error) setJobTypes(jobTypesRes.data || []);

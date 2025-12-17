@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { TrendingUp, Download, Filter, ArrowLeft } from 'lucide-react';
+import { TrendingUp, Download, Filter } from 'lucide-react';
 import { ReportingService, ProjectService, ClientService } from '../services/TimesheetService';
 
 export default function BillingReports() {
-  const navigate = useNavigate();
   const [monthlyData, setMonthlyData] = useState([]);
   const [clientData, setClientData] = useState([]);
   const [consultantData, setConsultantData] = useState([]);
@@ -81,40 +79,30 @@ export default function BillingReports() {
   const billableHours = monthlyData.filter(item => item.billable).reduce((sum, item) => sum + (item.hours || 0), 0);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Back Button */}
-        <button
-          onClick={() => navigate('/')}
-          className="mb-4 flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          Back to Home
-        </button>
-
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-              <TrendingUp className="w-8 h-8 text-blue-600" />
-              Billing Reports
-            </h1>
-            <p className="text-gray-600 mt-1">Comprehensive billing analytics and insights</p>
-          </div>
-          <button
-            onClick={exportToCSV}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2"
-          >
-            <Download className="w-4 h-4" />
-            Export CSV
-          </button>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <TrendingUp className="w-7 h-7 text-blue-600" />
+            Billing Reports
+          </h1>
+          <p className="text-gray-600 mt-1">Comprehensive billing analytics and insights</p>
         </div>
+        <button
+          onClick={exportToCSV}
+          className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2"
+        >
+          <Download className="w-4 h-4" />
+          Export CSV
+        </button>
+      </div>
 
-        {/* Filters */}
-        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 mb-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+      {/* Filters */}
+      <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
                 <Filter className="w-4 h-4 inline mr-2" />
                 Month
               </label>

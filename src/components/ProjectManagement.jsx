@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Briefcase, Plus, Edit2, Trash2, CheckCircle, Clock, ArrowLeft } from 'lucide-react';
+import { Briefcase, Plus, Edit2, Trash2, CheckCircle, Clock } from 'lucide-react';
 import { ProjectService, ClientService, JobTypeService } from '../services/TimesheetService';
 
 export default function ProjectManagement() {
-  const navigate = useNavigate();
   const [projects, setProjects] = useState([]);
   const [clients, setClients] = useState([]);
   const [jobTypes, setJobTypes] = useState([]);
@@ -133,48 +131,38 @@ export default function ProjectManagement() {
   const filteredProjects = getFilteredProjects();
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Back Button */}
-        <button
-          onClick={() => navigate('/')}
-          className="mb-4 flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          Back to Home
-        </button>
-
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-              <Briefcase className="w-8 h-8 text-blue-600" />
-              Project Management
-            </h1>
-            <p className="text-gray-600 mt-1">Create and manage client projects</p>
-          </div>
-          <button
-            onClick={() => {
-              resetForm();
-              setShowForm(true);
-            }}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            New Project
-          </button>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <Briefcase className="w-7 h-7 text-blue-600" />
+            Project Management
+          </h1>
+          <p className="text-gray-600 mt-1">Create and manage client projects</p>
         </div>
+        <button
+          onClick={() => {
+            resetForm();
+            setShowForm(true);
+          }}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          New Project
+        </button>
+      </div>
 
-        {/* Form Modal */}
-        {showForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg p-6 max-w-2xl w-full">
-              <h2 className="text-2xl font-bold mb-4">
-                {editingId ? 'Edit Project' : 'New Project'}
-              </h2>
+      {/* Form Modal */}
+      {showForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full">
+            <h2 className="text-2xl font-bold mb-4">
+              {editingId ? 'Edit Project' : 'New Project'}
+            </h2>
 
-              <form onSubmit={handleSubmit}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <form onSubmit={handleSubmit}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Client *

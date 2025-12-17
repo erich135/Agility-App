@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Clock, Edit2, Trash2, Download, Filter, ArrowLeft } from 'lucide-react';
+import { Clock, Edit2, Trash2, Download, Filter } from 'lucide-react';
 import { TimeEntryService, ProjectService, ClientService } from '../services/TimesheetService';
 
 export default function MyTimesheets() {
-  const navigate = useNavigate();
   const [entries, setEntries] = useState([]);
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -140,24 +138,14 @@ export default function MyTimesheets() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Back Button */}
-        <button
-          onClick={() => navigate('/')}
-          className="mb-4 flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          Back to Home
-        </button>
-
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-              <Clock className="w-8 h-8 text-blue-600" />
-              My Timesheets
-            </h1>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <Clock className="w-7 h-7 text-blue-600" />
+            My Timesheets
+          </h1>
             <p className="text-gray-600 mt-1">View and manage your time entries</p>
           </div>
           <button

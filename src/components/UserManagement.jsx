@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Users, UserPlus, Mail, Shield, Trash2, Key, CheckCircle, XCircle, ArrowLeft } from 'lucide-react';
+import { Users, UserPlus, Mail, Shield, Trash2, Key, CheckCircle, XCircle } from 'lucide-react';
 import supabase from '../lib/SupabaseClient';
 
 export default function UserManagement() {
-  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [permissions, setPermissions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -202,32 +200,22 @@ export default function UserManagement() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Back Button */}
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <Users className="w-7 h-7 text-blue-600" />
+            User Management
+          </h1>
+          <p className="text-gray-600 mt-1">Invite users and manage permissions</p>
+        </div>
         <button
-          onClick={() => navigate('/')}
-          className="mb-4 flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors"
+          onClick={() => setShowInviteForm(true)}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
         >
-          <ArrowLeft className="w-5 h-5" />
-          Back to Home
-        </button>
-
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-              <Users className="w-8 h-8 text-blue-600" />
-              User Management
-            </h1>
-            <p className="text-gray-600 mt-1">Invite users and manage permissions</p>
-          </div>
-          <button
-            onClick={() => setShowInviteForm(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
-          >
-            <UserPlus className="w-4 h-4" />
-            Invite User
+          <UserPlus className="w-4 h-4" />
+          Invite User
           </button>
         </div>
 

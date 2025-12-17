@@ -1,6 +1,7 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import Layout from './components/Layout';
 import HomePage from './components/HomePage';
 import LoginPage from './components/LoginPage';
 import SetupPassword from './components/SetupPassword';
@@ -11,6 +12,7 @@ import CalendarTaskManagement from './components/CalendarTaskManagement';
 import DashboardAnalytics from './components/DashboardAnalytics';
 import ClientPortal from './components/ClientPortal';
 import FinancialStatements from './components/FinancialStatements';
+import DocumentManager from './components/DocumentManager';
 import Timesheet from './components/Timesheet';
 import MyTimesheets from './components/MyTimesheets';
 import ProjectManagement from './components/ProjectManagement';
@@ -18,7 +20,7 @@ import BillingDashboard from './components/BillingDashboard';
 import BillingReports from './components/BillingReports';
 import UserManagement from './components/UserManagement';
 
-// Protected Route component
+// Protected Route component with Layout
 const ProtectedRoute = ({ children, requiredPermission }) => {
   const { isLoggedIn, hasPermission, loading } = useAuth();
 
@@ -37,17 +39,19 @@ const ProtectedRoute = ({ children, requiredPermission }) => {
   // Check permission if required
   if (requiredPermission && !hasPermission(requiredPermission)) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
-          <p className="text-gray-600">You don't have permission to view this page.</p>
-          <a href="/" className="text-blue-600 hover:underline mt-4 inline-block">Go to Home</a>
+      <Layout>
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+            <p className="text-gray-600">You don't have permission to view this page.</p>
+            <a href="/" className="text-blue-600 hover:underline mt-4 inline-block">Go to Home</a>
+          </div>
         </div>
-      </div>
+      </Layout>
     );
   }
 
-  return children;
+  return <Layout>{children}</Layout>;
 };
 
 // Public Route - redirects to home if already logged in
@@ -86,7 +90,8 @@ function AppRoutes() {
       <Route path="/my-timesheets" element={<ProtectedRoute requiredPermission="access_my_timesheets"><MyTimesheets /></ProtectedRoute>} />
       <Route path="/projects" element={<ProtectedRoute requiredPermission="access_projects"><ProjectManagement /></ProtectedRoute>} />
       <Route path="/billing" element={<ProtectedRoute requiredPermission="access_billing_dashboard"><BillingDashboard /></ProtectedRoute>} />
-      <Route path="/reports" element={<ProtectedRoute requiredPermission="access_billing_reports"><BillingReports /></ProtectedRoute>} />
+      <Route path="/billing/reports" element={<ProtectedRoute requiredPermission="access_billing_reports"><BillingReports /></ProtectedRoute>} />
+      <Route path="/documents" element={<ProtectedRoute requiredPermission="access_documents"><DocumentManager /></ProtectedRoute>} />
       <Route path="/financial-statements" element={<ProtectedRoute requiredPermission="access_financial_statements"><FinancialStatements /></ProtectedRoute>} />
       <Route path="/client-portal" element={<ProtectedRoute><ClientPortal /></ProtectedRoute>} />
       

@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { DollarSign, TrendingUp, Clock, AlertCircle, CheckCircle, ArrowLeft, AlertTriangle, Bell } from 'lucide-react';
+import { DollarSign, TrendingUp, Clock, AlertCircle, CheckCircle, AlertTriangle, Bell } from 'lucide-react';
 import { ProjectService, ReportingService, TimeEntryService } from '../services/TimesheetService';
 
 export default function BillingDashboard() {
-  const navigate = useNavigate();
   const [stats, setStats] = useState({
     readyToBill: 0,
     totalBillableHours: 0,
@@ -99,32 +97,24 @@ export default function BillingDashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Back Button */}
-        <button
-          onClick={() => navigate('/')}
-          className="mb-4 flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          Back to Home
-        </button>
-
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2 mb-2">
-            <DollarSign className="w-8 h-8 text-green-600" />
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <DollarSign className="w-7 h-7 text-green-600" />
             Billing Dashboard
           </h1>
-          <p className="text-gray-600">Track projects ready for invoicing</p>
+          <p className="text-gray-600 mt-1">Track projects ready for invoicing</p>
         </div>
+      </div>
 
         {/* Urgent Alert Banner */}
         {(stats.overdueCount > 0 || stats.dueTodayCount > 0) && (

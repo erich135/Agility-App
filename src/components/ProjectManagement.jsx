@@ -163,197 +163,196 @@ export default function ProjectManagement() {
 
             <form onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Client *
-                    </label>
-                    <select
-                      value={formData.client_id}
-                      onChange={(e) => setFormData({...formData, client_id: e.target.value})}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-                    >
-                      <option value="">Select a client</option>
-                      {clients.map(c => (
-                        <option key={c.id} value={c.id}>
-                          {c.client_name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Project Name *
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.project_name}
-                      onChange={(e) => setFormData({...formData, project_name: e.target.value})}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-                      placeholder="e.g., Annual Tax Return 2025"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Job Type *
-                    </label>
-                    <select
-                      value={formData.job_type_id}
-                      onChange={(e) => setFormData({...formData, job_type_id: e.target.value})}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-                    >
-                      <option value="">Select job type</option>
-                      {jobTypes.map(jt => (
-                        <option key={jt.id} value={jt.id}>
-                          {jt.job_type_name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Status *
-                    </label>
-                    <select
-                      value={formData.status}
-                      onChange={(e) => setFormData({...formData, status: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-                    >
-                      <option value="Active">Active</option>
-                      <option value="Completed">Completed</option>
-                      <option value="Invoiced">Invoiced</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Expected Billing Date
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.expected_billing_date}
-                      onChange={(e) => setFormData({...formData, expected_billing_date: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Client *
+                  </label>
+                  <select
+                    value={formData.client_id}
+                    onChange={(e) => setFormData({...formData, client_id: e.target.value})}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  >
+                    <option value="">Select a client</option>
+                    {clients.map(c => (
+                      <option key={c.id} value={c.id}>
+                        {c.client_name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
-                <div className="mb-4">
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Notes
+                    Project Name *
                   </label>
-                  <textarea
-                    value={formData.notes}
-                    onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                  <input
+                    type="text"
+                    value={formData.project_name}
+                    onChange={(e) => setFormData({...formData, project_name: e.target.value})}
+                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-                    rows="3"
+                    placeholder="e.g., Annual Tax Return 2025"
                   />
                 </div>
 
-                <div className="flex gap-3 justify-end">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowForm(false);
-                      resetForm();
-                    }}
-                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Job Type *
+                  </label>
+                  <select
+                    value={formData.job_type_id}
+                    onChange={(e) => setFormData({...formData, job_type_id: e.target.value})}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
                   >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                  >
-                    {editingId ? 'Update' : 'Create'} Project
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* Filters */}
-        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 mb-6">
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-          >
-            <option value="all">All Projects</option>
-            <option value="Active">Active</option>
-            <option value="Completed">Completed</option>
-            <option value="Invoiced">Invoiced</option>
-          </select>
-        </div>
-
-        {/* Projects Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProjects.length === 0 ? (
-            <div className="col-span-full text-center py-12">
-              <Briefcase className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-600">No projects found</p>
-            </div>
-          ) : (
-            filteredProjects.map(project => (
-              <div key={project.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition">
-                <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900 flex-1">
-                    {project.project_name}
-                  </h3>
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[project.status] || 'bg-gray-100'}`}>
-                    {project.status}
-                  </span>
+                    <option value="">Select job type</option>
+                    {jobTypes.map(jt => (
+                      <option key={jt.id} value={jt.id}>
+                        {jt.job_type_name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
-                <div className="space-y-3 mb-6">
-                  <p className="text-sm text-gray-600">
-                    <span className="font-medium">Client:</span> {clients.find(c => c.id === project.client_id)?.client_name}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    <span className="font-medium">Type:</span> {jobTypes.find(j => j.id === project.job_type_id)?.job_type_name}
-                  </p>
-                  {project.expected_billing_date && (
-                    <p className="text-sm text-gray-600">
-                      <span className="font-medium">Billing Date:</span> {new Date(project.expected_billing_date).toLocaleDateString()}
-                    </p>
-                  )}
-                  <p className="text-sm text-gray-600">
-                    <span className="font-medium">Total Hours:</span> {project.total_hours?.toFixed(2) || '0.00'}h
-                  </p>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Status *
+                  </label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => setFormData({...formData, status: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Invoiced">Invoiced</option>
+                  </select>
                 </div>
 
-                {project.notes && (
-                  <p className="text-sm text-gray-600 mb-4 p-3 bg-gray-50 rounded">
-                    {project.notes}
-                  </p>
-                )}
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleEdit(project)}
-                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(project.id)}
-                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    Delete
-                  </button>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Expected Billing Date
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.expected_billing_date}
+                    onChange={(e) => setFormData({...formData, expected_billing_date: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  />
                 </div>
               </div>
-            ))
-          )}
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Notes
+                </label>
+                <textarea
+                  value={formData.notes}
+                  onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  rows="3"
+                />
+              </div>
+
+              <div className="flex gap-3 justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForm(false);
+                    resetForm();
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  {editingId ? 'Update' : 'Create'} Project
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
+      )}
+
+      {/* Filters */}
+      <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+        >
+          <option value="all">All Projects</option>
+          <option value="Active">Active</option>
+          <option value="Completed">Completed</option>
+          <option value="Invoiced">Invoiced</option>
+        </select>
+      </div>
+
+      {/* Projects Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredProjects.length === 0 ? (
+          <div className="col-span-full text-center py-12">
+            <Briefcase className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-600">No projects found</p>
+          </div>
+        ) : (
+          filteredProjects.map(project => (
+            <div key={project.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition">
+              <div className="flex justify-between items-start mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 flex-1">
+                  {project.project_name}
+                </h3>
+                <span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[project.status] || 'bg-gray-100'}`}>
+                  {project.status}
+                </span>
+              </div>
+
+              <div className="space-y-3 mb-6">
+                <p className="text-sm text-gray-600">
+                  <span className="font-medium">Client:</span> {clients.find(c => c.id === project.client_id)?.client_name}
+                </p>
+                <p className="text-sm text-gray-600">
+                  <span className="font-medium">Type:</span> {jobTypes.find(j => j.id === project.job_type_id)?.job_type_name}
+                </p>
+                {project.expected_billing_date && (
+                  <p className="text-sm text-gray-600">
+                    <span className="font-medium">Billing Date:</span> {new Date(project.expected_billing_date).toLocaleDateString()}
+                  </p>
+                )}
+                <p className="text-sm text-gray-600">
+                  <span className="font-medium">Total Hours:</span> {project.total_hours?.toFixed(2) || '0.00'}h
+                </p>
+              </div>
+
+              {project.notes && (
+                <p className="text-sm text-gray-600 mb-4 p-3 bg-gray-50 rounded">
+                  {project.notes}
+                </p>
+              )}
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleEdit(project)}
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(project.id)}
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

@@ -150,7 +150,6 @@ const DashboardAnalytics = () => {
       } catch (e) {
         console.log('Revenue data not available yet');
       }
-      }
 
       setStats({
         totalClients: clientCount || 0,

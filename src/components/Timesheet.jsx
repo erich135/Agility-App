@@ -721,11 +721,10 @@ const Timesheet = () => {
   const loadInitialData = async () => {
     setLoading(true);
     try {
-      // Load clients
+      // Load clients (no status filter - clients table doesn't have status column)
       const { data: clientsData } = await supabase
         .from('clients')
         .select('id, client_name')
-        .eq('status', 'Active')
         .order('client_name');
       
       setClients(clientsData || []);
@@ -734,18 +733,36 @@ const Timesheet = () => {
       const { data: jobTypesData } = await JobTypeService.getAll();
       setJobTypes(jobTypesData || []);
 
-      // For now, use user info as consultant (we'll link this properly later)
-      // In production, this would come from the consultants table
-      const mockConsultant = {
+      // Try to get consultant from consultants table by email
+      let consultantData = null;
+      if (user?.email) {
+        const { data: consultantResult } = await ConsultantService.getByUserId(user.id);
+        if (consultantResult) {
+          consultantData = consultantResult;
+        } else {
+          // Try by email if not linked by user_id
+          const { data: consultantByEmail } = await supabase
+            .from('consultants')
+            .select('*')
+            .eq('email', user.email)
+            .single();
+          if (consultantByEmail) {
+            consultantData = consultantByEmail;
+          }
+        }
+      }
+      
+      // Use consultant from DB or fallback to user info
+      const finalConsultant = consultantData || {
         id: user?.id || 'demo-consultant',
         full_name: user?.full_name || user?.email || 'Demo Consultant',
         email: user?.email || 'demo@example.com'
       };
-      setConsultant(mockConsultant);
+      setConsultant(finalConsultant);
 
       // Check for active timer
-      if (mockConsultant.id) {
-        const { data: timerData } = await TimeEntryService.getActiveTimer(mockConsultant.id);
+      if (finalConsultant.id) {
+        const { data: timerData } = await TimeEntryService.getActiveTimer(finalConsultant.id);
         if (timerData) {
           setActiveTimer(timerData);
         }

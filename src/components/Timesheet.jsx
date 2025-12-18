@@ -7,6 +7,8 @@ import {
   JobTypeService,
   ConsultantService 
 } from '../services/TimesheetService';
+import AnimatedCounter from './animations/AnimatedCounter';
+import { SkeletonStats, SkeletonCard } from './animations/Skeletons';
 
 // ============================================
 // TIMER WIDGET COMPONENT
@@ -23,7 +25,7 @@ const TimerWidget = ({ activeTimer, onStop, elapsedTime }) => {
   if (!activeTimer) return null;
 
   return (
-    <div className="fixed bottom-6 right-6 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl shadow-2xl p-4 z-50 min-w-[280px] animate-pulse-slow">
+    <div className="fixed bottom-6 right-6 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl shadow-2xl p-4 z-50 min-w-[280px] animate-pulse-soft hover-lift">
       <div className="flex items-center justify-between">
         <div>
           <div className="text-xs opacity-80 mb-1">Timer Running</div>
@@ -903,17 +905,34 @@ const Timesheet = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading timesheet...</p>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-6 animate-page-in">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Skeleton Header */}
+          <div className="flex justify-between items-center">
+            <div>
+              <div className="skeleton h-8 w-48 mb-2"></div>
+              <div className="skeleton h-4 w-72"></div>
+            </div>
+            <div className="skeleton h-12 w-40 rounded-xl"></div>
+          </div>
+          {/* Skeleton Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map(i => <SkeletonStats key={i} className="h-28" />)}
+          </div>
+          {/* Skeleton Content */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <div className="skeleton h-96 rounded-2xl"></div>
+            </div>
+            <div className="skeleton h-96 rounded-2xl"></div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-6 animate-page-in">
       {/* Success Toast */}
       {successMessage && (
         <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-slide-in flex items-center">
@@ -926,7 +945,7 @@ const Timesheet = () => {
 
       {/* Error Toast */}
       {error && (
-        <div className="fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center">
+        <div className="fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-slide-in flex items-center">
           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -937,7 +956,7 @@ const Timesheet = () => {
 
       {/* Header */}
       <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 animate-card-enter">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Timesheet</h1>
             <p className="text-gray-500 mt-1">
@@ -954,7 +973,7 @@ const Timesheet = () => {
           <div className="flex space-x-3 mt-4 md:mt-0">
             <button
               onClick={() => setShowProjectModal(true)}
-              className="bg-white hover:bg-gray-50 text-gray-700 font-semibold py-3 px-5 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center border border-gray-200"
+              className="bg-white hover:bg-gray-50 text-gray-700 font-semibold py-3 px-5 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center border border-gray-200 btn-animated hover-lift"
             >
               <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />

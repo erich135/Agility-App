@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { ProjectService, ReportingService, TimeEntryService } from '../services/TimesheetService';
+import AnimatedCounter from './animations/AnimatedCounter';
+import { SkeletonStats, SkeletonCard } from './animations/Skeletons';
 import {
   Clock,
   Banknote,
@@ -110,16 +112,25 @@ const HomePage = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="space-y-6 animate-page-in">
+        {/* Skeleton Header */}
+        <div className="skeleton h-40 rounded-2xl"></div>
+        {/* Skeleton Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map(i => <SkeletonStats key={i} className="h-24" />)}
+        </div>
+        {/* Skeleton Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => <div key={i} className="skeleton h-32 rounded-xl"></div>)}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-page-in">
       {/* Welcome Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-8 text-white">
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-8 text-white animate-gradient animate-card-enter">
         <h1 className="text-3xl font-bold mb-2">
           {getGreeting()}, {user?.first_name || user?.full_name || 'User'}! 👋
         </h1>
@@ -130,7 +141,7 @@ const HomePage = () => {
 
       {/* Alert Banner for Overdue */}
       {stats.overdueCount > 0 && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-4">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-4 animate-card-enter overdue-pulse">
           <div className="p-2 bg-red-100 rounded-lg">
             <AlertTriangle className="w-6 h-6 text-red-600" />
           </div>
@@ -142,7 +153,7 @@ const HomePage = () => {
           </div>
           <Link 
             to="/billing"
-            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors btn-animated hover-lift"
           >
             View Now
           </Link>
@@ -151,11 +162,13 @@ const HomePage = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 stats-card animate-card-enter stagger-1">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500 font-medium">Active Projects</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">{stats.activeProjects}</p>
+              <p className="text-3xl font-bold text-gray-900 mt-1">
+                <AnimatedCounter value={stats.activeProjects} duration={800} />
+              </p>
             </div>
             <div className="p-3 bg-blue-100 rounded-xl">
               <Briefcase className="w-6 h-6 text-blue-600" />
@@ -163,11 +176,13 @@ const HomePage = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 stats-card animate-card-enter stagger-2">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500 font-medium">Pending Invoices</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">{stats.pendingInvoices}</p>
+              <p className="text-3xl font-bold text-gray-900 mt-1">
+                <AnimatedCounter value={stats.pendingInvoices} duration={900} />
+              </p>
             </div>
             <div className="p-3 bg-green-100 rounded-xl">
               <Banknote className="w-6 h-6 text-green-600" />
@@ -175,7 +190,7 @@ const HomePage = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 stats-card animate-card-enter stagger-3">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500 font-medium">Hours This Week</p>
@@ -187,12 +202,12 @@ const HomePage = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 stats-card animate-card-enter stagger-4">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500 font-medium">Overdue</p>
               <p className={`text-3xl font-bold mt-1 ${stats.overdueCount > 0 ? 'text-red-600' : 'text-gray-900'}`}>
-                {stats.overdueCount}
+                <AnimatedCounter value={stats.overdueCount} duration={1000} />
               </p>
             </div>
             <div className={`p-3 rounded-xl ${stats.overdueCount > 0 ? 'bg-red-100' : 'bg-gray-100'}`}>
@@ -214,7 +229,7 @@ const HomePage = () => {
             <Link
               key={index}
               to={action.link}
-              className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md hover:border-blue-200 transition-all group"
+              className={`bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-lg hover:border-blue-200 transition-all group hover-lift card-shine animate-card-enter stagger-${index + 1}`}
             >
               <div className={`w-12 h-12 ${action.color} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
                 <action.icon className="w-6 h-6 text-white" />
@@ -231,16 +246,16 @@ const HomePage = () => {
 
       {/* Recent Projects */}
       {recentProjects.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden animate-card-enter stagger-5">
           <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-900">Recent Projects</h2>
-            <Link to="/projects" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+            <Link to="/projects" className="text-sm text-blue-600 hover:text-blue-700 font-medium btn-animated">
               View All →
             </Link>
           </div>
           <div className="divide-y divide-gray-100">
-            {recentProjects.map((project) => (
-              <div key={project.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+            {recentProjects.map((project, index) => (
+              <div key={project.id} className={`px-6 py-4 hover:bg-gray-50 transition-colors animate-row`} style={{ animationDelay: `${index * 0.1}s` }}>
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium text-gray-900">{project.name}</p>

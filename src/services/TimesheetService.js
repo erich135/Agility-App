@@ -141,32 +141,53 @@ export const ClientService = {
 export const ProjectService = {
   // Get all projects with related data
   async getAll(filters = {}) {
-    let query = supabase
-      .from('projects')
-      .select(`
-        *,
-        client:clients(id, client_name),
-        job_type:job_types(id, name, category),
-        assigned_consultant:consultants(id, full_name)
-      `)
-      .order('created_at', { ascending: false });
+    try {
+      // First try with joins
+      let query = supabase
+        .from('projects')
+        .select(`
+          *,
+          client:clients(id, client_name),
+          job_type:job_types(id, name, category)
+        `)
+        .order('created_at', { ascending: false });
 
-    // Apply filters
-    if (filters.status) {
-      query = query.eq('status', filters.status);
-    }
-    if (filters.client_id) {
-      query = query.eq('client_id', filters.client_id);
-    }
-    if (filters.assigned_consultant_id) {
-      query = query.eq('assigned_consultant_id', filters.assigned_consultant_id);
-    }
-    if (filters.status_in) {
-      query = query.in('status', filters.status_in);
-    }
+      // Apply filters
+      if (filters.status) {
+        query = query.eq('status', filters.status);
+      }
+      if (filters.client_id) {
+        query = query.eq('client_id', filters.client_id);
+      }
+      if (filters.assigned_consultant_id) {
+        query = query.eq('assigned_consultant_id', filters.assigned_consultant_id);
+      }
+      if (filters.status_in) {
+        query = query.in('status', filters.status_in);
+      }
 
-    const { data, error } = await query;
-    return { data, error };
+      const { data, error } = await query;
+      
+      // If join fails, try simple query
+      if (error) {
+        console.warn('Join query failed, trying simple query:', error);
+        const simpleResult = await supabase
+          .from('projects')
+          .select('*')
+          .order('created_at', { ascending: false });
+        return simpleResult;
+      }
+      
+      return { data, error };
+    } catch (err) {
+      console.error('ProjectService.getAll error:', err);
+      // Fallback to simple query
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .order('created_at', { ascending: false });
+      return { data, error };
+    }
   },
 
   // Get projects for a specific client
@@ -175,8 +196,7 @@ export const ProjectService = {
       .from('projects')
       .select(`
         *,
-        job_type:job_types(id, name, category),
-        assigned_consultant:consultants(id, full_name)
+        job_type:job_types(id, name, category)
       `)
       .eq('client_id', clientId)
       .order('created_at', { ascending: false });
@@ -186,12 +206,21 @@ export const ProjectService = {
 
   // Get active projects for a client (for dropdown)
   async getActiveByClient(clientId) {
-    const { data, error } = await supabase
+    // First try to get projects with status filter
+    let { data, error } = await supabase
       .from('projects')
       .select('id, project_number, name, status')
       .eq('client_id', clientId)
-      .in('status', ['active', 'on_hold'])
       .order('name');
+    
+    // If that works, filter for active/on_hold status
+    if (!error && data) {
+      // Filter in JS in case status column doesn't exist or has different values
+      const activeProjects = data.filter(p => 
+        !p.status || p.status === 'active' || p.status === 'on_hold'
+      );
+      return { data: activeProjects, error: null };
+    }
     
     return { data, error };
   },
@@ -202,9 +231,8 @@ export const ProjectService = {
       .from('projects')
       .select(`
         *,
-        client:clients(id, client_name, email, phone_number),
-        job_type:job_types(id, name, category),
-        assigned_consultant:consultants(id, full_name, email)
+        client:clients(id, client_name),
+        job_type:job_types(id, name, category)
       `)
       .eq('id', id)
       .single();

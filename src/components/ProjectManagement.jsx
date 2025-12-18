@@ -577,11 +577,12 @@ export default function ProjectManagement() {
       {/* Project Detail Modal */}
       {expandedProject && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-50 animate-modal-backdrop"
+          className="fixed inset-0 bg-black/50 grid place-items-center p-4"
+          style={{ zIndex: 9999 }}
           onClick={(e) => { if (e.target === e.currentTarget) setExpandedProject(null); }}
         >
           <div 
-            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl max-w-4xl w-[calc(100%-2rem)] max-h-[90vh] overflow-hidden flex flex-col animate-modal-content"
+            className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl"
           >
             {(() => {
               const project = projects.find(p => p.id === expandedProject);
@@ -692,11 +693,12 @@ export default function ProjectManagement() {
       {/* Form Modal */}
       {showForm && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-50 animate-modal-backdrop"
+          className="fixed inset-0 bg-black/50 grid place-items-center p-4"
+          style={{ zIndex: 9999 }}
           onClick={(e) => { if (e.target === e.currentTarget) { setShowForm(false); resetForm(); } }}
         >
           <div 
-            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl p-6 max-w-2xl w-[calc(100%-2rem)] max-h-[90vh] overflow-y-auto animate-modal-slide-up"
+            className="bg-white rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
           >
             <h2 className="text-2xl font-bold mb-6">
               {editingId ? 'Edit Project' : 'New Project'}

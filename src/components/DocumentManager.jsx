@@ -683,29 +683,31 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
           )}
         </div>
 
-        {/* AI Smart Upload Section */}
-        <div id="smart-upload-section" className="px-6 py-4 border-t-2 border-purple-200 bg-purple-50">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-3">
-              <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-sm">AI</span>
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">AI Smart Upload</h3>
-                <p className="text-sm text-gray-600">Automatic OCR, classification, and duplicate detection</p>
+        {/* AI Smart Upload Section - only show when customerId is provided */}
+        {customerId && (
+          <div id="smart-upload-section" className="px-6 py-4 border-t-2 border-purple-200 bg-purple-50">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-3">
+                <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">AI</span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">AI Smart Upload</h3>
+                  <p className="text-sm text-gray-600">Automatic OCR, classification, and duplicate detection</p>
+                </div>
               </div>
             </div>
+            
+            <div className="bg-white rounded-lg">
+              <SmartDocumentUpload 
+                clientId={customerId}
+                onUploadComplete={() => {
+                  fetchDocuments(); // Refresh documents after upload
+                }}
+              />
+            </div>
           </div>
-          
-          <div className="bg-white rounded-lg">
-            <SmartDocumentUpload 
-              clientId={customerId}
-              onUploadComplete={() => {
-                fetchDocuments(); // Refresh documents after upload
-              }}
-            />
-          </div>
-        </div>
+        )}
 
         {/* Additional Documents Section - only show when customerId is provided */}
         {customerId && (
@@ -904,31 +906,36 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
               <p><strong>Total documents:</strong> {documents.length}</p>
             </div>
             <div className="flex space-x-3 flex-shrink-0">
-              <button
-                onClick={() => {
-                  const smartUploadSection = document.getElementById('smart-upload-section');
-                  smartUploadSection?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all"
-              >
-                🤖 AI Upload
-              </button>
-              <button
-                onClick={() => {
-                  const additionalSection = document.getElementById('additional-documents-section');
-                  additionalSection?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                📎 Additional Documents
-              </button>
-              <button
-                onClick={onClose}
-                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-              >
-                Close
-              </button>
-            </div>
+              {customerId && (
+                <>
+                  <button
+                    onClick={() => {
+                      const smartUploadSection = document.getElementById('smart-upload-section');
+                      smartUploadSection?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all"
+                  >
+                    🤖 AI Upload
+                  </button>
+                  <button
+                    onClick={() => {
+                      const additionalSection = document.getElementById('additional-documents-section');
+                      additionalSection?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    📎 Additional Documents
+                  </button>
+                </>
+              )}
+              {onClose && (
+                <button
+                  onClick={onClose}
+                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  Close
+                </button>
+              )}
           </div>
         </div>
       </div>

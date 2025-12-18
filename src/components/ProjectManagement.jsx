@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Briefcase, Plus, Edit2, Trash2, Clock, DollarSign, User, Calendar, ChevronDown, ChevronUp, Eye, Filter, Search } from 'lucide-react';
+import { Briefcase, Plus, Edit2, Trash2, Clock, User, Calendar, ChevronDown, ChevronUp, Eye, Filter, Search, Banknote } from 'lucide-react';
 import { ProjectService, ClientService, JobTypeService, TimeEntryService } from '../services/TimesheetService';
 import { useToast } from './Toast';
 import supabase from '../lib/SupabaseClient';
@@ -328,7 +328,7 @@ export default function ProjectManagement() {
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 stats-card animate-card-enter stagger-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-orange-100 rounded-lg">
-              <DollarSign className="w-5 h-5 text-orange-600" />
+              <Banknote className="w-5 h-5 text-orange-600" />
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-900">
@@ -466,7 +466,7 @@ export default function ProjectManagement() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <DollarSign className="w-4 h-4 text-gray-400" />
+                      <span className="w-4 h-4 text-gray-400 font-bold text-sm flex items-center justify-center">R</span>
                       <div>
                         <p className="text-xs text-gray-500">Billable</p>
                         <p className="text-sm font-medium">{stats.billableHours.toFixed(1)}h</p>
@@ -576,8 +576,8 @@ export default function ProjectManagement() {
 
       {/* Project Detail Modal */}
       {expandedProject && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 animate-modal-backdrop">
-          <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-modal-content">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 animate-modal-backdrop" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-modal-content mx-4" style={{ margin: 'auto' }}>
             {(() => {
               const project = projects.find(p => p.id === expandedProject);
               if (!project) return null;
@@ -686,8 +686,8 @@ export default function ProjectManagement() {
 
       {/* Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 animate-modal-backdrop">
-          <div className="bg-white rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-modal-slide-up">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 animate-modal-backdrop" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="bg-white rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-modal-slide-up mx-4" style={{ margin: 'auto' }}>
             <h2 className="text-2xl font-bold mb-6">
               {editingId ? 'Edit Project' : 'New Project'}
             </h2>

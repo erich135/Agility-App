@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Briefcase, Plus, Edit2, Trash2, Clock, User, Calendar, ChevronDown, ChevronUp, Eye, Filter, Search, Banknote } from 'lucide-react';
 import { ProjectService, ClientService, JobTypeService, TimeEntryService } from '../services/TimesheetService';
 import { useToast } from './Toast';
@@ -575,15 +576,16 @@ export default function ProjectManagement() {
       )}
 
       {/* Project Detail Modal */}
-      {expandedProject && (
-        <div 
-          className="fixed inset-0 bg-black/50 grid place-items-center p-4"
-          style={{ zIndex: 9999 }}
-          onClick={(e) => { if (e.target === e.currentTarget) setExpandedProject(null); }}
-        >
+      {expandedProject && typeof document !== 'undefined'
+        ? createPortal(
           <div 
-            className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl"
+            className="fixed inset-0 bg-black/50 grid place-items-center p-4"
+            style={{ zIndex: 9999 }}
+            onClick={(e) => { if (e.target === e.currentTarget) setExpandedProject(null); }}
           >
+            <div 
+              className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl"
+            >
             {(() => {
               const project = projects.find(p => p.id === expandedProject);
               if (!project) return null;
@@ -686,20 +688,23 @@ export default function ProjectManagement() {
                 </>
               );
             })()}
-          </div>
-        </div>
-      )}
+            </div>
+          </div>,
+          document.body
+        )
+        : null}
 
       {/* Form Modal */}
-      {showForm && (
-        <div 
-          className="fixed inset-0 bg-black/50 grid place-items-center p-4"
-          style={{ zIndex: 9999 }}
-          onClick={(e) => { if (e.target === e.currentTarget) { setShowForm(false); resetForm(); } }}
-        >
+      {showForm && typeof document !== 'undefined'
+        ? createPortal(
           <div 
-            className="bg-white rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+            className="fixed inset-0 bg-black/50 grid place-items-center p-4"
+            style={{ zIndex: 9999 }}
+            onClick={(e) => { if (e.target === e.currentTarget) { setShowForm(false); resetForm(); } }}
           >
+            <div 
+              className="bg-white rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+            >
             <h2 className="text-2xl font-bold mb-6">
               {editingId ? 'Edit Project' : 'New Project'}
             </h2>
@@ -829,9 +834,11 @@ export default function ProjectManagement() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+            </div>
+          </div>,
+          document.body
+        )
+        : null}
     </div>
   );
 }

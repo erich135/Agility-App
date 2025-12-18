@@ -150,8 +150,8 @@ const DocumentManager = ({ customerId: propCustomerId, customerName: propCustome
       setLoadingCustomers(true);
       const { data, error } = await supabase
         .from('clients')
-        .select('id, company_name')
-        .order('company_name', { ascending: true });
+        .select('id, client_name')
+        .order('client_name', { ascending: true });
 
       if (error) throw error;
       setCustomers(data || []);
@@ -166,7 +166,7 @@ const DocumentManager = ({ customerId: propCustomerId, customerName: propCustome
     const id = e.target.value;
     setSelectedCustomerId(id);
     const customer = customers.find(c => c.id === id);
-    setSelectedCustomerName(customer?.company_name || '');
+    setSelectedCustomerName(customer?.client_name || '');
   };
 
   const fetchDocuments = async () => {
@@ -542,7 +542,7 @@ const DocumentManager = ({ customerId: propCustomerId, customerName: propCustome
                 <option value="">-- Select a customer --</option>
                 {customers.map((customer) => (
                   <option key={customer.id} value={customer.id}>
-                    {customer.company_name}
+                    {customer.client_name}
                   </option>
                 ))}
               </select>

@@ -122,11 +122,18 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
   const fetchDocuments = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      
+      // Build query based on whether customerId is provided
+      let query = supabase
         .from('documents')
-        .select('*')
-        .eq('client_id', customerId)
-        .order('uploaded_at', { ascending: false });
+        .select('*');
+      
+      // Only filter by client_id if customerId is provided
+      if (customerId) {
+        query = query.eq('client_id', customerId);
+      }
+      
+      const { data, error } = await query.order('uploaded_at', { ascending: false });
 
       if (error) throw error;
       setDocuments(data || []);
@@ -140,6 +147,12 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
 
   const handleFileUpload = async (file, documentType) => {
     if (!file) return;
+
+    // Check if customerId is provided (required for uploads)
+    if (!customerId) {
+      alert('Customer ID is required to upload documents. Please access this page from a customer record.');
+      return;
+    }
 
     // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
@@ -220,6 +233,12 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
   const handleAdditionalDocUpload = async () => {
     if (!additionalDoc.file || !additionalDoc.description.trim() || !additionalDoc.documentName.trim()) {
       alert('Please select a file, enter a document name, and provide a description');
+      return;
+    }
+
+    // Check if customerId is provided (required for uploads)
+    if (!customerId) {
+      alert('Customer ID is required to upload documents. Please access this page from a customer record.');
       return;
     }
 
@@ -459,17 +478,19 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
                 Document Management
               </h2>
               <p className="text-sm text-gray-600 mt-1">
-                {customerName} - Upload and manage client documents
+                {customerId ? `${customerName || 'Customer'} - Upload and manage client documents` : 'View all documents'}
               </p>
             </div>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
           </div>
         </div>
 
@@ -484,6 +505,18 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
         >
           {/* Content wrapper with minimum height for scrolling */}
           <div style={{ minHeight: '800px' }}>
+          {/* Info message when no customerId */}
+          {!customerId && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <div className="flex">
+                <svg className="w-5 h-5 text-blue-400 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-sm text-blue-700">To upload documents, please access this page from a specific customer record in Customer Management.</span>
+              </div>
+            </div>
+          )}
+
           {/* Error Display */}
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
@@ -525,43 +558,45 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
                         </div>
                       </div>
                       
-                      {/* Upload Button */}
-                      <div className="relative">
-                        <input
-                          type="file"
-                          id={`upload-${docType.key}`}
-                          className="hidden"
-                          accept=".pdf,.jpg,.jpeg,.png"
-                          onChange={(e) => {
-                            const file = e.target.files[0];
-                            if (file) {
-                              handleFileUpload(file, docType.key);
-                            }
-                            e.target.value = ''; // Reset input
-                          }}
-                          disabled={isUploading}
-                        />
-                        <label
-                          htmlFor={`upload-${docType.key}`}
-                          className={`inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer ${
-                            isUploading ? 'opacity-50 cursor-not-allowed' : ''
-                          }`}
-                        >
-                          {isUploading ? (
-                            <>
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-                              Uploading...
-                            </>
-                          ) : (
-                            <>
-                              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                              </svg>
-                              Upload File
-                            </>
-                          )}
-                        </label>
-                      </div>
+                      {/* Upload Button - only show when customerId is provided */}
+                      {customerId && (
+                        <div className="relative">
+                          <input
+                            type="file"
+                            id={`upload-${docType.key}`}
+                            className="hidden"
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            onChange={(e) => {
+                              const file = e.target.files[0];
+                              if (file) {
+                                handleFileUpload(file, docType.key);
+                              }
+                              e.target.value = ''; // Reset input
+                            }}
+                            disabled={isUploading}
+                          />
+                          <label
+                            htmlFor={`upload-${docType.key}`}
+                            className={`inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer ${
+                              isUploading ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
+                          >
+                            {isUploading ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                                Uploading...
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                </svg>
+                                Upload File
+                              </>
+                            )}
+                          </label>
+                        </div>
+                      )}
                     </div>
 
                     {/* Documents List */}
@@ -672,25 +707,26 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
           </div>
         </div>
 
-        {/* Additional Documents Section */}
-        <div id="additional-documents-section" className="px-6 py-4 border-t-2 border-blue-200 bg-blue-50">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-3">
-              <div className="flex-shrink-0 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-sm">+</span>
+        {/* Additional Documents Section - only show when customerId is provided */}
+        {customerId && (
+          <div id="additional-documents-section" className="px-6 py-4 border-t-2 border-blue-200 bg-blue-50">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-3">
+                <div className="flex-shrink-0 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">+</span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Additional Documents</h3>
+                  <p className="text-sm text-gray-600">Upload custom documents with descriptions</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">Additional Documents</h3>
-                <p className="text-sm text-gray-600">Upload custom documents with descriptions</p>
-              </div>
+              <button
+                onClick={() => setShowAdditionalForm(!showAdditionalForm)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm font-medium"
+              >
+                {showAdditionalForm ? 'Cancel' : '+ Add Document'}
+              </button>
             </div>
-            <button
-              onClick={() => setShowAdditionalForm(!showAdditionalForm)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm font-medium"
-            >
-              {showAdditionalForm ? 'Cancel' : '+ Add Document'}
-            </button>
-          </div>
 
           {/* Additional Document Upload Form */}
           {showAdditionalForm && (
@@ -857,6 +893,7 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
             )}
           </div>
         </div>
+        )}
         </div> {/* Close content wrapper */}
 
         {/* Footer - Fixed at bottom */}

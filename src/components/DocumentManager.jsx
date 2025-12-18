@@ -4,12 +4,25 @@ import ActivityLogger from '../lib/ActivityLogger';
 import SmartDocumentUpload from './SmartDocumentUpload';
 import { useAuth } from '../contexts/AuthContext';
 
-const DocumentManager = ({ customerId, customerName, onClose }) => {
+const DocumentManager = ({ customerId: propCustomerId, customerName: propCustomerName, onClose }) => {
   const { user } = useAuth();
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState({});
   const [error, setError] = useState(null);
+  
+  // Customer selection state (for standalone mode)
+  const [customers, setCustomers] = useState([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState(propCustomerId || '');
+  const [selectedCustomerName, setSelectedCustomerName] = useState(propCustomerName || '');
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
+  
+  // Determine if we're in standalone mode (no props passed)
+  const isStandaloneMode = !propCustomerId;
+  
+  // Use either props or selected customer
+  const customerId = propCustomerId || selectedCustomerId;
+  const customerName = propCustomerName || selectedCustomerName;
   
   // Additional documents state
   const [showAdditionalForm, setShowAdditionalForm] = useState(false);
@@ -101,39 +114,70 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
     }
   ];
 
+  // Fetch customers list when in standalone mode
   useEffect(() => {
-    fetchDocuments();
-    
-    // Log customer document access
-    if (user && customerId && customerName) {
-      ActivityLogger.logCustomerAccess(
-        user.id,
-        user.full_name || user.email,
-        customerId,
-        customerName,
-        {
-          action_type: 'document_management',
-          accessed_timestamp: new Date().toISOString()
-        }
-      );
+    if (isStandaloneMode) {
+      fetchCustomers();
+    }
+  }, [isStandaloneMode]);
+
+  // Fetch documents when customerId changes
+  useEffect(() => {
+    if (customerId) {
+      fetchDocuments();
+      
+      // Log customer document access
+      if (user && customerName) {
+        ActivityLogger.logCustomerAccess(
+          user.id,
+          user.full_name || user.email,
+          customerId,
+          customerName,
+          {
+            action_type: 'document_management',
+            accessed_timestamp: new Date().toISOString()
+          }
+        );
+      }
+    } else {
+      setDocuments([]);
+      setLoading(false);
     }
   }, [customerId, user, customerName]);
+
+  const fetchCustomers = async () => {
+    try {
+      setLoadingCustomers(true);
+      const { data, error } = await supabase
+        .from('clients')
+        .select('id, company_name')
+        .order('company_name', { ascending: true });
+
+      if (error) throw error;
+      setCustomers(data || []);
+    } catch (err) {
+      console.error('Error fetching customers:', err);
+    } finally {
+      setLoadingCustomers(false);
+    }
+  };
+
+  const handleCustomerSelect = (e) => {
+    const id = e.target.value;
+    setSelectedCustomerId(id);
+    const customer = customers.find(c => c.id === id);
+    setSelectedCustomerName(customer?.company_name || '');
+  };
 
   const fetchDocuments = async () => {
     try {
       setLoading(true);
       
-      // Build query based on whether customerId is provided
-      let query = supabase
+      const { data, error } = await supabase
         .from('documents')
-        .select('*');
-      
-      // Only filter by client_id if customerId is provided
-      if (customerId) {
-        query = query.eq('client_id', customerId);
-      }
-      
-      const { data, error } = await query.order('uploaded_at', { ascending: false });
+        .select('*')
+        .eq('client_id', customerId)
+        .order('uploaded_at', { ascending: false });
 
       if (error) throw error;
       setDocuments(data || []);
@@ -146,13 +190,7 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
   };
 
   const handleFileUpload = async (file, documentType) => {
-    if (!file) return;
-
-    // Check if customerId is provided (required for uploads)
-    if (!customerId) {
-      alert('Customer ID is required to upload documents. Please access this page from a customer record.');
-      return;
-    }
+    if (!file || !customerId) return;
 
     // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
@@ -236,11 +274,7 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
       return;
     }
 
-    // Check if customerId is provided (required for uploads)
-    if (!customerId) {
-      alert('Customer ID is required to upload documents. Please access this page from a customer record.');
-      return;
-    }
+    if (!customerId) return;
 
     // Validate file size (max 10MB)
     if (additionalDoc.file.size > 10 * 1024 * 1024) {
@@ -468,8 +502,8 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl h-[85vh] flex flex-col">
+    <div className={`${onClose ? 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4' : 'min-h-screen bg-gray-100 p-6'}`}>
+      <div className={`bg-white rounded-lg shadow-xl w-full ${onClose ? 'max-w-6xl h-[85vh]' : 'max-w-7xl'} flex flex-col`}>
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex-shrink-0">
           <div className="flex items-center justify-between">
@@ -478,7 +512,7 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
                 Document Management
               </h2>
               <p className="text-sm text-gray-600 mt-1">
-                {customerId ? `${customerName || 'Customer'} - Upload and manage client documents` : 'View all documents'}
+                {customerId ? `${customerName || 'Customer'} - Upload and manage client documents` : 'Select a customer to manage documents'}
               </p>
             </div>
             {onClose && (
@@ -492,6 +526,31 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
               </button>
             )}
           </div>
+
+          {/* Customer Selector - Only show in standalone mode */}
+          {isStandaloneMode && (
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Customer
+              </label>
+              <select
+                value={selectedCustomerId}
+                onChange={handleCustomerSelect}
+                className="w-full md:w-96 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                disabled={loadingCustomers}
+              >
+                <option value="">-- Select a customer --</option>
+                {customers.map((customer) => (
+                  <option key={customer.id} value={customer.id}>
+                    {customer.company_name}
+                  </option>
+                ))}
+              </select>
+              {loadingCustomers && (
+                <p className="text-sm text-gray-500 mt-1">Loading customers...</p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Content - Scrollable area */}
@@ -499,63 +558,67 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
           className="flex-1 overflow-y-auto px-6 py-4"
           style={{ 
             minHeight: 0,
-            maxHeight: 'calc(85vh - 200px)',
-            height: 'calc(85vh - 200px)' /* Force fixed height for scrolling */
+            maxHeight: onClose ? 'calc(85vh - 200px)' : 'calc(100vh - 300px)',
+            height: onClose ? 'calc(85vh - 200px)' : 'auto'
           }}
         >
-          {/* Content wrapper with minimum height for scrolling */}
-          <div style={{ minHeight: '800px' }}>
-          {/* Info message when no customerId */}
-          {!customerId && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <div className="flex">
-                <svg className="w-5 h-5 text-blue-400 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="text-sm text-blue-700">To upload documents, please access this page from a specific customer record in Customer Management.</span>
-              </div>
+          {/* Content wrapper */}
+          <div style={{ minHeight: customerId ? '800px' : 'auto' }}>
+          {/* Prompt to select customer when none selected in standalone mode */}
+          {isStandaloneMode && !customerId && (
+            <div className="text-center py-16">
+              <svg className="mx-auto h-16 w-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Customer Selected</h3>
+              <p className="text-gray-600 max-w-md mx-auto">
+                Please select a customer from the dropdown above to view and manage their documents.
+              </p>
             </div>
           )}
 
-          {/* Error Display */}
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-              <div className="flex">
-                <svg className="w-5 h-5 text-red-400 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.998-.833-2.768 0L3.046 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-                <span className="text-sm text-red-700">{error}</span>
-              </div>
-            </div>
-          )}
+          {/* Only show document content when customer is selected */}
+          {customerId && (
+            <>
+              {/* Error Display */}
+              {error && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                  <div className="flex">
+                    <svg className="w-5 h-5 text-red-400 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.998-.833-2.768 0L3.046 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    <span className="text-sm text-red-700">{error}</span>
+                  </div>
+                </div>
+              )}
 
-          {loading ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-              <h3 className="mt-4 text-lg font-medium text-gray-900">Loading documents...</h3>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {documentTypes.map((docType) => {
-                const typeDocuments = getDocumentsByType(docType.key);
-                const isUploading = uploading[docType.key];
+              {loading ? (
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                  <h3 className="mt-4 text-lg font-medium text-gray-900">Loading documents...</h3>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {documentTypes.map((docType) => {
+                    const typeDocuments = getDocumentsByType(docType.key);
+                    const isUploading = uploading[docType.key];
 
-                return (
-                  <div key={docType.key} className="bg-gray-50 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center space-x-3">
-                        <span className="text-2xl">{docType.icon}</span>
-                        <div>
-                          <h3 className="text-lg font-medium text-gray-900">
-                            {docType.label}
-                            {docType.required && (
-                              <span className="text-red-500 ml-1">*</span>
-                            )}
-                          </h3>
-                          <p className="text-sm text-gray-600">
-                            {typeDocuments.length} document{typeDocuments.length !== 1 ? 's' : ''} uploaded
-                          </p>
-                        </div>
+                    return (
+                      <div key={docType.key} className="bg-gray-50 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center space-x-3">
+                            <span className="text-2xl">{docType.icon}</span>
+                            <div>
+                              <h3 className="text-lg font-medium text-gray-900">
+                                {docType.label}
+                                {docType.required && (
+                                  <span className="text-red-500 ml-1">*</span>
+                                )}
+                              </h3>
+                              <p className="text-sm text-gray-600">
+                                {typeDocuments.length} document{typeDocuments.length !== 1 ? 's' : ''} uploaded
+                              </p>
+                            </div>
                       </div>
                       
                       {/* Upload Button - only show when customerId is provided */}
@@ -679,7 +742,9 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
                   </div>
                 );
               })}
-            </div>
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -936,6 +1001,7 @@ const DocumentManager = ({ customerId, customerName, onClose }) => {
                   Close
                 </button>
               )}
+            </div>
           </div>
         </div>
       </div>

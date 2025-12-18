@@ -576,8 +576,20 @@ export default function ProjectManagement() {
 
       {/* Project Detail Modal */}
       {expandedProject && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 animate-modal-backdrop" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-modal-content mx-4" style={{ margin: 'auto' }}>
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-50 animate-modal-backdrop overflow-y-auto"
+          style={{ 
+            display: 'flex', 
+            alignItems: 'flex-start', 
+            justifyContent: 'center',
+            padding: '2rem 1rem'
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget) setExpandedProject(null); }}
+        >
+          <div 
+            className="bg-white rounded-xl max-w-4xl w-full max-h-[85vh] overflow-hidden flex flex-col animate-modal-content"
+            style={{ marginTop: 'auto', marginBottom: 'auto' }}
+          >
             {(() => {
               const project = projects.find(p => p.id === expandedProject);
               if (!project) return null;
@@ -686,8 +698,20 @@ export default function ProjectManagement() {
 
       {/* Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 animate-modal-backdrop" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div className="bg-white rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-modal-slide-up mx-4" style={{ margin: 'auto' }}>
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-50 animate-modal-backdrop overflow-y-auto"
+          style={{ 
+            display: 'flex', 
+            alignItems: 'flex-start', 
+            justifyContent: 'center',
+            padding: '2rem 1rem'
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget) { setShowForm(false); resetForm(); } }}
+        >
+          <div 
+            className="bg-white rounded-xl p-6 max-w-2xl w-full max-h-[85vh] overflow-y-auto animate-modal-slide-up"
+            style={{ marginTop: 'auto', marginBottom: 'auto' }}
+          >
             <h2 className="text-2xl font-bold mb-6">
               {editingId ? 'Edit Project' : 'New Project'}
             </h2>

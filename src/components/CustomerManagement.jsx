@@ -30,6 +30,11 @@ const CustomerManagement = () => {
     consultantId: '',
     jobTypeId: ''
   });
+  
+  // Time history state
+  const [expandedTimeHistory, setExpandedTimeHistory] = useState(new Set());
+  const [customerTimeEntries, setCustomerTimeEntries] = useState({});
+  const [editingEntry, setEditingEntry] = useState(null);
 
   // Fetch customers from Supabase
   const fetchCustomers = async () => {
@@ -102,6 +107,34 @@ const CustomerManagement = () => {
     setJobTypes(jobTypesData || []);
   };
 
+  const loadTimeEntriesForCustomer = async (customerId) => {
+    const { data } = await supabase
+      .from('time_entries')
+      .select(`
+        *,
+        consultants(first_name, last_name),
+        job_types(name)
+      `)
+      .eq('client_id', customerId)
+      .order('entry_date', { ascending: false });
+    
+    setCustomerTimeEntries(prev => ({
+      ...prev,
+      [customerId]: data || []
+    }));
+  };
+
+  const toggleTimeHistory = (customerId) => {
+    const newExpanded = new Set(expandedTimeHistory);
+    if (newExpanded.has(customerId)) {
+      newExpanded.delete(customerId);
+    } else {
+      newExpanded.add(customerId);
+      loadTimeEntriesForCustomer(customerId);
+    }
+    setExpandedTimeHistory(newExpanded);
+  };
+
   const filteredCustomers = customers.filter(customer =>
     customer.client_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     customer.registration_number?.includes(searchTerm)
@@ -150,27 +183,85 @@ const CustomerManagement = () => {
     }
 
     try {
-      const { error } = await supabase
-        .from('time_entries')
-        .insert({
-          client_id: timeLogCustomer.id,
-          consultant_id: timeEntry.consultantId,
-          job_type_id: timeEntry.jobTypeId || null,
-          entry_date: timeEntry.date,
-          hours: parseFloat(timeEntry.hours),
-          description: timeEntry.description,
-          hourly_rate: timeEntry.hourlyRate ? parseFloat(timeEntry.hourlyRate) : null,
-          is_invoiced: false
-        });
+      if (editingEntry) {
+        // Update existing entry
+        const { error } = await supabase
+          .from('time_entries')
+          .update({
+            consultant_id: timeEntry.consultantId,
+            job_type_id: timeEntry.jobTypeId || null,
+            entry_date: timeEntry.date,
+            hours: parseFloat(timeEntry.hours),
+            description: timeEntry.description,
+            hourly_rate: timeEntry.hourlyRate ? parseFloat(timeEntry.hourlyRate) : null,
+          })
+          .eq('id', editingEntry.id);
 
-      if (error) throw error;
+        if (error) throw error;
+        alert(`✅ Time entry updated`);
+      } else {
+        // Create new entry
+        const { error } = await supabase
+          .from('time_entries')
+          .insert({
+            client_id: timeLogCustomer.id,
+            consultant_id: timeEntry.consultantId,
+            job_type_id: timeEntry.jobTypeId || null,
+            entry_date: timeEntry.date,
+            hours: parseFloat(timeEntry.hours),
+            description: timeEntry.description,
+            hourly_rate: timeEntry.hourlyRate ? parseFloat(timeEntry.hourlyRate) : null,
+            is_invoiced: false
+          });
+
+        if (error) throw error;
+        alert(`✅ Time logged: ${timeEntry.hours}h for ${timeLogCustomer.client_name}`);
+      }
 
       setShowTimeModal(false);
-      alert(`✅ Time logged: ${timeEntry.hours}h for ${timeLogCustomer.client_name}`);
-      fetchCustomers(); // Refresh to show updated data
+      setEditingEntry(null);
+      if (expandedTimeHistory.has(timeLogCustomer.id)) {
+        loadTimeEntriesForCustomer(timeLogCustomer.id);
+      }
+      fetchCustomers();
     } catch (err) {
       console.error('Error saving time entry:', err);
       alert('❌ Error: ' + err.message);
+    }
+  };
+
+  const handleEditTimeEntry = (entry, customer) => {
+    setTimeLogCustomer(customer);
+    setEditingEntry(entry);
+    setTimeEntry({
+      date: entry.entry_date,
+      hours: entry.hours.toString(),
+      description: entry.description || '',
+      hourlyRate: entry.hourly_rate?.toString() || '500',
+      consultantId: entry.consultant_id || '',
+      jobTypeId: entry.job_type_id || ''
+    });
+    setShowTimeModal(true);
+  };
+
+  const handleDeleteTimeEntry = async (entryId, customerId) => {
+    if (!confirm('Are you sure you want to delete this time entry?')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('time_entries')
+        .delete()
+        .eq('id', entryId);
+
+      if (error) throw error;
+
+      alert('✅ Time entry deleted');
+      loadTimeEntriesForCustomer(customerId);
+      fetchCustomers();
+    } catch (err) {
+      alert('❌ Error deleting entry: ' + err.message);
     }
   };
 
@@ -365,6 +456,114 @@ const CustomerManagement = () => {
                         </svg>
                       </button>
                     </div>
+                  </div>
+
+                  {/* Time Entries History */}
+                  <div className="px-6 py-3 bg-gray-50 border-t border-gray-200">
+                    <button
+                      onClick={() => toggleTimeHistory(customer.id)}
+                      className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      {expandedTimeHistory.has(customer.id) ? 'Hide' : 'View'} Time Entries
+                      {customerTimeEntries[customer.id] && ` (${customerTimeEntries[customer.id].length})`}
+                    </button>
+
+                    {expandedTimeHistory.has(customer.id) && (
+                      <div className="mt-4">
+                        {!customerTimeEntries[customer.id] || customerTimeEntries[customer.id].length === 0 ? (
+                          <p className="text-gray-500 text-sm">No time entries yet</p>
+                        ) : (
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                              <thead className="bg-gray-100">
+                                <tr>
+                                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Date</th>
+                                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Consultant</th>
+                                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Job Type</th>
+                                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Description</th>
+                                  <th className="px-3 py-2 text-right text-xs font-semibold text-gray-700">Hours</th>
+                                  <th className="px-3 py-2 text-right text-xs font-semibold text-gray-700">Amount</th>
+                                  <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">Status</th>
+                                  <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-200">
+                                {customerTimeEntries[customer.id].map((entry) => (
+                                  <tr key={entry.id} className="hover:bg-gray-50">
+                                    <td className="px-3 py-3 whitespace-nowrap">
+                                      {new Date(entry.entry_date).toLocaleDateString('en-ZA')}
+                                    </td>
+                                    <td className="px-3 py-3 whitespace-nowrap">
+                                      {entry.consultants?.first_name} {entry.consultants?.last_name}
+                                    </td>
+                                    <td className="px-3 py-3 whitespace-nowrap">
+                                      {entry.job_types?.name || '-'}
+                                    </td>
+                                    <td className="px-3 py-3 text-gray-700">
+                                      {entry.description}
+                                    </td>
+                                    <td className="px-3 py-3 text-right font-semibold">
+                                      {parseFloat(entry.hours).toFixed(2)}h
+                                    </td>
+                                    <td className="px-3 py-3 text-right font-semibold text-green-600">
+                                      R{(parseFloat(entry.hours) * parseFloat(entry.hourly_rate || 0)).toFixed(2)}
+                                    </td>
+                                    <td className="px-3 py-3 text-center">
+                                      {entry.is_invoiced ? (
+                                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                          Invoiced
+                                        </span>
+                                      ) : (
+                                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
+                                          Unbilled
+                                        </span>
+                                      )}
+                                    </td>
+                                    <td className="px-3 py-3 text-center">
+                                      {!entry.is_invoiced && (
+                                        <div className="flex items-center justify-center gap-2">
+                                          <button
+                                            onClick={() => handleEditTimeEntry(entry, customer)}
+                                            className="text-blue-600 hover:text-blue-800 text-xs font-medium"
+                                            title="Edit"
+                                          >
+                                            Edit
+                                          </button>
+                                          <button
+                                            onClick={() => handleDeleteTimeEntry(entry.id, customer.id)}
+                                            className="text-red-600 hover:text-red-800 text-xs font-medium"
+                                            title="Delete"
+                                          >
+                                            Delete
+                                          </button>
+                                        </div>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                              <tfoot className="bg-gray-50 font-semibold">
+                                <tr>
+                                  <td colSpan="4" className="px-3 py-2 text-right">Total:</td>
+                                  <td className="px-3 py-2 text-right">
+                                    {customerTimeEntries[customer.id].reduce((sum, e) => sum + parseFloat(e.hours || 0), 0).toFixed(2)}h
+                                  </td>
+                                  <td className="px-3 py-2 text-right text-green-600">
+                                    R{customerTimeEntries[customer.id].reduce((sum, e) => 
+                                      sum + (parseFloat(e.hours || 0) * parseFloat(e.hourly_rate || 0)), 0
+                                    ).toFixed(2)}
+                                  </td>
+                                  <td colSpan="2"></td>
+                                </tr>
+                              </tfoot>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

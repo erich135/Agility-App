@@ -115,86 +115,176 @@ export default function Billing() {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     
-    // Header
-    doc.setFontSize(20);
-    doc.setFont('helvetica', 'bold');
-    doc.text('INVOICE', pageWidth / 2, 20, { align: 'center' });
+    // Company Header with Blue Background
+    doc.setFillColor(37, 99, 235);
+    doc.rect(0, 0, 210, 40, 'F');
     
-    // Client Info
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Client: ${clientData.client.client_name}`, 20, 40);
-    if (clientData.client.registration_number) {
-      doc.text(`Reg #: ${clientData.client.registration_number}`, 20, 47);
-    }
-    doc.text(`Date: ${new Date().toLocaleDateString('en-ZA')}`, 20, 54);
-    doc.text(`Invoice #: INV-${Date.now()}`, 20, 61);
-    
-    // Table Header
-    let yPos = 75;
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(24);
     doc.setFont('helvetica', 'bold');
+    doc.text('AGILITY CONSULTANTS', pageWidth / 2, 18, { align: 'center' });
+    
     doc.setFontSize(10);
-    doc.text('Date', 20, yPos);
-    doc.text('Consultant', 50, yPos);
-    doc.text('Job Type', 90, yPos);
-    doc.text('Description', 120, yPos);
-    doc.text('Hours', 160, yPos);
-    doc.text('Rate', 175, yPos);
-    doc.text('Amount', 190, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Professional Accounting & Tax Services', pageWidth / 2, 26, { align: 'center' });
+    doc.text('Email: info@agilityconsultants.co.za | Phone: +27 (0)11 123 4567', pageWidth / 2, 32, { align: 'center' });
+    
+    doc.setTextColor(0, 0, 0);
+    
+    // Invoice Title
+    doc.setFontSize(22);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(37, 99, 235);
+    doc.text('TAX INVOICE', 20, 55);
+    doc.setTextColor(0, 0, 0);
+    
+    // Invoice & Customer Details
+    const invoiceNumber = `INV-${Date.now()}`;
+    const invoiceDate = new Date().toLocaleDateString('en-ZA');
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + 30);
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Invoice Number:', 20, 70);
+    doc.setFont('helvetica', 'normal');
+    doc.text(invoiceNumber, 60, 70);
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Invoice Date:', 20, 77);
+    doc.setFont('helvetica', 'normal');
+    doc.text(invoiceDate, 60, 77);
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Due Date:', 20, 84);
+    doc.setFont('helvetica', 'normal');
+    doc.text(dueDate.toLocaleDateString('en-ZA'), 60, 84);
+    
+    // Customer Info
+    doc.setFont('helvetica', 'bold');
+    doc.text('BILL TO:', 120, 70);
+    doc.setFont('helvetica', 'normal');
+    doc.text(clientData.client.client_name, 120, 77);
+    if (clientData.client.registration_number) {
+      doc.text(`Reg #: ${clientData.client.registration_number}`, 120, 84);
+    }
+    
+    // Table Header with Background
+    let yPos = 105;
+    doc.setFillColor(240, 240, 240);
+    doc.rect(20, yPos - 5, 170, 8, 'F');
+    
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Date', 22, yPos);
+    doc.text('Service Description', 52, yPos);
+    doc.text('Hours', 130, yPos, { align: 'right' });
+    doc.text('Rate', 152, yPos, { align: 'right' });
+    doc.text('Amount', 185, yPos, { align: 'right' });
     
     doc.setDrawColor(200, 200, 200);
-    doc.line(20, yPos + 2, 200, yPos + 2);
+    doc.line(20, yPos + 2, 190, yPos + 2);
     
     // Table Rows
     yPos += 10;
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
     
-    clientData.entries.forEach((entry) => {
-      if (yPos > 270) {
+    clientData.entries.forEach((entry, index) => {
+      if (yPos > 250) {
         doc.addPage();
         yPos = 20;
       }
       
+      // Alternating row colors
+      if (index % 2 === 1) {
+        doc.setFillColor(250, 250, 250);
+        doc.rect(20, yPos - 5, 170, 7, 'F');
+      }
+      
       const date = new Date(entry.entry_date).toLocaleDateString('en-ZA');
-      const consultant = `${entry.consultants?.first_name || ''} ${entry.consultants?.last_name || ''}`.trim();
-      const jobType = entry.job_types?.name || '';
       const hours = parseFloat(entry.hours || 0).toFixed(2);
       const rate = parseFloat(entry.hourly_rate || 0).toFixed(2);
       const amount = (parseFloat(entry.hours || 0) * parseFloat(entry.hourly_rate || 0)).toFixed(2);
       
-      doc.text(date, 20, yPos);
-      doc.text(consultant, 50, yPos);
-      doc.text(jobType, 90, yPos);
-      
+      // Service description combining job type and description
+      const jobType = entry.job_types?.name || 'Service';
       const description = entry.description || '';
-      const wrappedDesc = doc.splitTextToSize(description, 35);
-      doc.text(wrappedDesc[0] || '', 120, yPos);
+      const serviceDesc = `${jobType} - ${description}`.substring(0, 45);
       
-      doc.text(hours, 160, yPos);
-      doc.text(`R${rate}`, 175, yPos);
-      doc.text(`R${amount}`, 190, yPos);
+      doc.text(date, 22, yPos);
+      doc.text(serviceDesc, 52, yPos);
+      doc.text(hours, 130, yPos, { align: 'right' });
+      doc.text(`R${rate}`, 152, yPos, { align: 'right' });
+      doc.text(`R${amount}`, 185, yPos, { align: 'right' });
       
       yPos += 7;
     });
     
-    // Total
+    // Subtotal Section
     yPos += 5;
-    doc.line(20, yPos, 200, yPos);
-    yPos += 10;
+    doc.setDrawColor(200, 200, 200);
+    doc.line(20, yPos, 190, yPos);
+    
+    yPos += 8;
+    doc.setFontSize(10);
+    
+    // Subtotal
     doc.setFont('helvetica', 'bold');
+    doc.text('Subtotal:', 145, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`R${clientData.totalAmount.toFixed(2)}`, 185, yPos, { align: 'right' });
+    
+    yPos += 7;
+    doc.setFont('helvetica', 'bold');
+    doc.text('VAT (15%):', 145, yPos);
+    doc.setFont('helvetica', 'normal');
+    const vat = clientData.totalAmount * 0.15;
+    doc.text(`R${vat.toFixed(2)}`, 185, yPos, { align: 'right' });
+    
+    // Total with Background
+    yPos += 10;
+    doc.setFillColor(37, 99, 235);
+    doc.rect(130, yPos - 6, 60, 10, 'F');
+    
+    doc.setTextColor(255, 255, 255);
     doc.setFontSize(12);
-    doc.text('TOTAL:', 160, yPos);
-    doc.text(`R${clientData.totalAmount.toFixed(2)}`, 190, yPos);
+    doc.setFont('helvetica', 'bold');
+    doc.text('TOTAL:', 145, yPos);
+    doc.text(`R${(clientData.totalAmount + vat).toFixed(2)}`, 185, yPos, { align: 'right' });
+    
+    doc.setTextColor(0, 0, 0);
+    
+    // Payment Details Footer
+    yPos = 250;
+    if (yPos > 270) {
+      doc.addPage();
+      yPos = 20;
+    }
+    
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PAYMENT DETAILS:', 20, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Bank: FNB', 20, yPos + 6);
+    doc.text('Account Name: Agility Consultants (Pty) Ltd', 20, yPos + 12);
+    doc.text('Account Number: 1234567890', 20, yPos + 18);
+    doc.text('Branch Code: 250655', 20, yPos + 24);
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('TERMS & CONDITIONS:', 120, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.text('Payment due within 30 days', 120, yPos + 6);
+    doc.text('Late payments subject to 2% monthly interest', 120, yPos + 11);
     
     // Footer
-    yPos += 20;
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.text('Payment Terms: 30 days', 20, yPos);
+    doc.setFillColor(240, 240, 240);
+    doc.rect(0, 285, 210, 12, 'F');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.text('Thank you for your business!', pageWidth / 2, 291, { align: 'center' });
     
-    // Save
-    doc.save(`Invoice-${clientData.client.client_name}-${Date.now()}.pdf`);
+    doc.save(`Invoice-${clientData.client.client_name.replace(/\s+/g, '_')}-${invoiceNumber}.pdf`);
   };
 
   const getTotalStats = () => {

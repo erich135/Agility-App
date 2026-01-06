@@ -80,46 +80,46 @@ export default function Sidebar() {
         },
       ]
     },
-    {
-      title: 'Timesheet',
-      items: [
-        { 
-          path: '/timesheet', 
-          icon: Clock, 
-          label: 'Log Time',
-          permission: 'access_timesheet'
-        },
-        { 
-          path: '/my-timesheets', 
-          icon: ClipboardList, 
-          label: 'My Timesheets',
-          permission: 'access_my_timesheets'
-        },
-        { 
-          path: '/projects', 
-          icon: Briefcase, 
-          label: 'Projects',
-          permission: 'access_projects'
-        },
-      ]
-    },
-    {
-      title: 'Billing',
-      items: [
-        { 
-          path: '/billing', 
-          icon: Banknote, 
-          label: 'Billing Dashboard',
-          permission: 'access_billing_dashboard'
-        },
-        { 
-          path: '/billing/reports', 
-          icon: BarChart3, 
-          label: 'Billing Reports',
-          permission: 'access_billing_reports'
-        },
-      ]
-    },
+    // {
+    //   title: 'Timesheet',
+    //   items: [
+    //     { 
+    //       path: '/timesheet', 
+    //       icon: Clock, 
+    //       label: 'Log Time',
+    //       permission: 'access_timesheet'
+    //     },
+    //     { 
+    //       path: '/my-timesheets', 
+    //       icon: ClipboardList, 
+    //       label: 'My Timesheets',
+    //       permission: 'access_my_timesheets'
+    //     },
+    //     { 
+    //       path: '/projects', 
+    //       icon: Briefcase, 
+    //       label: 'Projects',
+    //       permission: 'access_projects'
+    //     },
+    //   ]
+    // },
+    // {
+    //   title: 'Billing',
+    //   items: [
+    //     { 
+    //       path: '/billing', 
+    //       icon: Banknote, 
+    //       label: 'Billing Dashboard',
+    //       permission: 'access_billing_dashboard'
+    //     },
+    //     { 
+    //       path: '/billing/reports', 
+    //       icon: BarChart3, 
+    //       label: 'Billing Reports',
+    //       permission: 'access_billing_reports'
+    //     },
+    //   ]
+    // },
     {
       title: 'Financial',
       items: [

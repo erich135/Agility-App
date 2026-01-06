@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DollarSign, FileText, Download, ChevronRight, ChevronDown } from 'lucide-react';
 import jsPDF from 'jspdf';
 import supabase from '../lib/SupabaseClient';

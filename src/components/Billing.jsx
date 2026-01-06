@@ -645,21 +645,21 @@ export default function Billing() {
                   <tbody className="divide-y divide-gray-200">
                     {previewClient.entries.map((entry, index) => (
                       <tr key={entry.id} className={index % 2 === 1 ? 'bg-gray-50' : ''}>
-                        <td className="px-4 py-3 text-sm">
+                        <td className="px-4 py-3 text-sm whitespace-nowrap">
                           {new Date(entry.entry_date).toLocaleDateString('en-ZA')}
                         </td>
-                        <td className="px-4 py-3 text-sm">{entry.consultants?.full_name || 'N/A'}</td>
-                        <td className="px-4 py-3 text-sm">{entry.job_types?.name || 'Service'}</td>
-                        <td className="px-4 py-3 text-sm max-w-xs">
-                          <div className="line-clamp-2">{entry.description}</div>
+                        <td className="px-4 py-3 text-sm whitespace-nowrap">{entry.consultants?.full_name || 'N/A'}</td>
+                        <td className="px-4 py-3 text-sm whitespace-nowrap">{entry.job_types?.name || 'Service'}</td>
+                        <td className="px-4 py-3 text-sm">
+                          <div className="whitespace-pre-wrap text-gray-700">{entry.description}</div>
                         </td>
-                        <td className="px-4 py-3 text-sm text-right font-semibold">
+                        <td className="px-4 py-3 text-sm text-right font-semibold whitespace-nowrap">
                           {parseFloat(entry.hours || 0).toFixed(2)}h
                         </td>
-                        <td className="px-4 py-3 text-sm text-right">
+                        <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
                           R{parseFloat(entry.hourly_rate || 0).toFixed(2)}
                         </td>
-                        <td className="px-4 py-3 text-sm text-right font-semibold text-green-600">
+                        <td className="px-4 py-3 text-sm text-right font-semibold text-green-600 whitespace-nowrap">
                           R{(parseFloat(entry.hours || 0) * parseFloat(entry.hourly_rate || 0)).toFixed(2)}
                         </td>
                       </tr>

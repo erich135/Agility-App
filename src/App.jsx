@@ -89,12 +89,12 @@ function AppRoutes() {
       <Route path="/cipc" element={<ProtectedRoute requiredPermission="access_cipc"><CIPCManagement /></ProtectedRoute>} />
       <Route path="/customers" element={<ProtectedRoute requiredPermission="access_customers"><CustomerManagement /></ProtectedRoute>} />
       <Route path="/calendar" element={<ProtectedRoute requiredPermission="access_calendar"><CalendarTaskManagement /></ProtectedRoute>} />
-      <Route path="/timesheet" element={<ProtectedRoute requiredPermission="access_timesheet"><Timesheet /></ProtectedRoute>} />
-      <Route path="/timesheet-new" element={<ProtectedRoute requiredPermission="access_timesheet"><TimesheetNew /></ProtectedRoute>} />
+      <Route path="/timesheet" element={<ProtectedRoute requiredPermission="access_timesheet"><TimesheetNew /></ProtectedRoute>} />
+      <Route path="/timesheet-old" element={<ProtectedRoute requiredPermission="access_timesheet"><Timesheet /></ProtectedRoute>} />
       <Route path="/my-timesheets" element={<ProtectedRoute requiredPermission="access_my_timesheets"><MyTimesheets /></ProtectedRoute>} />
       <Route path="/projects" element={<ProtectedRoute requiredPermission="access_projects"><ProjectManagement /></ProtectedRoute>} />
-      <Route path="/billing" element={<ProtectedRoute requiredPermission="access_billing_dashboard"><BillingDashboard /></ProtectedRoute>} />
-      <Route path="/billing-new" element={<ProtectedRoute requiredPermission="access_billing_dashboard"><BillingDashboardNew /></ProtectedRoute>} />
+      <Route path="/billing" element={<ProtectedRoute requiredPermission="access_billing_dashboard"><BillingDashboardNew /></ProtectedRoute>} />
+      <Route path="/billing-old" element={<ProtectedRoute requiredPermission="access_billing_dashboard"><BillingDashboard /></ProtectedRoute>} />
       <Route path="/billing/reports" element={<ProtectedRoute requiredPermission="access_billing_reports"><BillingReports /></ProtectedRoute>} />
       <Route path="/documents" element={<ProtectedRoute requiredPermission="access_documents"><DocumentManager /></ProtectedRoute>} />
       <Route path="/financial-statements" element={<ProtectedRoute requiredPermission="access_financial_statements"><FinancialStatements /></ProtectedRoute>} />

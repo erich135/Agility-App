@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import { useAuth } from '../contexts/AuthContext';
-import BillingNotifications from './BillingNotifications';
-import NotificationCenter from './NotificationCenter';
+// import BillingNotifications from './BillingNotifications';
+// import NotificationCenter from './NotificationCenter';
 
 export default function Layout({ children }) {
   const { user } = useAuth();
@@ -42,8 +42,8 @@ export default function Layout({ children }) {
             
             {/* Right Side - Notifications & User */}
             <div className="flex items-center space-x-4">
-              <BillingNotifications />
-              <NotificationCenter />
+              {/* <BillingNotifications /> */}
+              {/* <NotificationCenter /> */}
               <div className="hidden md:block text-right">
                 <p className="text-sm font-medium text-gray-900">
                   {user?.full_name || user?.first_name || 'User'}

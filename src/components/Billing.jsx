@@ -296,14 +296,6 @@ export default function Billing() {
     
     doc.save(`Unbilled_Time_${clientData.client.client_name.replace(/\s+/g, '_')}_${reportDate.replace(/\//g, '-')}.pdf`);
   };
-    doc.setFillColor(240, 240, 240);
-    doc.rect(0, 285, 210, 12, 'F');
-    doc.setFontSize(8);
-    doc.setTextColor(100, 100, 100);
-    doc.text('Thank you for your business!', pageWidth / 2, 291, { align: 'center' });
-    
-    doc.save(`Invoice-${clientData.client.client_name.replace(/\s+/g, '_')}-${invoiceNumber}.pdf`);
-  };
 
   const getTotalStats = () => {
     const totalClients = unbilledData.length;

@@ -213,11 +213,16 @@ export const ProjectService = {
       .eq('client_id', clientId)
       .order('name');
     
-    // If that works, filter for active/on_hold status
+    // If that works, filter for active/on_hold/ready_to_bill/invoiced status
+    // Allow time logging on all project statuses except completed/cancelled
     if (!error && data) {
       // Filter in JS in case status column doesn't exist or has different values
       const activeProjects = data.filter(p => 
-        !p.status || p.status === 'active' || p.status === 'on_hold'
+        !p.status || 
+        p.status === 'active' || 
+        p.status === 'on_hold' || 
+        p.status === 'ready_to_bill' ||
+        p.status === 'invoiced'
       );
       return { data: activeProjects, error: null };
     }

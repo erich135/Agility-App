@@ -19,6 +19,35 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const checkSession = () => {
       try {
+        // DEVELOPMENT MODE: Auto-login with dev user
+        const DEV_MODE = true;
+        if (DEV_MODE) {
+          const devUser = {
+            id: 'dev-user-id',
+            email: 'dev@test.com',
+            full_name: 'Dev User',
+            role: 'admin',
+            permissions: [
+              'access_dashboard',
+              'access_cipc',
+              'access_customers',
+              'access_calendar',
+              'access_timesheet',
+              'access_my_timesheets',
+              'access_projects',
+              'access_billing_dashboard',
+              'access_billing_reports',
+              'access_documents',
+              'access_financial_statements',
+              'access_client_portal',
+              'system_settings'
+            ]
+          };
+          setUser(devUser);
+          setLoading(false);
+          return;
+        }
+
         const storedUser = localStorage.getItem('agility_user');
         const loginTime = localStorage.getItem('agility_login_time');
         

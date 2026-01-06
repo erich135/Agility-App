@@ -564,6 +564,19 @@ export default function BillingDashboard() {
                 >
                   Close
                 </button>
+                {selectedProject.status === 'active' && (
+                  <button
+                    onClick={() => {
+                      ProjectService.update(selectedProject.id, { status: 'ready_to_bill' });
+                      loadDashboardData();
+                      closeProjectDetails();
+                    }}
+                    className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors flex items-center gap-2"
+                  >
+                    <AlertCircle className="w-4 h-4" />
+                    Mark Ready to Bill
+                  </button>
+                )}
                 {selectedProject.status === 'ready_to_bill' && (
                   <button
                     onClick={() => handleMarkInvoiced(selectedProject.id)}

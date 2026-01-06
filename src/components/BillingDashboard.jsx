@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Banknote, TrendingUp, Clock, AlertCircle, CheckCircle, AlertTriangle, Bell, X, FileText, User, Calendar } from 'lucide-react';
+import { Banknote, TrendingUp, Clock, AlertCircle, CheckCircle, AlertTriangle, Bell, X, FileText, User, Calendar, Download } from 'lucide-react';
 import { ProjectService, ReportingService, TimeEntryService } from '../services/TimesheetService';
+import jsPDF from 'jspdf';
 
 export default function BillingDashboard() {
   const [stats, setStats] = useState({
@@ -158,6 +159,140 @@ export default function BillingDashboard() {
   const closeProjectDetails = () => {
     setSelectedProject(null);
     setProjectDetails(null);
+  };
+
+  const exportJobCardToPDF = () => {
+    if (!selectedProject || !projectDetails) return;
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    let yPos = 20;
+
+    // Header
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text('JOB CARD', pageWidth / 2, yPos, { align: 'center' });
+    yPos += 15;
+
+    // Project Information
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Project: ${selectedProject.name}`, 20, yPos);
+    yPos += 7;
+    doc.text(`Client: ${selectedProject.client?.client_name || 'N/A'}`, 20, yPos);
+    yPos += 7;
+    doc.text(`Project Number: ${selectedProject.project_number || 'N/A'}`, 20, yPos);
+    yPos += 7;
+    doc.text(`Billing Date: ${selectedProject.billing_date ? new Date(selectedProject.billing_date).toLocaleDateString('en-ZA') : 'Not set'}`, 20, yPos);
+    yPos += 7;
+    doc.text(`Status: ${selectedProject.status}`, 20, yPos);
+    yPos += 12;
+
+    // Summary
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Summary', 20, yPos);
+    yPos += 8;
+    
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Total Hours: ${projectDetails.totalHours.toFixed(2)}h`, 20, yPos);
+    yPos += 6;
+    doc.text(`Total Amount: R ${projectDetails.totalAmount.toFixed(2)}`, 20, yPos);
+    yPos += 6;
+    doc.text(`Time Entries: ${projectDetails.timeEntries.length}`, 20, yPos);
+    yPos += 12;
+
+    // Time Entries
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Detailed Time Entries', 20, yPos);
+    yPos += 8;
+
+    if (projectDetails.timeEntries.length === 0) {
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'italic');
+      doc.text('No time entries recorded', 20, yPos);
+    } else {
+      // Group by date
+      const sortedDates = Object.keys(projectDetails.entriesByDate).sort((a, b) => new Date(b) - new Date(a));
+      
+      doc.setFontSize(10);
+      sortedDates.forEach(date => {
+        const entries = projectDetails.entriesByDate[date];
+        const dayTotal = entries.reduce((sum, entry) => sum + (entry.duration_hours || 0), 0);
+
+        // Check if we need a new page
+        if (yPos > 260) {
+          doc.addPage();
+          yPos = 20;
+        }
+
+        // Date header
+        doc.setFont('helvetica', 'bold');
+        doc.setFillColor(59, 130, 246);
+        doc.rect(20, yPos - 5, pageWidth - 40, 8, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.text(new Date(date).toLocaleDateString('en-ZA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }), 22, yPos);
+        doc.text(`${dayTotal.toFixed(2)}h`, pageWidth - 22, yPos, { align: 'right' });
+        doc.setTextColor(0, 0, 0);
+        yPos += 10;
+
+        // Entries for this date
+        entries.forEach(entry => {
+          if (yPos > 270) {
+            doc.addPage();
+            yPos = 20;
+          }
+
+          doc.setFont('helvetica', 'bold');
+          doc.text(`${entry.consultant?.full_name || 'Unknown'}`, 25, yPos);
+          doc.text(`${entry.duration_hours?.toFixed(2) || '0.00'}h`, pageWidth - 22, yPos, { align: 'right' });
+          yPos += 5;
+
+          if (entry.description) {
+            doc.setFont('helvetica', 'normal');
+            const descLines = doc.splitTextToSize(entry.description, pageWidth - 50);
+            doc.text(descLines, 25, yPos);
+            yPos += descLines.length * 5;
+          }
+
+          // Additional info
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8);
+          let infoText = '';
+          if (entry.task_type) infoText += `Task: ${entry.task_type}  `;
+          if (entry.hourly_rate) infoText += `Rate: R${entry.hourly_rate}/hr  `;
+          if (entry.status) infoText += `Status: ${entry.status}`;
+          
+          if (infoText) {
+            doc.setTextColor(100, 100, 100);
+            doc.text(infoText, 25, yPos);
+            doc.setTextColor(0, 0, 0);
+            yPos += 5;
+          }
+          
+          doc.setFontSize(10);
+          yPos += 5;
+        });
+
+        yPos += 3;
+      });
+    }
+
+    // Footer
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text(`Generated: ${new Date().toLocaleString('en-ZA')}`, 20, doc.internal.pageSize.getHeight() - 10);
+      doc.text(`Page ${i} of ${pageCount}`, pageWidth - 20, doc.internal.pageSize.getHeight() - 10, { align: 'right' });
+    }
+
+    // Save PDF
+    const fileName = `JobCard_${selectedProject.project_number || selectedProject.name}_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
   };
 
   if (loading) {
@@ -554,9 +689,13 @@ export default function BillingDashboard() {
 
             {/* Modal Footer */}
             <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-between items-center">
-              <div className="text-sm text-gray-600">
-                Click outside or press ESC to close
-              </div>
+              <button
+                onClick={exportJobCardToPDF}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Export Job Card PDF
+              </button>
               <div className="flex gap-3">
                 <button
                   onClick={closeProjectDetails}
@@ -566,9 +705,9 @@ export default function BillingDashboard() {
                 </button>
                 {selectedProject.status === 'active' && (
                   <button
-                    onClick={() => {
-                      ProjectService.update(selectedProject.id, { status: 'ready_to_bill' });
-                      loadDashboardData();
+                    onClick={async () => {
+                      await ProjectService.update(selectedProject.id, { status: 'ready_to_bill' });
+                      await loadDashboardData();
                       closeProjectDetails();
                     }}
                     className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors flex items-center gap-2"

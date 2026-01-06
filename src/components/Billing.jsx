@@ -131,38 +131,36 @@ export default function Billing() {
     
     doc.setTextColor(0, 0, 0);
     
-    // Invoice Title
+    // Report Title
     doc.setFontSize(22);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(37, 99, 235);
-    doc.text('TAX INVOICE', 20, 55);
+    doc.text('UNBILLED TIME REPORT', 20, 55);
     doc.setTextColor(0, 0, 0);
     
-    // Invoice & Customer Details
-    const invoiceNumber = `INV-${Date.now()}`;
-    const invoiceDate = new Date().toLocaleDateString('en-ZA');
-    const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + 30);
+    // Report Details
+    const reportDate = new Date().toLocaleDateString('en-ZA');
+    const periodStart = clientData.entries.length > 0 
+      ? new Date(Math.min(...clientData.entries.map(e => new Date(e.entry_date)))).toLocaleDateString('en-ZA')
+      : reportDate;
+    const periodEnd = clientData.entries.length > 0
+      ? new Date(Math.max(...clientData.entries.map(e => new Date(e.entry_date)))).toLocaleDateString('en-ZA')
+      : reportDate;
     
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    doc.text('Invoice Number:', 20, 70);
+    doc.text('Report Date:', 20, 70);
     doc.setFont('helvetica', 'normal');
-    doc.text(invoiceNumber, 60, 70);
+    doc.text(reportDate, 60, 70);
     
     doc.setFont('helvetica', 'bold');
-    doc.text('Invoice Date:', 20, 77);
+    doc.text('Period:', 20, 77);
     doc.setFont('helvetica', 'normal');
-    doc.text(invoiceDate, 60, 77);
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text('Due Date:', 20, 84);
-    doc.setFont('helvetica', 'normal');
-    doc.text(dueDate.toLocaleDateString('en-ZA'), 60, 84);
+    doc.text(`${periodStart} - ${periodEnd}`, 60, 77);
     
     // Customer Info
     doc.setFont('helvetica', 'bold');
-    doc.text('BILL TO:', 120, 70);
+    doc.text('CLIENT:', 120, 70);
     doc.setFont('helvetica', 'normal');
     doc.text(clientData.client.client_name, 120, 77);
     if (clientData.client.registration_number) {
@@ -170,16 +168,18 @@ export default function Billing() {
     }
     
     // Table Header with Background
-    let yPos = 105;
+    let yPos = 100;
     doc.setFillColor(240, 240, 240);
     doc.rect(20, yPos - 5, 170, 8, 'F');
     
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.text('Date', 22, yPos);
-    doc.text('Service Description', 52, yPos);
-    doc.text('Hours', 130, yPos, { align: 'right' });
-    doc.text('Rate', 152, yPos, { align: 'right' });
+    doc.text('Consultant', 45, yPos);
+    doc.text('Job Type', 75, yPos);
+    doc.text('Description', 105, yPos);
+    doc.text('Hours', 150, yPos, { align: 'right' });
+    doc.text('Rate', 165, yPos, { align: 'right' });
     doc.text('Amount', 185, yPos, { align: 'right' });
     
     doc.setDrawColor(200, 200, 200);
@@ -188,11 +188,29 @@ export default function Billing() {
     // Table Rows
     yPos += 10;
     doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
     
     clientData.entries.forEach((entry, index) => {
-      if (yPos > 250) {
+      if (yPos > 260) {
         doc.addPage();
+        
+        // Repeat header on new page
         yPos = 20;
+        doc.setFillColor(240, 240, 240);
+        doc.rect(20, yPos - 5, 170, 8, 'F');
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Date', 22, yPos);
+        doc.text('Consultant', 45, yPos);
+        doc.text('Job Type', 75, yPos);
+        doc.text('Description', 105, yPos);
+        doc.text('Hours', 150, yPos, { align: 'right' });
+        doc.text('Rate', 165, yPos, { align: 'right' });
+        doc.text('Amount', 185, yPos, { align: 'right' });
+        doc.line(20, yPos + 2, 190, yPos + 2);
+        yPos += 10;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
       }
       
       // Alternating row colors
@@ -202,82 +220,82 @@ export default function Billing() {
       }
       
       const date = new Date(entry.entry_date).toLocaleDateString('en-ZA');
+      const consultant = entry.consultants?.full_name || 'N/A';
+      const jobType = entry.job_types?.name || 'Service';
+      const description = (entry.description || '').substring(0, 25);
       const hours = parseFloat(entry.hours || 0).toFixed(2);
       const rate = parseFloat(entry.hourly_rate || 0).toFixed(2);
       const amount = (parseFloat(entry.hours || 0) * parseFloat(entry.hourly_rate || 0)).toFixed(2);
       
-      // Service description combining job type and description
-      const jobType = entry.job_types?.name || 'Service';
-      const description = entry.description || '';
-      const serviceDesc = `${jobType} - ${description}`.substring(0, 45);
-      
       doc.text(date, 22, yPos);
-      doc.text(serviceDesc, 52, yPos);
-      doc.text(hours, 130, yPos, { align: 'right' });
-      doc.text(`R${rate}`, 152, yPos, { align: 'right' });
+      doc.text(consultant.substring(0, 15), 45, yPos);
+      doc.text(jobType.substring(0, 15), 75, yPos);
+      doc.text(description, 105, yPos);
+      doc.text(hours, 150, yPos, { align: 'right' });
+      doc.text(`R${rate}`, 165, yPos, { align: 'right' });
       doc.text(`R${amount}`, 185, yPos, { align: 'right' });
       
       yPos += 7;
     });
     
-    // Subtotal Section
+    // Totals Section
     yPos += 5;
     doc.setDrawColor(200, 200, 200);
     doc.line(20, yPos, 190, yPos);
     
     yPos += 8;
     doc.setFontSize(10);
-    
-    // Subtotal
     doc.setFont('helvetica', 'bold');
-    doc.text('Subtotal:', 145, yPos);
-    doc.setFont('helvetica', 'normal');
+    
+    // Total Hours
+    doc.text('Total Hours:', 120, yPos);
+    doc.text(`${clientData.totalHours.toFixed(2)}h`, 150, yPos, { align: 'right' });
+    
+    yPos += 7;
+    // Total Amount (Excl VAT)
+    doc.text('Total (Excl VAT):', 120, yPos);
     doc.text(`R${clientData.totalAmount.toFixed(2)}`, 185, yPos, { align: 'right' });
     
     yPos += 7;
-    doc.setFont('helvetica', 'bold');
-    doc.text('VAT (15%):', 145, yPos);
-    doc.setFont('helvetica', 'normal');
+    // VAT Amount
     const vat = clientData.totalAmount * 0.15;
+    doc.text('VAT (15%):', 120, yPos);
     doc.text(`R${vat.toFixed(2)}`, 185, yPos, { align: 'right' });
     
-    // Total with Background
+    // Grand Total with Background
     yPos += 10;
     doc.setFillColor(37, 99, 235);
-    doc.rect(130, yPos - 6, 60, 10, 'F');
+    doc.rect(110, yPos - 6, 80, 10, 'F');
     
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.text('TOTAL:', 145, yPos);
+    doc.text('Total (Incl VAT):', 120, yPos);
     doc.text(`R${(clientData.totalAmount + vat).toFixed(2)}`, 185, yPos, { align: 'right' });
     
     doc.setTextColor(0, 0, 0);
     
-    // Payment Details Footer
-    yPos = 250;
+    // Footer Note
+    yPos += 20;
     if (yPos > 270) {
       doc.addPage();
       yPos = 20;
     }
     
     doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text('PAYMENT DETAILS:', 20, yPos);
-    doc.setFont('helvetica', 'normal');
-    doc.text('Bank: FNB', 20, yPos + 6);
-    doc.text('Account Name: Agility Consultants (Pty) Ltd', 20, yPos + 12);
-    doc.text('Account Number: 1234567890', 20, yPos + 18);
-    doc.text('Branch Code: 250655', 20, yPos + 24);
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text('TERMS & CONDITIONS:', 120, yPos);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.text('Payment due within 30 days', 120, yPos + 6);
-    doc.text('Late payments subject to 2% monthly interest', 120, yPos + 11);
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(100, 100, 100);
+    doc.text('This is an unbilled time report for your records. Please use this information to create', 20, yPos);
+    doc.text('an invoice in your Pastel Partner system.', 20, yPos + 5);
     
     // Footer
+    doc.setFillColor(240, 240, 240);
+    doc.rect(0, 285, 210, 12, 'F');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Report generated on ${reportDate}`, pageWidth / 2, 291, { align: 'center' });
+    
+    doc.save(`Unbilled_Time_${clientData.client.client_name.replace(/\s+/g, '_')}_${reportDate.replace(/\//g, '-')}.pdf`);
+  };
     doc.setFillColor(240, 240, 240);
     doc.rect(0, 285, 210, 12, 'F');
     doc.setFontSize(8);

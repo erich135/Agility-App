@@ -182,6 +182,11 @@ const CustomerManagement = () => {
       return;
     }
 
+    if (!timeEntry.consultantId) {
+      alert('Please select a consultant');
+      return;
+    }
+
     try {
       if (editingEntry) {
         // Update existing entry

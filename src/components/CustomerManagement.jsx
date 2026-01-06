@@ -94,8 +94,11 @@ const CustomerManagement = () => {
     // Load consultants
     const { data: consultantsData } = await supabase
       .from('consultants')
-      .select('id, first_name, last_name')
-      .order('first_name');
+      .select('id, full_name')
+      .eq('is_active', true)
+      .order('full_name');
+    
+    console.log('Loaded consultants:', consultantsData);
     setConsultants(consultantsData || []);
 
     // Load job types
@@ -104,6 +107,8 @@ const CustomerManagement = () => {
       .select('*')
       .eq('is_active', true)
       .order('name');
+    
+    console.log('Loaded job types:', jobTypesData);
     setJobTypes(jobTypesData || []);
   };
 
@@ -502,7 +507,7 @@ const CustomerManagement = () => {
                                       {new Date(entry.entry_date).toLocaleDateString('en-ZA')}
                                     </td>
                                     <td className="px-3 py-3 whitespace-nowrap">
-                                      {entry.consultants?.first_name} {entry.consultants?.last_name}
+                                      {entry.consultants?.full_name}
                                     </td>
                                     <td className="px-3 py-3 whitespace-nowrap">
                                       {entry.job_types?.name || '-'}
@@ -707,7 +712,7 @@ const CustomerManagement = () => {
                     <option value="">Select...</option>
                     {consultants.map(c => (
                       <option key={c.id} value={c.id}>
-                        {c.first_name} {c.last_name}
+                        {c.full_name}
                       </option>
                     ))}
                   </select>

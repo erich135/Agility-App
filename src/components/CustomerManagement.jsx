@@ -20,11 +20,15 @@ const CustomerManagement = () => {
   // Time logging state
   const [showTimeModal, setShowTimeModal] = useState(false);
   const [timeLogCustomer, setTimeLogCustomer] = useState(null);
+  const [consultants, setConsultants] = useState([]);
+  const [jobTypes, setJobTypes] = useState([]);
   const [timeEntry, setTimeEntry] = useState({
     date: new Date().toISOString().split('T')[0],
     hours: '',
     description: '',
-    hourlyRate: '500'
+    hourlyRate: '500',
+    consultantId: '',
+    jobTypeId: ''
   });
 
   // Fetch customers from Supabase
@@ -78,7 +82,25 @@ const CustomerManagement = () => {
 
   useEffect(() => {
     fetchCustomers();
+    loadConsultantsAndJobTypes();
   }, []);
+
+  const loadConsultantsAndJobTypes = async () => {
+    // Load consultants
+    const { data: consultantsData } = await supabase
+      .from('consultants')
+      .select('id, first_name, last_name')
+      .order('first_name');
+    setConsultants(consultantsData || []);
+
+    // Load job types
+    const { data: jobTypesData } = await supabase
+      .from('job_types')
+      .select('*')
+      .eq('is_active', true)
+      .order('name');
+    setJobTypes(jobTypesData || []);
+  };
 
   const filteredCustomers = customers.filter(customer =>
     customer.client_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -106,11 +128,17 @@ const CustomerManagement = () => {
 
   const handleLogTime = (customer) => {
     setTimeLogCustomer(customer);
+    
+    // Get default consultant (current user or first consultant)
+    const defaultConsultant = consultants.find(c => c.id === user?.id) || consultants[0];
+    
     setTimeEntry({
       date: new Date().toISOString().split('T')[0],
       hours: '',
       description: '',
-      hourlyRate: '500'
+      hourlyRate: '500',
+      consultantId: defaultConsultant?.id || '',
+      jobTypeId: jobTypes[0]?.id || ''
     });
     setShowTimeModal(true);
   };
@@ -122,25 +150,12 @@ const CustomerManagement = () => {
     }
 
     try {
-      // Get first consultant as fallback for dev mode
-      let consultantId = null;
-      if (user?.id && user.id !== 'dev-user-id') {
-        consultantId = user.id;
-      } else {
-        // In dev mode, get first consultant
-        const { data: consultants } = await supabase
-          .from('consultants')
-          .select('id')
-          .limit(1)
-          .single();
-        consultantId = consultants?.id || null;
-      }
-
       const { error } = await supabase
         .from('time_entries')
         .insert({
           client_id: timeLogCustomer.id,
-          consultant_id: consultantId,
+          consultant_id: timeEntry.consultantId,
+          job_type_id: timeEntry.jobTypeId || null,
           entry_date: timeEntry.date,
           hours: parseFloat(timeEntry.hours),
           description: timeEntry.description,
@@ -152,6 +167,7 @@ const CustomerManagement = () => {
 
       setShowTimeModal(false);
       alert(`✅ Time logged: ${timeEntry.hours}h for ${timeLogCustomer.client_name}`);
+      fetchCustomers(); // Refresh to show updated data
     } catch (err) {
       console.error('Error saving time entry:', err);
       alert('❌ Error: ' + err.message);
@@ -472,6 +488,51 @@ const CustomerManagement = () => {
                   onChange={(e) => setTimeEntry({ ...timeEntry, date: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Consultant *
+                  </label>
+                  <select
+                    value={timeEntry.consultantId}
+                    onChange={(e) => setTimeEntry({ ...timeEntry, consultantId: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Select...</option>
+                    {consultants.map(c => (
+                      <option key={c.id} value={c.id}>
+                        {c.first_name} {c.last_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Job Type
+                  </label>
+                  <select
+                    value={timeEntry.jobTypeId}
+                    onChange={(e) => {
+                      const selectedJobType = jobTypes.find(jt => jt.id === e.target.value);
+                      setTimeEntry({ 
+                        ...timeEntry, 
+                        jobTypeId: e.target.value,
+                        hourlyRate: selectedJobType?.default_rate || timeEntry.hourlyRate
+                      });
+                    }}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Select...</option>
+                    {jobTypes.map(jt => (
+                      <option key={jt.id} value={jt.id}>
+                        {jt.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div>

@@ -1,103 +1,220 @@
-# Time Tracking & Billing - Implementation Roadmap
+# Agility App - Development Roadmap
 
-## Current Status ✅
-- [x] Clean database schema created (`time_entries` table)
-- [x] "Log Time" button added to Customer Management
-- [x] Basic time entry modal working (date, hours, description, rate)
-- [x] Time entries saving to database successfully
+## ✅ COMPLETED - Ready for Monday Presentation (Jan 6, 2026)
 
-## Phase 1: Enhanced Time Logging 🎯
+### Time Tracking & Billing System
+- [x] Clean database schema (`time_entries`, `job_types` tables)
+- [x] "Log Time" button on Customer Management page
+- [x] Time entry modal with consultant selector
+- [x] Job type selector with 8 default service types
+- [x] **Large description field (8 rows)** for detailed work notes
+- [x] Time entries saving with consultant, job type, rate, hours
+- [x] Edit and delete time entries (unbilled only)
+- [x] Time entry history view under each customer card
+- [x] Billing Dashboard at `/billing` route
+- [x] Unbilled time grouped by customer
+- [x] Stats cards (customers, hours, amount)
+- [x] **"Mark as Invoiced" workflow** (replaced "Create Invoice")
+- [x] **Invoice number modal** - Capture Pastel Partner invoice details
+- [x] **Preview Report Modal** - View unbilled time on-screen
+- [x] **Professional PDF export** - "Unbilled Time Report" for Pastel Partner
+- [x] Full description text visible in preview (no truncation)
 
-### A. Improve Time Entry Modal
-- [ ] **Add Consultant Selector**
-  - Dropdown showing all consultants
-  - Default to current logged-in user
-  - Allow admin to log time for others
-  
-- [ ] **Add Job Type Selector**
-  - Link to `job_types` table
-  - Categories like: Consultation, Tax Return, CIPC Filing, Bookkeeping, etc.
-  - Store `job_type_id` in time_entries
-  
-- [ ] **Add Notes/Details Field**
-  - Separate from description
-  - For internal notes (non-billable details)
-  
-- [ ] **Validation Improvements**
-  - Prevent duplicate entries (same day, same customer, overlapping times)
-  - Warn if hours > 12 in one day
-  - Required fields clearly marked
+### Database Schema
+- [x] `time_entries` table with all fields
+- [x] `job_types` table with default service types
+- [x] Foreign keys to clients, consultants, job_types
 
-### B. Time Entry History per Customer
-- [ ] **Show Time Log on Customer Page**
-  - Expandable section under each customer
-  - Table showing: Date | Consultant | Job Type | Hours | Amount | Status
-  - Filter by date range
-  - Total unbilled hours/amount displayed
-  
-- [ ] **Quick Actions**
-  - Edit time entry
-  - Delete time entry (with confirmation)
-  - Mark as billable/non-billable
+---
 
-## Phase 2: Billing Module 💰
+## 🚀 PHASE 1: Critical Security & Access Control (Next Priority)
 
-### A. Billing Dashboard (New Route: `/billing`)
-- [ ] **Overview Cards**
-  - Total Unbilled Amount (all customers)
-  - Total Unbilled Hours
-  - Number of Customers with Unbilled Time
-  - This Month's Invoiced Amount
+### Authentication & Login System
+- [ ] **Fix OTP email flow**
+  - Working email delivery via Supabase Auth
+  - Resend OTP option
+  - Session management
+  - Remember device option
   
-- [ ] **Customer List View**
-  - Show all customers with unbilled time
-  - Grouped/sorted by amount (highest first)
-  - Click to expand and see line items
-  
-- [ ] **Bulk Actions**
-  - Select multiple time entries
-  - "Create Invoice" button
-  - Mark selected as invoiced
+- [ ] **User roles enforcement**
+  - Admin, Consultant, Billing roles
+  - Role-based UI rendering
+  - Protect admin routes
 
-### B. Invoice Creation
-- [ ] **Invoice Generator**
-  - Auto-generate invoice number (e.g., INV-2026-001)
-  - Select time entries to include
-  - Preview invoice before finalizing
-  - Add invoice date
-  
-- [ ] **Invoice PDF Export**
-  - Professional template
-  - Company details (from settings)
-  - Line items with descriptions
-  - Subtotal, VAT (if applicable), Total
-  - Download as PDF
-  
-- [ ] **Mark as Invoiced**
-  - Update time_entries: set invoice_number, invoice_date, is_invoiced=true
-  - Create invoice record (new table: `invoices`)
-
-### C. Invoice Management
-- [ ] **Invoices Table** (New database table)
+### Granular Permissions System
+- [ ] **Create `permissions` table**
   ```sql
-  CREATE TABLE invoices (
-    id UUID PRIMARY KEY,
-    invoice_number VARCHAR(50) UNIQUE,
-    client_id UUID REFERENCES clients(id),
-    invoice_date DATE,
-    due_date DATE,
-    subtotal NUMERIC(10,2),
-    tax_amount NUMERIC(10,2),
-    total_amount NUMERIC(10,2),
-    status VARCHAR(20), -- draft, sent, paid, overdue
-    notes TEXT,
-    created_at TIMESTAMPTZ,
-    updated_at TIMESTAMPTZ
-  );
+  permissions: module, action, role
+  e.g., "customers", "create", "admin"
+       "customers", "view", "consultant"
   ```
   
-- [ ] **Invoice History**
-  - List all invoices
+- [ ] **Permission checks on every action**
+  - View Customers
+  - Create/Edit/Delete Customers
+  - View Billing Dashboard
+  - Mark as Invoiced
+  - View Financial Statements
+  - Manage Users
+  - Assign Consultants
+  
+- [ ] **User-level permission overrides**
+  - Allow specific users custom permissions
+  - Override table for exceptions
+
+### Customer Assignment & Data Isolation
+- [ ] **Add `assigned_consultant_id` to clients table**
+  - Dropdown in customer form
+  - Only assigned consultant can see/edit
+  
+- [ ] **Implement Row Level Security (RLS)**
+  - Consultants see ONLY their assigned customers
+  - Admins see all customers
+  - Enforce at database level (Supabase RLS policies)
+  
+- [ ] **Safeguards**
+  - Prevent consultant from logging time on others' customers
+  - Warning if trying to access unassigned customer
+  - Audit log for admin override
+
+---
+
+## 📊 PHASE 2: Reporting & Analytics
+
+### Customer Reports
+- [ ] **Customer History Timeline**
+  - All interactions (calls, meetings, documents)
+  - Time entries chronologically
+  - Invoice history
+  - Activity feed
+  
+- [ ] **Customer Financial Summary**
+  - Total hours logged (all time)
+  - Total amount invoiced
+  - Outstanding unbilled time
+  - Revenue trend chart
+
+### Consultant Reports
+- [ ] **Consultant Performance Dashboard**
+  - Hours billed per consultant
+  - Revenue generated per consultant
+  - Customer count per consultant
+  - Utilization rate (billable vs total hours)
+  
+- [ ] **Time Analysis**
+  - Hours by job type
+  - Hours by customer
+  - Monthly trends
+  - Billable vs non-billable breakdown
+
+### Billing Reports
+- [ ] **Invoice History View**
+  - All invoiced time entries
+  - Filter by invoice number, date range, customer
+  - Search functionality
+  - Export to CSV/Excel
+  
+- [ ] **Revenue Reports**
+  - Monthly revenue totals
+  - Revenue by consultant
+  - Revenue by job type
+  - Outstanding unbilled amounts
+
+---
+
+## 🎨 PHASE 3: UI/UX Enhancements
+
+### Dashboard Improvements
+- [ ] **Clean up main Dashboard**
+  - Better stats cards
+  - Recent activity feed
+  - Quick action buttons
+  - Charts (revenue trend, hours by consultant)
+  
+- [ ] **Notifications panel**
+  - Pending time approvals
+  - Overdue invoices
+  - Recent customer activity
+
+### Search & Filters
+- [ ] **Billing Dashboard filters**
+  - Date range picker
+  - Search by customer name
+  - Filter by consultant
+  - Filter by job type
+  
+- [ ] **Date range filters everywhere**
+  - Time entries
+  - Reports
+  - Invoice history
+  - Global date picker component
+
+### Bulk Actions
+- [ ] **Multi-select functionality**
+  - Bulk delete time entries
+  - Bulk mark as invoiced
+  - Bulk reassign consultant
+  - Bulk export
+
+### Mobile Responsive
+- [ ] **Mobile-optimized layouts**
+  - Responsive tables (stack on mobile)
+  - Touch-friendly buttons
+  - Mobile navigation
+  - Test on tablets and phones
+
+---
+
+## 🔧 PHASE 4: Advanced Features
+
+### Data Export
+- [ ] **CSV/Excel export**
+  - Time entries export
+  - Invoice history export
+  - Customer list export
+  - Consultant reports export
+
+### Automation
+- [ ] **Automated reminders**
+  - Email when unbilled time > threshold
+  - Monthly billing reminders
+  - Customer activity notifications
+
+### Integration
+- [ ] **Pastel Partner integration** (future)
+  - API connection
+  - Auto-sync invoices
+  - Customer import/export
+
+---
+
+## 🐛 Known Issues / Technical Debt
+
+- [ ] Remove console.log statements (consultants/job types loading)
+- [ ] Add loading states to all async operations
+- [ ] Error boundary components for graceful failures
+- [ ] Optimize database queries (add indexes)
+- [ ] Add database backups automation
+- [ ] Implement proper form validation library (Zod/Yup)
+
+---
+
+## 📝 Notes
+
+**Monday Presentation Focus:**
+1. ✅ Time logging with detailed descriptions
+2. ✅ Preview unbilled time reports on-screen
+3. ✅ Mark as invoiced with Pastel invoice number
+4. ✅ Professional PDF export for client records
+5. ✅ Edit/delete time entries
+
+**Priority After Monday:**
+1. Fix login/authentication (security)
+2. Permissions & RLS (data isolation)
+3. Customer assignment (workflow)
+4. Consultant reports (value-add)
+5. Dashboard cleanup (polish)
+
   - Filter by customer, date, status
   - Regenerate PDF
   - Mark as paid

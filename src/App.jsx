@@ -14,6 +14,7 @@ import DashboardAnalytics from './components/DashboardAnalytics';
 import ClientPortal from './components/ClientPortal';
 import FinancialStatements from './components/FinancialStatements';
 import DocumentManager from './components/DocumentManager';
+import Billing from './components/Billing';
 // import Timesheet from './components/Timesheet';
 // import TimesheetNew from './components/TimesheetNew';
 // import TimesheetSimple from './components/TimesheetSimple';
@@ -91,6 +92,7 @@ function AppRoutes() {
       <Route path="/cipc" element={<ProtectedRoute requiredPermission="access_cipc"><CIPCManagement /></ProtectedRoute>} />
       <Route path="/customers" element={<ProtectedRoute requiredPermission="access_customers"><CustomerManagement /></ProtectedRoute>} />
       <Route path="/calendar" element={<ProtectedRoute requiredPermission="access_calendar"><CalendarTaskManagement /></ProtectedRoute>} />
+      <Route path="/billing" element={<ProtectedRoute requiredPermission="access_billing_dashboard"><Billing /></ProtectedRoute>} />
       {/* TIMESHEET & BILLING REMOVED - Will rebuild from scratch */}
       {/* <Route path="/timesheet" element={<ProtectedRoute requiredPermission="access_timesheet"><TimesheetSimple /></ProtectedRoute>} /> */}
       {/* <Route path="/my-timesheets" element={<ProtectedRoute requiredPermission="access_my_timesheets"><MyTimesheets /></ProtectedRoute>} /> */}

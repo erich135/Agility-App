@@ -80,6 +80,17 @@ export default function Sidebar() {
         },
       ]
     },
+    {
+      title: 'Billing',
+      items: [
+        { 
+          path: '/billing', 
+          icon: Banknote, 
+          label: 'Billing Dashboard',
+          permission: 'access_billing_dashboard'
+        },
+      ]
+    },
     // {
     //   title: 'Timesheet',
     //   items: [

@@ -21,7 +21,7 @@ export default function Billing() {
       .select(`
         *,
         clients(id, client_name, registration_number),
-        consultants(first_name, last_name),
+        consultants(full_name),
         job_types(name)
       `)
       .eq('is_invoiced', false)

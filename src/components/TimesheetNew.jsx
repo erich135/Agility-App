@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Square, Clock, Plus, Trash2, Edit2, Save, X } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import supabase from '../lib/SupabaseClient';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function TimesheetNew() {

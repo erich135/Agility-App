@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { DollarSign, FileText, Clock, Download, ChevronDown, ChevronRight, Calendar, User } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import supabase from '../lib/SupabaseClient';
 import jsPDF from 'jspdf';
 
 export default function BillingDashboardNew() {

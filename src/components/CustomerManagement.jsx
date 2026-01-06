@@ -157,8 +157,6 @@ const CustomerManagement = () => {
       alert('❌ Error: ' + err.message);
     }
   };
-    }
-  };
 
   const handleViewDocuments = async (customer) => {
     // Log customer access

@@ -763,8 +763,8 @@ const CustomerManagement = () => {
                   Description *
                 </label>
                 <textarea
-                  rows={3}
-                  placeholder="What work was done?"
+                  rows={8}
+                  placeholder="Detailed description of work performed (visible on unbilled time report)"
                   value={timeEntry.description}
                   onChange={(e) => setTimeEntry({ ...timeEntry, description: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"

@@ -8,6 +8,13 @@ export default function Billing() {
   const [expandedClients, setExpandedClients] = useState(new Set());
   const [selectedEntries, setSelectedEntries] = useState(new Set());
   const [loading, setLoading] = useState(true);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [invoiceDetails, setInvoiceDetails] = useState({
+    invoiceNumber: '',
+    invoiceDate: new Date().toISOString().split('T')[0]
+  });
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [previewClient, setPreviewClient] = useState(null);
 
   useEffect(() => {
     loadUnbilledTime();
@@ -84,31 +91,46 @@ export default function Billing() {
     setSelectedEntries(newSelected);
   };
 
-  const createInvoice = async () => {
+  const openInvoiceModal = () => {
     if (selectedEntries.size === 0) {
-      alert('Please select time entries to invoice');
+      alert('Please select time entries to mark as invoiced');
       return;
     }
+    setShowInvoiceModal(true);
+  };
 
-    const invoiceNumber = `INV-${Date.now()}`;
-    const invoiceDate = new Date().toISOString().split('T')[0];
+  const markAsInvoiced = async () => {
+    if (!invoiceDetails.invoiceNumber.trim()) {
+      alert('Please enter an invoice number');
+      return;
+    }
 
     const { error } = await supabase
       .from('time_entries')
       .update({
-        invoice_number: invoiceNumber,
-        invoice_date: invoiceDate,
+        invoice_number: invoiceDetails.invoiceNumber,
+        invoice_date: invoiceDetails.invoiceDate,
         is_invoiced: true,
       })
       .in('id', Array.from(selectedEntries));
 
     if (!error) {
-      alert(`✅ Invoice created: ${invoiceNumber}\n${selectedEntries.size} entries marked as invoiced`);
+      alert(`✅ Marked as invoiced: ${invoiceDetails.invoiceNumber}\n${selectedEntries.size} entries updated`);
       setSelectedEntries(new Set());
+      setShowInvoiceModal(false);
+      setInvoiceDetails({
+        invoiceNumber: '',
+        invoiceDate: new Date().toISOString().split('T')[0]
+      });
       loadUnbilledTime();
     } else {
-      alert('❌ Error creating invoice: ' + error.message);
+      alert('❌ Error: ' + error.message);
     }
+  };
+
+  const openPreview = (clientData) => {
+    setPreviewClient(clientData);
+    setShowPreviewModal(true);
   };
 
   const exportToPDF = (clientData) => {
@@ -364,11 +386,11 @@ export default function Billing() {
             <span className="ml-4 text-blue-700">Total: R {selectedTotal.toFixed(2)}</span>
           </div>
           <button
-            onClick={createInvoice}
+            onClick={openInvoiceModal}
             className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 flex items-center gap-2"
           >
-            <FileText size={18} />
-            Create Invoice
+            <Check size={18} />
+            Mark as Invoiced
           </button>
         </div>
       )}
@@ -438,14 +460,24 @@ export default function Billing() {
                             R {clientData.totalAmount.toFixed(2)}
                           </div>
                         </div>
-                        <button
-                          onClick={() => exportToPDF(clientData)}
-                          className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 flex items-center gap-2"
-                          title="Export to PDF"
-                        >
-                          <Download size={16} />
-                          PDF
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => openPreview(clientData)}
+                            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                            title="Preview Report"
+                          >
+                            <FileText size={16} />
+                            Preview
+                          </button>
+                          <button
+                            onClick={() => exportToPDF(clientData)}
+                            className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 flex items-center gap-2"
+                            title="Export to PDF"
+                          >
+                            <Download size={16} />
+                            PDF
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -510,6 +542,176 @@ export default function Billing() {
           </div>
         )}
       </div>
+
+      {/* Mark as Invoiced Modal */}
+      {showInvoiceModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-xl font-bold mb-4">Mark as Invoiced</h3>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Pastel Invoice Number *
+              </label>
+              <input
+                type="text"
+                placeholder="e.g., INV-2026-001"
+                value={invoiceDetails.invoiceNumber}
+                onChange={(e) => setInvoiceDetails({...invoiceDetails, invoiceNumber: e.target.value})}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Invoice Date
+              </label>
+              <input
+                type="date"
+                value={invoiceDetails.invoiceDate}
+                onChange={(e) => setInvoiceDetails({...invoiceDetails, invoiceDate: e.target.value})}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            <div className="text-sm text-gray-600 mb-6 bg-blue-50 p-3 rounded">
+              <p className="font-semibold">Summary:</p>
+              <p>{selectedEntries.size} time entries will be marked as invoiced</p>
+              <p>Total: R {selectedTotal.toFixed(2)}</p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowInvoiceModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={markAsInvoiced}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Preview Report Modal */}
+      {showPreviewModal && previewClient && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
+          <div className="bg-white rounded-lg max-w-4xl w-full mx-4 my-8">
+            <div className="bg-blue-600 text-white px-6 py-4 rounded-t-lg flex items-center justify-between">
+              <h3 className="text-xl font-bold">Unbilled Time Report</h3>
+              <button
+                onClick={() => setShowPreviewModal(false)}
+                className="text-white hover:text-gray-200"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 max-h-[80vh] overflow-y-auto">
+              {/* Client Info */}
+              <div className="mb-6 grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-600">Client</p>
+                  <p className="font-semibold text-lg">{previewClient.client.client_name}</p>
+                  {previewClient.client.registration_number && (
+                    <p className="text-sm text-gray-600">Reg #: {previewClient.client.registration_number}</p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Report Date</p>
+                  <p className="font-semibold">{new Date().toLocaleDateString('en-ZA')}</p>
+                </div>
+              </div>
+
+              {/* Time Entries Table */}
+              <div className="border rounded-lg overflow-hidden mb-6">
+                <table className="w-full">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-sm font-semibold">Date</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold">Consultant</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold">Job Type</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold">Description</th>
+                      <th className="px-4 py-3 text-right text-sm font-semibold">Hours</th>
+                      <th className="px-4 py-3 text-right text-sm font-semibold">Rate</th>
+                      <th className="px-4 py-3 text-right text-sm font-semibold">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {previewClient.entries.map((entry, index) => (
+                      <tr key={entry.id} className={index % 2 === 1 ? 'bg-gray-50' : ''}>
+                        <td className="px-4 py-3 text-sm">
+                          {new Date(entry.entry_date).toLocaleDateString('en-ZA')}
+                        </td>
+                        <td className="px-4 py-3 text-sm">{entry.consultants?.full_name || 'N/A'}</td>
+                        <td className="px-4 py-3 text-sm">{entry.job_types?.name || 'Service'}</td>
+                        <td className="px-4 py-3 text-sm max-w-xs">
+                          <div className="line-clamp-2">{entry.description}</div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right font-semibold">
+                          {parseFloat(entry.hours || 0).toFixed(2)}h
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right">
+                          R{parseFloat(entry.hourly_rate || 0).toFixed(2)}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right font-semibold text-green-600">
+                          R{(parseFloat(entry.hours || 0) * parseFloat(entry.hourly_rate || 0)).toFixed(2)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Totals */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-semibold">Total Hours:</span>
+                  <span className="text-lg font-bold">{previewClient.totalHours.toFixed(2)}h</span>
+                </div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-semibold">Total (Excl VAT):</span>
+                  <span className="text-lg font-bold">R{previewClient.totalAmount.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center mb-3">
+                  <span className="font-semibold">VAT (15%):</span>
+                  <span className="text-lg font-bold">R{(previewClient.totalAmount * 0.15).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center pt-3 border-t-2 border-blue-600">
+                  <span className="text-xl font-bold">Total (Incl VAT):</span>
+                  <span className="text-2xl font-bold text-blue-600">
+                    R{(previewClient.totalAmount * 1.15).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-6 flex gap-3">
+                <button
+                  onClick={() => setShowPreviewModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    exportToPDF(previewClient);
+                    setShowPreviewModal(false);
+                  }}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 flex items-center justify-center gap-2"
+                >
+                  <Download size={18} />
+                  Download PDF
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

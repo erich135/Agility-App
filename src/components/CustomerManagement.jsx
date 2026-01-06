@@ -122,11 +122,25 @@ const CustomerManagement = () => {
     }
 
     try {
+      // Get first consultant as fallback for dev mode
+      let consultantId = null;
+      if (user?.id && user.id !== 'dev-user-id') {
+        consultantId = user.id;
+      } else {
+        // In dev mode, get first consultant
+        const { data: consultants } = await supabase
+          .from('consultants')
+          .select('id')
+          .limit(1)
+          .single();
+        consultantId = consultants?.id || null;
+      }
+
       const { error } = await supabase
         .from('time_entries')
         .insert({
           client_id: timeLogCustomer.id,
-          consultant_id: user?.id,
+          consultant_id: consultantId,
           entry_date: timeEntry.date,
           hours: parseFloat(timeEntry.hours),
           description: timeEntry.description,
@@ -136,28 +150,13 @@ const CustomerManagement = () => {
 
       if (error) throw error;
 
-      // Log activity
-      if (user) {
-        await ActivityLogger.logActivity(
-          user.id,
-          user.full_name || user.email,
-          'time_entry_created',
-          'time_entries',
-          null,
-          timeLogCustomer.client_name,
-          {
-            customer_id: timeLogCustomer.id,
-            hours: timeEntry.hours,
-            date: timeEntry.date
-          }
-        );
-      }
-
       setShowTimeModal(false);
-      alert(`Time logged: ${timeEntry.hours}h for ${timeLogCustomer.client_name}`);
+      alert(`✅ Time logged: ${timeEntry.hours}h for ${timeLogCustomer.client_name}`);
     } catch (err) {
       console.error('Error saving time entry:', err);
-      alert('Error saving time entry: ' + err.message);
+      alert('❌ Error: ' + err.message);
+    }
+  };
     }
   };
 

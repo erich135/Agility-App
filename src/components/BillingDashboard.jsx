@@ -94,20 +94,52 @@ export default function BillingDashboard() {
     }
   };
 
-  const handleMarkInvoiced = async (projectId) => {
+  const handleMarkInvoiced = async (projectId, invoiceOnlyUninvoiced = true) => {
     const invoiceNumber = prompt('Enter invoice number:');
     if (!invoiceNumber) return;
 
-    const result = await ProjectService.update(projectId, {
-      status: 'invoiced',
-      invoice_number: invoiceNumber,
-      invoice_date: new Date().toISOString().split('T')[0]
-    });
+    try {
+      // Get all time entries for this project
+      const timeEntriesRes = await TimeEntryService.getByProject(projectId);
+      const timeEntries = timeEntriesRes.data || [];
+      
+      // Determine which entries to invoice
+      const entriesToInvoice = invoiceOnlyUninvoiced 
+        ? timeEntries.filter(entry => entry.status !== 'invoiced')
+        : timeEntries;
 
-    if (!result.error) {
+      // Mark time entries as invoiced
+      for (const entry of entriesToInvoice) {
+        await TimeEntryService.update(entry.id, {
+          status: 'invoiced',
+          invoice_number: invoiceNumber,
+          invoice_date: new Date().toISOString().split('T')[0]
+        });
+      }
+
+      // Check if all time entries are now invoiced
+      const remainingUninvoiced = timeEntries.filter(e => 
+        e.status !== 'invoiced' && !entriesToInvoice.find(ei => ei.id === e.id)
+      ).length;
+
+      // Only mark project as fully invoiced if no uninvoiced entries remain
+      const projectStatus = remainingUninvoiced === 0 ? 'invoiced' : 'ready_to_bill';
+      
+      await ProjectService.update(projectId, {
+        status: projectStatus,
+        invoice_number: invoiceNumber,
+        invoice_date: new Date().toISOString().split('T')[0]
+      });
+
       loadDashboardData();
-      setSelectedProject(null);
-      setProjectDetails(null);
+      // Reload project details to show updated status
+      if (selectedProject && selectedProject.id === projectId) {
+        const updatedProject = { ...selectedProject, status: projectStatus };
+        handleProjectClick(updatedProject);
+      }
+    } catch (error) {
+      console.error('Error marking as invoiced:', error);
+      alert('Failed to create invoice. Please try again.');
     }
   };
 
@@ -124,6 +156,10 @@ export default function BillingDashboard() {
       
       const timeEntries = timeEntriesRes.data || [];
       console.log('Time entries fetched:', timeEntries.length, timeEntries);
+      
+      // Separate invoiced and uninvoiced entries
+      const invoicedEntries = timeEntries.filter(entry => entry.status === 'invoiced');
+      const uninvoicedEntries = timeEntries.filter(entry => entry.status !== 'invoiced');
       
       // Group time entries by date
       const entriesByDate = timeEntries.reduce((acc, entry) => {
@@ -142,12 +178,34 @@ export default function BillingDashboard() {
         const rate = entry.hourly_rate || project.hourly_rate || 0;
         return sum + (hours * rate);
       }, 0);
+      
+      // Calculate invoiced totals
+      const invoicedHours = invoicedEntries.reduce((sum, entry) => sum + (entry.duration_hours || 0), 0);
+      const invoicedAmount = invoicedEntries.reduce((sum, entry) => {
+        const hours = entry.duration_hours || 0;
+        const rate = entry.hourly_rate || project.hourly_rate || 0;
+        return sum + (hours * rate);
+      }, 0);
+      
+      // Calculate uninvoiced totals
+      const uninvoicedHours = uninvoicedEntries.reduce((sum, entry) => sum + (entry.duration_hours || 0), 0);
+      const uninvoicedAmount = uninvoicedEntries.reduce((sum, entry) => {
+        const hours = entry.duration_hours || 0;
+        const rate = entry.hourly_rate || project.hourly_rate || 0;
+        return sum + (hours * rate);
+      }, 0);
 
       setProjectDetails({
         timeEntries,
+        invoicedEntries,
+        uninvoicedEntries,
         entriesByDate,
         totalHours,
-        totalAmount
+        totalAmount,
+        invoicedHours,
+        invoicedAmount,
+        uninvoicedHours,
+        uninvoicedAmount
       });
     } catch (error) {
       console.error('Error loading project details:', error);
@@ -551,7 +609,7 @@ export default function BillingDashboard() {
               ) : projectDetails ? (
                 <div className="space-y-6">
                   {/* Summary Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                       <p className="text-sm text-blue-600 font-medium">Total Hours</p>
                       <p className="text-3xl font-bold text-blue-900 mt-1">
@@ -564,11 +622,19 @@ export default function BillingDashboard() {
                         R {projectDetails.totalAmount.toFixed(2)}
                       </p>
                     </div>
-                    <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
-                      <p className="text-sm text-purple-600 font-medium">Time Entries</p>
-                      <p className="text-3xl font-bold text-purple-900 mt-1">
-                        {projectDetails.timeEntries.length}
+                    <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+                      <p className="text-sm text-yellow-600 font-medium">Uninvoiced Hours</p>
+                      <p className="text-3xl font-bold text-yellow-900 mt-1">
+                        {projectDetails.uninvoicedHours.toFixed(2)}
                       </p>
+                      <p className="text-xs text-yellow-700 mt-1">R {projectDetails.uninvoicedAmount.toFixed(2)}</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <p className="text-sm text-gray-600 font-medium">Invoiced Hours</p>
+                      <p className="text-3xl font-bold text-gray-900 mt-1">
+                        {projectDetails.invoicedHours.toFixed(2)}
+                      </p>
+                      <p className="text-xs text-gray-700 mt-1">R {projectDetails.invoicedAmount.toFixed(2)}</p>
                     </div>
                   </div>
 
@@ -622,25 +688,31 @@ export default function BillingDashboard() {
                                 <div className="divide-y divide-gray-100">
                                   {entries.map((entry, idx) => {
                                     const entryAmount = (entry.duration_hours || 0) * (entry.hourly_rate || selectedProject.hourly_rate || 0);
+                                    const isInvoiced = entry.status === 'invoiced';
                                     return (
-                                      <div key={idx} className="p-4 hover:bg-gray-50 transition-colors">
+                                      <div key={idx} className={`p-4 hover:bg-gray-50 transition-colors ${isInvoiced ? 'bg-gray-100 opacity-75' : ''}`}>
                                         <div className="flex justify-between items-start mb-2">
                                           <div className="flex items-center gap-2">
                                             <User className="w-4 h-4 text-gray-400" />
                                             <span className="font-medium text-gray-900">
                                               {entry.consultant?.full_name || 'Unknown Consultant'}
                                             </span>
+                                            {isInvoiced && (
+                                              <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full font-medium">
+                                                ✓ Invoiced
+                                              </span>
+                                            )}
                                           </div>
                                           <div className="text-right">
-                                            <p className="font-bold text-blue-600">{entry.duration_hours?.toFixed(2)}h</p>
+                                            <p className={`font-bold ${isInvoiced ? 'text-gray-500 line-through' : 'text-blue-600'}`}>{entry.duration_hours?.toFixed(2)}h</p>
                                             {entryAmount > 0 && (
-                                              <p className="text-sm text-gray-500">R {entryAmount.toFixed(2)}</p>
+                                              <p className={`text-sm ${isInvoiced ? 'text-gray-400' : 'text-gray-500'}`}>R {entryAmount.toFixed(2)}</p>
                                             )}
                                           </div>
                                         </div>
                                         
                                         {entry.description && (
-                                          <div className="mt-2 bg-gray-50 rounded p-3 border-l-4 border-blue-500">
+                                          <div className={`mt-2 rounded p-3 border-l-4 ${isInvoiced ? 'bg-gray-50 border-gray-400' : 'bg-gray-50 border-blue-500'}`}>
                                             <p className="text-sm text-gray-700 leading-relaxed">{entry.description}</p>
                                           </div>
                                         )}
@@ -716,13 +788,13 @@ export default function BillingDashboard() {
                     Mark Ready to Bill
                   </button>
                 )}
-                {selectedProject.status === 'ready_to_bill' && (
+                {(selectedProject.status === 'ready_to_bill' || selectedProject.status === 'invoiced') && projectDetails?.uninvoicedHours > 0 && (
                   <button
-                    onClick={() => handleMarkInvoiced(selectedProject.id)}
+                    onClick={() => handleMarkInvoiced(selectedProject.id, true)}
                     className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
                   >
                     <Banknote className="w-4 h-4" />
-                    Create Invoice
+                    Invoice Uninvoiced Hours ({projectDetails.uninvoicedHours.toFixed(2)}h)
                   </button>
                 )}
               </div>

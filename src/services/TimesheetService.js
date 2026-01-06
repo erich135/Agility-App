@@ -366,12 +366,29 @@ export const TimeEntryService = {
   async getByProject(projectId) {
     const { data, error } = await supabase
       .from('time_entries')
-      .select(`
-        *,
-        consultant:consultants(id, full_name)
-      `)
+      .select('*')
       .eq('project_id', projectId)
       .order('entry_date', { ascending: false });
+    
+    if (data && data.length > 0) {
+      // Fetch consultant details separately to avoid relationship issues
+      const consultantIds = [...new Set(data.map(entry => entry.consultant_id))];
+      const { data: consultants } = await supabase
+        .from('consultants')
+        .select('id, full_name')
+        .in('id', consultantIds);
+      
+      // Map consultant data to entries
+      const consultantMap = {};
+      consultants?.forEach(c => consultantMap[c.id] = c);
+      
+      const enrichedData = data.map(entry => ({
+        ...entry,
+        consultant: consultantMap[entry.consultant_id] || { id: entry.consultant_id, full_name: 'Unknown' }
+      }));
+      
+      return { data: enrichedData, error };
+    }
     
     return { data, error };
   },

@@ -16,6 +16,16 @@ const CustomerManagement = () => {
   const [editingCustomerId, setEditingCustomerId] = useState(null);
   const [showDocuments, setShowDocuments] = useState(false);
   const [documentsCustomer, setDocumentsCustomer] = useState(null);
+  
+  // Time logging state
+  const [showTimeModal, setShowTimeModal] = useState(false);
+  const [timeLogCustomer, setTimeLogCustomer] = useState(null);
+  const [timeEntry, setTimeEntry] = useState({
+    date: new Date().toISOString().split('T')[0],
+    hours: '',
+    description: '',
+    hourlyRate: '500'
+  });
 
   // Fetch customers from Supabase
   const fetchCustomers = async () => {
@@ -92,6 +102,63 @@ const CustomerManagement = () => {
 
   const handleSaveCustomer = () => {
     fetchCustomers(); // Refresh the list
+  };
+
+  const handleLogTime = (customer) => {
+    setTimeLogCustomer(customer);
+    setTimeEntry({
+      date: new Date().toISOString().split('T')[0],
+      hours: '',
+      description: '',
+      hourlyRate: '500'
+    });
+    setShowTimeModal(true);
+  };
+
+  const handleSaveTimeEntry = async () => {
+    if (!timeEntry.hours || !timeEntry.description) {
+      alert('Please enter hours and description');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('time_entries')
+        .insert({
+          client_id: timeLogCustomer.id,
+          consultant_id: user?.id,
+          entry_date: timeEntry.date,
+          hours: parseFloat(timeEntry.hours),
+          description: timeEntry.description,
+          hourly_rate: timeEntry.hourlyRate ? parseFloat(timeEntry.hourlyRate) : null,
+          is_invoiced: false
+        });
+
+      if (error) throw error;
+
+      // Log activity
+      if (user) {
+        await ActivityLogger.logActivity(
+          user.id,
+          user.full_name || user.email,
+          'time_entry_created',
+          'time_entries',
+          null,
+          timeLogCustomer.client_name,
+          {
+            customer_id: timeLogCustomer.id,
+            hours: timeEntry.hours,
+            date: timeEntry.date
+          }
+        );
+      }
+
+      setShowTimeModal(false);
+      alert(`Time logged: ${timeEntry.hours}h for ${timeLogCustomer.client_name}`);
+    } catch (err) {
+      console.error('Error saving time entry:', err);
+      alert('Error saving time entry: ' + err.message);
+    }
   };
 
   const handleViewDocuments = async (customer) => {
@@ -255,6 +322,15 @@ const CustomerManagement = () => {
                       </span>
                       <div className="flex flex-col sm:flex-row gap-2">
                         <button 
+                          onClick={() => handleLogTime(customer)}
+                          className="text-green-600 hover:text-green-800 transition-colors font-medium text-sm px-3 py-1 rounded hover:bg-green-50 flex items-center gap-1"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Log Time
+                        </button>
+                        <button 
                           onClick={() => handleEditCustomer(customer.id)}
                           className="text-blue-600 hover:text-blue-800 transition-colors font-medium text-sm px-2 py-1 rounded hover:bg-blue-50"
                         >
@@ -375,6 +451,99 @@ const CustomerManagement = () => {
           customerName={documentsCustomer.client_name}
           onClose={handleCloseDocuments}
         />
+      )}
+
+      {/* Time Logging Modal */}
+      {showTimeModal && timeLogCustomer && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900">Log Time</h2>
+              <p className="text-sm text-gray-600 mt-1">
+                Customer: <span className="font-semibold">{timeLogCustomer.client_name}</span>
+              </p>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Date
+                </label>
+                <input
+                  type="date"
+                  value={timeEntry.date}
+                  onChange={(e) => setTimeEntry({ ...timeEntry, date: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Hours *
+                </label>
+                <input
+                  type="number"
+                  step="0.25"
+                  placeholder="e.g., 2.5"
+                  value={timeEntry.hours}
+                  onChange={(e) => setTimeEntry({ ...timeEntry, hours: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Description *
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="What work was done?"
+                  value={timeEntry.description}
+                  onChange={(e) => setTimeEntry({ ...timeEntry, description: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Hourly Rate (R)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="500.00"
+                  value={timeEntry.hourlyRate}
+                  onChange={(e) => setTimeEntry({ ...timeEntry, hourlyRate: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {timeEntry.hours && timeEntry.hourlyRate && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <div className="text-sm text-blue-600 font-semibold">Total Amount</div>
+                  <div className="text-2xl font-bold text-blue-900">
+                    R {(parseFloat(timeEntry.hours || 0) * parseFloat(timeEntry.hourlyRate || 0)).toFixed(2)}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
+              <button
+                onClick={() => setShowTimeModal(false)}
+                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveTimeEntry}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+              >
+                Save Time Entry
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

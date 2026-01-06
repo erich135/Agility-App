@@ -18,6 +18,7 @@ import Timesheet from './components/Timesheet';
 import MyTimesheets from './components/MyTimesheets';
 import ProjectManagement from './components/ProjectManagement';
 import BillingDashboard from './components/BillingDashboard';
+import BillingDashboardNew from './components/BillingDashboardNew';
 import BillingReports from './components/BillingReports';
 import UserManagement from './components/UserManagement';
 
@@ -91,6 +92,7 @@ function AppRoutes() {
       <Route path="/my-timesheets" element={<ProtectedRoute requiredPermission="access_my_timesheets"><MyTimesheets /></ProtectedRoute>} />
       <Route path="/projects" element={<ProtectedRoute requiredPermission="access_projects"><ProjectManagement /></ProtectedRoute>} />
       <Route path="/billing" element={<ProtectedRoute requiredPermission="access_billing_dashboard"><BillingDashboard /></ProtectedRoute>} />
+      <Route path="/billing-new" element={<ProtectedRoute requiredPermission="access_billing_dashboard"><BillingDashboardNew /></ProtectedRoute>} />
       <Route path="/billing/reports" element={<ProtectedRoute requiredPermission="access_billing_reports"><BillingReports /></ProtectedRoute>} />
       <Route path="/documents" element={<ProtectedRoute requiredPermission="access_documents"><DocumentManager /></ProtectedRoute>} />
       <Route path="/financial-statements" element={<ProtectedRoute requiredPermission="access_financial_statements"><FinancialStatements /></ProtectedRoute>} />

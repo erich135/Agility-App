@@ -60,12 +60,17 @@ const CustomerManagement = () => {
         .order('client_name', { ascending: true });
 
       if (user?.role === 'consultant' && myConsultantId) {
+        console.log('🔐 Consultant filter applied. myConsultantId:', myConsultantId);
         query = query.eq('assigned_consultant_id', myConsultantId);
+      } else if (user?.role === 'consultant' && !myConsultantId) {
+        console.log('⚠️  Consultant role but myConsultantId not set yet');
       }
 
       const { data: customersData, error: customersError } = await query;
 
       if (customersError) throw customersError;
+      
+      console.log(`📦 Fetched ${customersData?.length || 0} customers`);
 
       // Get document counts for each customer
       const { data: documentCounts, error: docError } = await supabase
@@ -103,13 +108,16 @@ const CustomerManagement = () => {
   useEffect(() => {
     const resolveConsultant = async () => {
       if (user?.role === 'consultant') {
-        const { data } = await supabase
+        console.log('👤 Consultant role detected. User ID:', user.id, 'Email:', user.email);
+        const { data, error } = await supabase
           .from('consultants')
           .select('id, user_id, email')
           .or(`user_id.eq.${user.id},email.eq.${user.email}`)
           .limit(1)
           .single();
+        console.log('🔍 Consultant lookup result:', data, 'Error:', error);
         setMyConsultantId(data?.id || null);
+        console.log('📌 myConsultantId set to:', data?.id || null);
       }
     };
     resolveConsultant().finally(() => fetchCustomers());

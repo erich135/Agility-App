@@ -30,10 +30,18 @@ export default function UserManagement() {
         .order('created_at', { ascending: false });
 
       if (!usersError) setUsers(usersData || []);
-
-      // Permissions table doesn't exist yet - use role-based defaults
-      // TODO: Create permissions table when needed
-      setPermissions([]);
+      // Load permissions catalog (if table exists)
+      try {
+        const { data: permsData } = await supabase
+          .from('permissions')
+          .select('key,name,description,category')
+          .order('category')
+          .order('name');
+        setPermissions(permsData || []);
+      } catch (e) {
+        console.warn('Permissions table not found; using empty list', e);
+        setPermissions([]);
+      }
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -121,16 +129,48 @@ export default function UserManagement() {
   const handleShowPermissions = async (user) => {
     setSelectedUser(user);
     
-    // Permissions are role-based for now
-    // TODO: Load from user_permissions table when created
-    user.permissions = [];
+    // Load user's current granular permissions (if table exists)
+    try {
+      const { data: userPerms } = await supabase
+        .from('user_permissions')
+        .select('permission_key')
+        .eq('user_id', user.id);
+      user.permissions = (userPerms || []).map(p => p.permission_key);
+    } catch (e) {
+      console.warn('user_permissions table not found; defaulting to empty', e);
+      user.permissions = [];
+    }
     
     setShowPermissions(true);
   };
 
   const handleTogglePermission = async (permissionKey, currentlyEnabled) => {
-    // Permissions table doesn't exist yet - show message
-    alert('Granular permissions coming soon! Currently using role-based permissions.');
+    try {
+      if (currentlyEnabled) {
+        // Remove permission
+        await supabase
+          .from('user_permissions')
+          .delete()
+          .eq('user_id', selectedUser.id)
+          .eq('permission_key', permissionKey);
+        setSelectedUser(prev => ({
+          ...prev,
+          permissions: (prev.permissions || []).filter(k => k !== permissionKey)
+        }));
+      } else {
+        // Add permission
+        await supabase
+          .from('user_permissions')
+          .insert({ user_id: selectedUser.id, permission_key: permissionKey });
+        setSelectedUser(prev => ({
+          ...prev,
+          permissions: [ ...(prev.permissions || []), permissionKey ]
+        }));
+      }
+    } catch (e) {
+      console.error('Failed to toggle permission', e);
+      alert('Failed to update permission.');
+    }
   };
 
   const roleColors = {

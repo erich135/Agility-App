@@ -32,15 +32,22 @@ export const AuthProvider = ({ children }) => {
               'access_cipc',
               'access_customers',
               'access_calendar',
-              'access_timesheet',
-              'access_my_timesheets',
-              'access_projects',
+              'access_documents',
               'access_billing_dashboard',
               'access_billing_reports',
-              'access_documents',
               'access_financial_statements',
-              'access_client_portal',
-              'system_settings'
+              'manage_users',
+              'manage_permissions',
+              'system_settings',
+              'customers_view_my',
+              'customers_create',
+              'customers_edit',
+              'customers_delete',
+              'customers_bulk_assign',
+              'log_time',
+              'view_time_entries',
+              'documents_view',
+              'documents_manage'
             ]
           };
           setUser(devUser);

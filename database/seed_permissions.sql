@@ -33,5 +33,26 @@ INSERT INTO public.permissions (key, name, description, category) VALUES
   ('system_settings','System Settings','Access system configuration','admin')
 ON CONFLICT (key) DO NOTHING;
 
+-- Granular customer permissions
+INSERT INTO public.permissions (key, name, description, category) VALUES
+  ('customers_view_my','My Customers','View customers assigned to me','customers'),
+  ('customers_create','Create Customers','Create new customers','customers'),
+  ('customers_edit','Edit Customers','Edit existing customers','customers'),
+  ('customers_delete','Delete Customers','Delete customers','customers'),
+  ('customers_bulk_assign','Bulk Assign Customers','Bulk assign customers to consultants','customers')
+ON CONFLICT (key) DO NOTHING;
+
+-- Time logging permissions
+INSERT INTO public.permissions (key, name, description, category) VALUES
+  ('log_time','Log Time','Create time entries for customers','timesheet'),
+  ('view_time_entries','View Time Entries','View time entries history','timesheet')
+ON CONFLICT (key) DO NOTHING;
+
+-- Documents permissions (beyond navigation)
+INSERT INTO public.permissions (key, name, description, category) VALUES
+  ('documents_view','View Documents','View documents for customers','documents'),
+  ('documents_manage','Manage Documents','Upload, edit, and delete documents','documents')
+ON CONFLICT (key) DO NOTHING;
+
 -- Example role templates (optional usage in app)
 -- Admin template can be all permissions; Consultant minimal set

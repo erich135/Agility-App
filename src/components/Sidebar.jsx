@@ -61,6 +61,12 @@ export default function Sidebar() {
           permission: 'access_customers'
         },
         { 
+          path: '/my-customers', 
+          icon: Users, 
+          label: 'My Customers',
+          permission: 'customers_view_my'
+        },
+        { 
           path: '/cipc', 
           icon: Building2, 
           label: 'CIPC',

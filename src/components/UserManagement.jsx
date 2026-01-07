@@ -9,6 +9,7 @@ export default function UserManagement() {
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [showPermissions, setShowPermissions] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState('');
   const [inviteForm, setInviteForm] = useState({
     first_name: '',
     last_name: '',
@@ -72,8 +73,8 @@ export default function UserManagement() {
 
       if (error) throw error;
 
-      // Note: Permissions are role-based for now (handled in AuthContext)
-      // TODO: Create user_permissions table when granular permissions needed
+      // Auto-grant template permissions based on selected role
+      await applyRoleTemplate(newUser.id, inviteForm.role);
 
       // Send invitation email via API
       const inviteLink = `${window.location.origin}/setup-password?token=${token}`;
@@ -128,6 +129,7 @@ export default function UserManagement() {
 
   const handleShowPermissions = async (user) => {
     setSelectedUser(user);
+    setSelectedTemplate('');
     
     // Load user's current granular permissions (if table exists)
     try {
@@ -173,12 +175,70 @@ export default function UserManagement() {
     }
   };
 
+  // Role templates mapping
+  const ROLE_TEMPLATES = {
+    admin: () => permissions.map(p => p.key),
+    consultant: () => [
+      'access_dashboard',
+      'access_customers',
+      'customers_view_my',
+      'log_time',
+      'access_documents',
+      'documents_view',
+      'access_calendar'
+    ],
+    accounts: () => [
+      'access_dashboard',
+      'access_billing_dashboard',
+      'access_billing_reports',
+      'access_financial_statements',
+      'access_documents',
+      'documents_view'
+    ],
+    user: () => [
+      'access_dashboard',
+      'access_calendar',
+      'access_documents',
+      'documents_view'
+    ]
+  };
+
+  const applyPermissions = async (userId, keys) => {
+    if (!keys || keys.length === 0) return;
+    const rows = keys.map(k => ({ user_id: userId, permission_key: k }));
+    await supabase.from('user_permissions').upsert(rows, { onConflict: 'user_id,permission_key' });
+    if (selectedUser && selectedUser.id === userId) {
+      setSelectedUser(prev => ({ ...prev, permissions: Array.from(new Set([...(prev.permissions || []), ...keys])) }));
+    }
+  };
+
+  const clearAllPermissions = async (userId) => {
+    await supabase.from('user_permissions').delete().eq('user_id', userId);
+    if (selectedUser && selectedUser.id === userId) {
+      setSelectedUser(prev => ({ ...prev, permissions: [] }));
+    }
+  };
+
+  const selectAllPermissions = async (userId) => {
+    const allKeys = permissions.map(p => p.key);
+    await applyPermissions(userId, allKeys);
+  };
+
+  const applyRoleTemplate = async (userId, role) => {
+    const getKeys = ROLE_TEMPLATES[role];
+    const keys = getKeys ? getKeys() : [];
+    if (keys.length > 0) {
+      await applyPermissions(userId, keys);
+    }
+  };
+
   const roleColors = {
     admin: 'bg-red-100 text-red-800',
     consultant: 'bg-blue-100 text-blue-800',
     accounts: 'bg-green-100 text-green-800',
     user: 'bg-gray-100 text-gray-800'
   };
+
 
   const permissionCategories = permissions.reduce((acc, perm) => {
     if (!acc[perm.category]) acc[perm.category] = [];
@@ -305,6 +365,39 @@ export default function UserManagement() {
             <h2 className="text-2xl font-bold mb-4">
               Manage Permissions: {selectedUser.first_name} {selectedUser.last_name}
             </h2>
+
+            {/* Template & bulk controls */}
+            <div className="flex flex-wrap items-center gap-3 mb-4">
+              <select
+                value={selectedTemplate}
+                onChange={(e) => setSelectedTemplate(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg"
+              >
+                <option value="">Select role template…</option>
+                <option value="admin">Admin</option>
+                <option value="consultant">Consultant</option>
+                <option value="accounts">Accounts</option>
+                <option value="user">User</option>
+              </select>
+              <button
+                onClick={() => selectedTemplate && applyRoleTemplate(selectedUser.id, selectedTemplate)}
+                className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Apply Template
+              </button>
+              <button
+                onClick={() => selectAllPermissions(selectedUser.id)}
+                className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+                Select All
+              </button>
+              <button
+                onClick={() => clearAllPermissions(selectedUser.id)}
+                className="px-3 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
+              >
+                Clear All
+              </button>
+            </div>
 
             <div className="space-y-6 max-h-96 overflow-y-auto">
               {Object.entries(permissionCategories).map(([category, perms]) => (

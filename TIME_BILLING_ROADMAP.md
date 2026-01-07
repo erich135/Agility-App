@@ -27,19 +27,24 @@
 
 ---
 
-## 🚀 PHASE 1: Critical Security & Access Control (Next Priority)
+## 🚀 PHASE 1: Critical Security & Access Control (In Progress ✅)
 
 ### Authentication & Login System
-- [ ] **Fix OTP email flow**
-  - Working email delivery via Supabase Auth
-  - Resend OTP option
-  - Session management
-  - Remember device option
+- [x] **Invitation email workflow**
+  - Email sent when adding new user
+  - Email with setup link for password creation
+  - User clicks link and creates password
+  - Session management after password setup
   
-- [ ] **User roles enforcement**
-  - Admin, Consultant, Billing roles
+- [x] **Forgot Password flow**
+  - "Forgot Password" button on login screen
+  - Send password reset email with link
+  - User clicks link and sets new password
+  
+- [x] **User roles enforcement**
+  - Admin, Consultant, Accounts, User roles
   - Role-based UI rendering
-  - Protect admin routes
+  - Protect admin routes with `manage_users` permission
 
 ### Granular Permissions System
 - [ ] **Create `permissions` table**
@@ -48,8 +53,9 @@
   e.g., "customers", "create", "admin"
        "customers", "view", "consultant"
   ```
+  ✅ *Already created in database schema*
   
-- [ ] **Permission checks on every action**
+- [x] **Permission checks on every action**
   - View Customers
   - Create/Edit/Delete Customers
   - View Billing Dashboard
@@ -57,10 +63,12 @@
   - View Financial Statements
   - Manage Users
   - Assign Consultants
+  ✅ *ProtectedRoute checks permissions, AuthContext enforces roles*
   
 - [ ] **User-level permission overrides**
   - Allow specific users custom permissions
   - Override table for exceptions
+  - *Not needed yet - roles sufficient for MVP*
 
 ### Customer Assignment & Data Isolation
 - [ ] **Add `assigned_consultant_id` to clients table**
@@ -71,11 +79,13 @@
   - Consultants see ONLY their assigned customers
   - Admins see all customers
   - Enforce at database level (Supabase RLS policies)
+  - *Foundation in place - needs consultant data isolation integration*
   
 - [ ] **Safeguards**
   - Prevent consultant from logging time on others' customers
   - Warning if trying to access unassigned customer
   - Audit log for admin override
+  - *Ready to implement after RLS is enabled*
 
 ---
 

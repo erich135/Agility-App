@@ -6,6 +6,7 @@ import Layout from './components/Layout';
 import HomePage from './components/HomePage';
 import LoginPage from './components/LoginPage';
 import SetupPassword from './components/SetupPassword';
+import ResetPassword from './components/ResetPassword';
 import CIPCManagement from './components/CIPCManagement';
 import CustomerManagement from './components/CustomerManagement';
 import SystemManagement from './components/SystemManagement';
@@ -85,6 +86,7 @@ function AppRoutes() {
       {/* Public Routes */}
       <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
       <Route path="/setup-password" element={<SetupPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* Protected Routes */}
       <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />

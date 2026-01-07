@@ -8,6 +8,7 @@ const CustomerForm = ({ customerId, onClose, onSave }) => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [consultants, setConsultants] = useState([]);
   const [formData, setFormData] = useState({
     // Basic company info (existing fields)
     client_name: '',
@@ -25,7 +26,8 @@ const CustomerForm = ({ customerId, onClose, onSave }) => {
     contact_person_name: '',
     contact_person_telephone: '',
     contact_person_email: '',
-    status: 'Active'
+    status: 'Active',
+    assigned_consultant_id: ''
   });
 
   // Director data (up to 5 directors)
@@ -62,7 +64,21 @@ const CustomerForm = ({ customerId, onClose, onSave }) => {
     if (customerId) {
       loadCustomerData();
     }
+    loadConsultants();
   }, [customerId]);
+
+  const loadConsultants = async () => {
+    try {
+      const { data } = await supabase
+        .from('consultants')
+        .select('id, full_name')
+        .eq('is_active', true)
+        .order('full_name');
+      setConsultants(data || []);
+    } catch (e) {
+      console.warn('Failed to load consultants', e);
+    }
+  };
 
   const loadCustomerData = async () => {
     try {
@@ -92,7 +108,8 @@ const CustomerForm = ({ customerId, onClose, onSave }) => {
           contact_person_name: customerData.contact_person_name || '',
           contact_person_telephone: customerData.contact_person_telephone || '',
           contact_person_email: customerData.contact_person_email || '',
-          status: customerData.status || 'Active'
+          status: customerData.status || 'Active',
+          assigned_consultant_id: customerData.assigned_consultant_id || ''
         });
       }
 
@@ -278,6 +295,7 @@ const CustomerForm = ({ customerId, onClose, onSave }) => {
         contact_person_telephone: formData.contact_person_telephone.trim() || null,
         contact_person_email: formData.contact_person_email.trim() || null,
         status: formData.status,
+        assigned_consultant_id: formData.assigned_consultant_id || null,
         updated_at: new Date().toISOString()
       };
 
@@ -443,6 +461,22 @@ const CustomerForm = ({ customerId, onClose, onSave }) => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                     placeholder="Enter company name"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Assigned Consultant
+                  </label>
+                  <select
+                    value={formData.assigned_consultant_id}
+                    onChange={(e) => handleInputChange('assigned_consultant_id', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  >
+                    <option value="">Unassigned</option>
+                    {consultants.map(c => (
+                      <option key={c.id} value={c.id}>{c.full_name}</option>
+                    ))}
+                  </select>
                 </div>
                 
                 <div>

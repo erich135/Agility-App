@@ -7,7 +7,7 @@ import ActivityLogger from '../lib/ActivityLogger';
 import { useAuth } from '../contexts/AuthContext';
 
 const CustomerManagement = () => {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -22,6 +22,7 @@ const CustomerManagement = () => {
   const [timeLogCustomer, setTimeLogCustomer] = useState(null);
   const [consultants, setConsultants] = useState([]);
   const [jobTypes, setJobTypes] = useState([]);
+  const [myConsultantId, setMyConsultantId] = useState(null);
   const [timeEntry, setTimeEntry] = useState({
     date: new Date().toISOString().split('T')[0],
     hours: '',
@@ -35,6 +36,8 @@ const CustomerManagement = () => {
   const [expandedTimeHistory, setExpandedTimeHistory] = useState(new Set());
   const [customerTimeEntries, setCustomerTimeEntries] = useState({});
   const [editingEntry, setEditingEntry] = useState(null);
+  const [reassigningCustomerId, setReassigningCustomerId] = useState(null);
+  const [reassignSelection, setReassignSelection] = useState('');
 
   // Fetch customers from Supabase
   const fetchCustomers = async () => {
@@ -42,7 +45,7 @@ const CustomerManagement = () => {
       setLoading(true);
       
       // Fetch customers with document counts
-      const { data: customersData, error: customersError } = await supabase
+      let query = supabase
         .from('clients')
         .select(`
           id,
@@ -51,9 +54,16 @@ const CustomerManagement = () => {
           registration_date,
           created_at,
           last_cipc_filed,
-          last_bo_filed
+          last_bo_filed,
+          assigned_consultant_id
         `)
         .order('client_name', { ascending: true });
+
+      if (user?.role === 'consultant' && myConsultantId) {
+        query = query.eq('assigned_consultant_id', myConsultantId);
+      }
+
+      const { data: customersData, error: customersError } = await query;
 
       if (customersError) throw customersError;
 
@@ -90,6 +100,21 @@ const CustomerManagement = () => {
     loadConsultantsAndJobTypes();
   }, []);
 
+  useEffect(() => {
+    const resolveConsultant = async () => {
+      if (user?.role === 'consultant') {
+        const { data } = await supabase
+          .from('consultants')
+          .select('id, user_id, email')
+          .or(`user_id.eq.${user.id},email.eq.${user.email}`)
+          .limit(1)
+          .single();
+        setMyConsultantId(data?.id || null);
+      }
+    };
+    resolveConsultant().finally(() => fetchCustomers());
+  }, [user]);
+
   const loadConsultantsAndJobTypes = async () => {
     // Load consultants
     const { data: consultantsData } = await supabase
@@ -113,20 +138,26 @@ const CustomerManagement = () => {
   };
 
   const loadTimeEntriesForCustomer = async (customerId) => {
-    const { data } = await supabase
-      .from('time_entries')
-      .select(`
-        *,
-        consultants(first_name, last_name),
-        job_types(name)
-      `)
-      .eq('client_id', customerId)
-      .order('entry_date', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('time_entries')
+          .select('*')
+        .eq('client_id', customerId)
+        .order('entry_date', { ascending: false });
+      
+      if (error) {
+        console.error('❌ Error loading time entries:', error);
+      } else {
+        console.log(`✅ Loaded ${data?.length || 0} time entries for client ${customerId}:`, data);
+      }
     
-    setCustomerTimeEntries(prev => ({
-      ...prev,
-      [customerId]: data || []
-    }));
+      setCustomerTimeEntries(prev => ({
+        ...prev,
+        [customerId]: data || []
+      }));
+    } catch (err) {
+      console.error('❌ Exception loading time entries:', err);
+    }
   };
 
   const toggleTimeHistory = (customerId) => {
@@ -165,10 +196,23 @@ const CustomerManagement = () => {
   };
 
   const handleLogTime = (customer) => {
+    // Safeguard: consultants can only log time for assigned customers
+    if (user?.role === 'consultant' && myConsultantId) {
+      if (customer.assigned_consultant_id && customer.assigned_consultant_id !== myConsultantId) {
+        alert('You are not assigned to this customer. Please contact an admin.');
+        return;
+      }
+      if (!customer.assigned_consultant_id) {
+        alert('This customer has no assigned consultant yet.');
+        return;
+      }
+    }
     setTimeLogCustomer(customer);
     
     // Get default consultant (current user or first consultant)
-    const defaultConsultant = consultants.find(c => c.id === user?.id) || consultants[0];
+    const defaultConsultant = (user?.role === 'consultant' && myConsultantId)
+      ? consultants.find(c => c.id === myConsultantId)
+      : consultants[0];
     
     setTimeEntry({
       date: new Date().toISOString().split('T')[0],
@@ -434,6 +478,62 @@ const CustomerManagement = () => {
                       <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
                         CIPC Client
                       </span>
+                      {customer.assigned_consultant_id && (
+                        <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-800" title="Assigned Consultant">
+                          {(() => {
+                            const c = consultants.find(x => x.id === customer.assigned_consultant_id);
+                            return c ? `Assigned: ${c.full_name}` : 'Assigned';
+                          })()}
+                        </span>
+                      )}
+                      {isAdmin && isAdmin() && (
+                        reassigningCustomerId === customer.id ? (
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={reassignSelection}
+                              onChange={(e) => setReassignSelection(e.target.value)}
+                              className="px-2 py-1 border border-gray-300 rounded text-xs"
+                            >
+                              <option value="">Unassigned</option>
+                              {consultants.map(c => (
+                                <option key={c.id} value={c.id}>{c.full_name}</option>
+                              ))}
+                            </select>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await supabase
+                                    .from('clients')
+                                    .update({ assigned_consultant_id: reassignSelection || null })
+                                    .eq('id', customer.id);
+                                  setReassigningCustomerId(null);
+                                  setReassignSelection('');
+                                  fetchCustomers();
+                                } catch (e) {
+                                  alert('Failed to reassign consultant');
+                                }
+                              }}
+                              className="text-green-600 hover:text-green-800 text-xs font-medium"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() => { setReassigningCustomerId(null); setReassignSelection(''); }}
+                              className="text-gray-500 hover:text-gray-700 text-xs"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => { setReassigningCustomerId(customer.id); setReassignSelection(customer.assigned_consultant_id || ''); }}
+                            className="text-xs text-blue-600 hover:text-blue-800 underline"
+                            title="Reassign consultant"
+                          >
+                            Reassign
+                          </button>
+                        )
+                      )}
                       <div className="flex flex-col sm:flex-row gap-2">
                         <button 
                           onClick={() => handleLogTime(customer)}

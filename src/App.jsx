@@ -18,15 +18,15 @@ import ClientPortal from './components/ClientPortal';
 import FinancialStatements from './components/FinancialStatements';
 import DocumentManager from './components/DocumentManager';
 import Billing from './components/Billing';
-// import Timesheet from './components/Timesheet';
-// import TimesheetNew from './components/TimesheetNew';
-// import TimesheetSimple from './components/TimesheetSimple';
-// import MyTimesheets from './components/MyTimesheets';
-// import ProjectManagement from './components/ProjectManagement';
-// import BillingDashboard from './components/BillingDashboard';
-// import BillingDashboardNew from './components/BillingDashboardNew';
-// import BillingSimple from './components/BillingSimple';
-// import BillingReports from './components/BillingReports';
+import Timesheet from './components/Timesheet';
+import TimesheetNew from './components/TimesheetNew';
+import TimesheetSimple from './components/TimesheetSimple';
+import MyTimesheets from './components/MyTimesheets';
+import ProjectManagement from './components/ProjectManagement';
+import BillingDashboard from './components/BillingDashboard';
+import BillingDashboardNew from './components/BillingDashboardNew';
+import BillingSimple from './components/BillingSimple';
+import BillingReports from './components/BillingReports';
 import UserManagement from './components/UserManagement';
 
 // Protected Route component with Layout
@@ -99,12 +99,11 @@ function AppRoutes() {
       <Route path="/customers/bulk-assign" element={<ProtectedRoute requiredPermission="customers_bulk_assign"><BulkAssignCustomers /></ProtectedRoute>} />
       <Route path="/calendar" element={<ProtectedRoute requiredPermission="access_calendar"><CalendarTaskManagement /></ProtectedRoute>} />
       <Route path="/billing" element={<ProtectedRoute requiredPermission="access_billing_dashboard"><Billing /></ProtectedRoute>} />
-      {/* TIMESHEET & BILLING REMOVED - Will rebuild from scratch */}
-      {/* <Route path="/timesheet" element={<ProtectedRoute requiredPermission="access_timesheet"><TimesheetSimple /></ProtectedRoute>} /> */}
-      {/* <Route path="/my-timesheets" element={<ProtectedRoute requiredPermission="access_my_timesheets"><MyTimesheets /></ProtectedRoute>} /> */}
-      {/* <Route path="/projects" element={<ProtectedRoute requiredPermission="access_projects"><ProjectManagement /></ProtectedRoute>} /> */}
-      {/* <Route path="/billing" element={<ProtectedRoute requiredPermission="access_billing_dashboard"><BillingSimple /></ProtectedRoute>} /> */}
-      {/* <Route path="/billing/reports" element={<ProtectedRoute requiredPermission="access_billing_reports"><BillingReports /></ProtectedRoute>} /> */}
+      <Route path="/timesheet" element={<ProtectedRoute requiredPermission="access_timesheet"><TimesheetSimple /></ProtectedRoute>} />
+      <Route path="/my-timesheets" element={<ProtectedRoute requiredPermission="access_my_timesheets"><MyTimesheets /></ProtectedRoute>} />
+      <Route path="/projects" element={<ProtectedRoute requiredPermission="access_projects"><ProjectManagement /></ProtectedRoute>} />
+      <Route path="/billing/dashboard" element={<ProtectedRoute requiredPermission="access_billing_dashboard"><BillingDashboard /></ProtectedRoute>} />
+      <Route path="/billing/reports" element={<ProtectedRoute requiredPermission="access_billing_reports"><BillingReports /></ProtectedRoute>} />
       <Route path="/documents" element={<ProtectedRoute requiredPermission="access_documents"><DocumentManager /></ProtectedRoute>} />
       <Route path="/financial-statements" element={<ProtectedRoute requiredPermission="access_financial_statements"><FinancialStatements /></ProtectedRoute>} />
       <Route path="/client-portal" element={<ProtectedRoute><ClientPortal /></ProtectedRoute>} />

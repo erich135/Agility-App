@@ -52,12 +52,44 @@ const HomePage = () => {
 
   const quickActions = [
     {
-      title: 'Billing',
+      title: 'Timesheet',
+      description: 'Log your time and track projects',
+      icon: Clock,
+      link: '/timesheet',
+      color: 'bg-blue-500',
+      permission: 'access_timesheet'
+    },
+    {
+      title: 'My Timesheets',
+      description: 'View and manage your time entries',
+      icon: Clock,
+      link: '/my-timesheets',
+      color: 'bg-indigo-500',
+      permission: 'access_my_timesheets'
+    },
+    {
+      title: 'Projects',
+      description: 'Manage projects and assignments',
+      icon: Briefcase,
+      link: '/projects',
+      color: 'bg-purple-500',
+      permission: 'access_projects'
+    },
+    {
+      title: 'Billing Dashboard',
       description: 'View billing dashboard',
       icon: Banknote,
-      link: '/billing',
+      link: '/billing/dashboard',
       color: 'bg-green-500',
       permission: 'access_billing_dashboard'
+    },
+    {
+      title: 'Billing Reports',
+      description: 'View billing reports and analytics',
+      icon: TrendingUp,
+      link: '/billing/reports',
+      color: 'bg-emerald-500',
+      permission: 'access_billing_reports'
     },
     {
       title: 'Calendar',

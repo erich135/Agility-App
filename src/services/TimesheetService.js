@@ -336,13 +336,13 @@ export const ProjectService = {
 export const TimeEntryService = {
   // Get time entries with filters
   async getAll(filters = {}) {
+    // Simplified query to avoid potential deep relation issues
     let query = supabase
       .from('time_entries')
       .select(`
         *,
         client:clients(id, client_name),
-        project:projects(id, project_number, name, client:clients(id, client_name)),
-        consultant:consultants(id, full_name)
+        project:projects(id, project_number, name)
       `)
       .order('entry_date', { ascending: false })
       .order('created_at', { ascending: false });
@@ -354,6 +354,9 @@ export const TimeEntryService = {
     if (filters.consultant_id) {
       query = query.eq('consultant_id', filters.consultant_id);
     }
+    if (filters.client_id) {
+      query = query.eq('client_id', filters.client_id);
+    }
     if (filters.date_from) {
       query = query.gte('entry_date', filters.date_from);
     }
@@ -364,7 +367,11 @@ export const TimeEntryService = {
       query = query.eq('status', filters.status);
     }
     if (filters.is_invoiced !== undefined) {
-      query = query.eq('is_invoiced', filters.is_invoiced);
+      if (filters.is_invoiced === false) {
+        query = query.or('is_invoiced.eq.false,is_invoiced.is.null');
+      } else {
+        query = query.eq('is_invoiced', filters.is_invoiced);
+      }
     }
     if (filters.project_id_is_null) {
       query = query.is('project_id', null);

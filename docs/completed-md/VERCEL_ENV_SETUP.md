@@ -34,11 +34,11 @@ VITE_TWILIO_PHONE_NUMBER = [Same value as above]
 - OR push a new commit to trigger deployment
 
 ### 5. Database Setup
-Run the SQL file `fix_authentication_issues.sql` in your Supabase SQL Editor:
+Run the SQL file `database/completed-sql-scripts/fix_authentication_issues.sql` in your Supabase SQL Editor:
 1. Go to https://supabase.com/dashboard
 2. Select your project
 3. Go to SQL Editor
-4. Copy and paste the contents of `fix_authentication_issues.sql`
+4. Copy and paste the contents of `database/completed-sql-scripts/fix_authentication_issues.sql`
 5. Click Run
 
 ### 6. Test the Login

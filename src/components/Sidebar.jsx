@@ -61,12 +61,6 @@ export default function Sidebar() {
           permission: 'access_customers'
         },
         { 
-          path: '/my-customers', 
-          icon: Users, 
-          label: 'My Customers',
-          permission: 'customers_view_my'
-        },
-        { 
           path: '/cipc', 
           icon: Building2, 
           label: 'CIPC',
@@ -90,7 +84,7 @@ export default function Sidebar() {
       title: 'Billing',
       items: [
         { 
-          path: '/billing', 
+          path: '/billing/dashboard', 
           icon: Banknote, 
           label: 'Billing Dashboard',
           permission: 'access_billing_dashboard'

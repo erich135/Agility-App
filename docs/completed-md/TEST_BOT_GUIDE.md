@@ -125,7 +125,7 @@ Full test coverage across 15 categories:
 Run the seed script first:
 ```sql
 -- In Supabase SQL Editor, run:
--- database/seed_test_data.sql
+-- database/completed-sql-scripts/seed_test_data.sql
 ```
 
 ### "Missing Supabase credentials"

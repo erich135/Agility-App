@@ -234,7 +234,7 @@ npm run test:coverage
 ```
 
 ### Test Data
-Run `database/seed_test_data.sql` in Supabase SQL Editor to populate:
+Run `database/completed-sql-scripts/seed_test_data.sql` in Supabase SQL Editor to populate:
 - 5 consultants
 - 12 clients
 - 16 projects
@@ -332,7 +332,7 @@ npm run test:comprehensive # Full test suite
 - Fixed all schema mismatches between React components and database
 - Added comprehensive test infrastructure (62 tests)
 - Created seed data SQL script for testing
-- Documented all changes in CHANGELOG.md
+- Documented all changes in docs/completed-md/CHANGELOG.md
 
 ### Previous Development
 - Built complete React frontend with all major features
@@ -356,6 +356,6 @@ npm run test:comprehensive # Full test suite
 ## 📞 Support
 
 For issues or questions:
-1. Check `TEST_BOT_GUIDE.md` for testing help
-2. Review `CHANGELOG.md` for recent changes
+1. Check `docs/completed-md/TEST_BOT_GUIDE.md` for testing help
+2. Review `docs/completed-md/CHANGELOG.md` for recent changes
 3. Run smoke tests to verify system health: `npm run test:smoke`

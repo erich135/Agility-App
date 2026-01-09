@@ -13,7 +13,7 @@ The error `Could not find the 'company_income_tax_number' column of 'clients'` m
 
 ### Step 2: Run the Migration Script
 1. Click "New Query"
-2. Copy and paste the entire content of `database/fix_schema_migration.sql`
+2. Copy and paste the entire content of `database/completed-sql-scripts/fix_schema_migration.sql`
 3. Click "Run" or press Ctrl+Enter
 4. Wait for the green success message
 
@@ -78,7 +78,7 @@ You should see these tables:
 If you haven't run the enhanced features schema yet:
 
 1. Open SQL Editor in Supabase
-2. Run the file: `database/enhanced_features_schema.sql`
+2. Run the file: `database/completed-sql-scripts/enhanced_features_schema.sql`
 3. This creates ALL new feature tables and adds missing columns
 
 ---

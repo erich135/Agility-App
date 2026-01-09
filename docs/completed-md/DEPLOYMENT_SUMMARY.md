@@ -28,7 +28,7 @@
 8. **enhanced_features_schema.sql** - 20+ new tables with seed data
 
 ### Documentation (1 file)
-9. **ENHANCED_FEATURES_GUIDE.md** - Complete feature documentation
+9. **docs/completed-md/ENHANCED_FEATURES_GUIDE.md** - Complete feature documentation
 
 ---
 
@@ -177,7 +177,7 @@ Warnings: Chunk size (expected for feature-rich app)
 ### 1. Database Setup (Production)
 ```sql
 -- Run this in your production Supabase instance
-psql -U postgres -d production_db -f database/enhanced_features_schema.sql
+psql -U postgres -d production_db -f database/completed-sql-scripts/enhanced_features_schema.sql
 ```
 
 ### 2. Environment Variables (Vercel)
@@ -233,7 +233,7 @@ VITE_TWILIO_WHATSAPP_NUMBER=your_whatsapp_number
 ## 📚 Documentation
 
 ### Complete Guide
-See `ENHANCED_FEATURES_GUIDE.md` for:
+See `docs/completed-md/ENHANCED_FEATURES_GUIDE.md` for:
 - Detailed feature documentation
 - API usage examples
 - Database schema details
@@ -370,4 +370,4 @@ The app is now **deployed to GitHub** and **Vercel is automatically building it*
 
 ---
 
-*For support or questions, refer to ENHANCED_FEATURES_GUIDE.md*
+*For support or questions, refer to docs/completed-md/ENHANCED_FEATURES_GUIDE.md*

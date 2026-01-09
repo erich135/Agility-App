@@ -9,7 +9,6 @@ import SetupPassword from './components/SetupPassword';
 import ResetPassword from './components/ResetPassword';
 import CIPCManagement from './components/CIPCManagement';
 import CustomerManagement from './components/CustomerManagement';
-import MyCustomers from './components/MyCustomers';
 import BulkAssignCustomers from './components/BulkAssignCustomers';
 import SystemManagement from './components/SystemManagement';
 import CalendarTaskManagement from './components/CalendarTaskManagement';
@@ -95,10 +94,9 @@ function AppRoutes() {
       <Route path="/dashboard" element={<ProtectedRoute requiredPermission="access_dashboard"><DashboardAnalytics /></ProtectedRoute>} />
       <Route path="/cipc" element={<ProtectedRoute requiredPermission="access_cipc"><CIPCManagement /></ProtectedRoute>} />
       <Route path="/customers" element={<ProtectedRoute requiredPermission="access_customers"><CustomerManagement /></ProtectedRoute>} />
-      <Route path="/my-customers" element={<ProtectedRoute requiredPermission="customers_view_my"><MyCustomers /></ProtectedRoute>} />
       <Route path="/customers/bulk-assign" element={<ProtectedRoute requiredPermission="customers_bulk_assign"><BulkAssignCustomers /></ProtectedRoute>} />
       <Route path="/calendar" element={<ProtectedRoute requiredPermission="access_calendar"><CalendarTaskManagement /></ProtectedRoute>} />
-      <Route path="/billing" element={<ProtectedRoute requiredPermission="access_billing_dashboard"><Billing /></ProtectedRoute>} />
+      <Route path="/billing" element={<Navigate to="/billing/dashboard" replace />} />
       <Route path="/timesheet" element={<ProtectedRoute requiredPermission="access_timesheet"><TimesheetSimple /></ProtectedRoute>} />
       <Route path="/my-timesheets" element={<ProtectedRoute requiredPermission="access_my_timesheets"><MyTimesheets /></ProtectedRoute>} />
       <Route path="/projects" element={<ProtectedRoute requiredPermission="access_projects"><ProjectManagement /></ProtectedRoute>} />

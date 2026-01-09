@@ -38,7 +38,7 @@ This document outlines all the enhanced features added to the Agility Management
 
 ### Files
 - `src/components/DashboardAnalytics.jsx`
-- `database/enhanced_features_schema.sql` (dashboard_widgets table)
+- `database/completed-sql-scripts/enhanced_features_schema.sql` (dashboard_widgets table)
 
 ---
 
@@ -393,7 +393,7 @@ Table: `billing_info`
 1. **Run Enhanced Schema**
 ```sql
 -- Execute the enhanced features schema
-psql -U postgres -d your_database -f database/enhanced_features_schema.sql
+psql -U postgres -d your_database -f database/completed-sql-scripts/enhanced_features_schema.sql
 ```
 
 2. **Verify Tables Created**

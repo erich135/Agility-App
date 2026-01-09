@@ -35,7 +35,7 @@ All notable changes to the Agility App project will be documented in this file.
 - `test/setup.js` - Supabase client initialization and test data IDs
 - `test/smoke.test.js` - Quick validation tests (12 tests, ~10 seconds)
 - `test/comprehensive.test.js` - Full test suite (62 tests, ~45 seconds)
-- `TEST_BOT_GUIDE.md` - Documentation for running tests
+- `docs/completed-md/TEST_BOT_GUIDE.md` - Documentation for running tests
 
 #### Test Coverage (62 Total Tests)
 | Category | Tests |
@@ -58,7 +58,7 @@ All notable changes to the Agility App project will be documented in this file.
 
 ### 📊 Test Data Seed Script
 
-#### New File: `database/seed_test_data.sql`
+#### New File: `database/completed-sql-scripts/seed_test_data.sql`
 - 5 test consultants (Erich, Sarah, John, Michelle, Thabo)
 - 12 test clients (10 active, 2 inactive) - South African businesses
 - 16 test projects across all statuses:

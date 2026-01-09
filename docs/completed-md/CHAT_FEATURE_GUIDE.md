@@ -18,7 +18,7 @@ You need to run the SQL script to create the `messages` table in your Supabase d
 1. Go to your Supabase dashboard: https://supabase.com/dashboard
 2. Navigate to your project: `nhzpfukswjgbchfczhsw`
 3. Go to SQL Editor
-4. Run the script from: `database/messages_schema.sql`
+4. Run the script from: `database/completed-sql-scripts/messages_schema.sql`
 
 Or copy this SQL:
 
@@ -110,7 +110,7 @@ GRANT ALL ON messages TO service_role;
 
 **Files Added:**
 - `src/components/ChatWidget.jsx` - Main chat component
-- `database/messages_schema.sql` - Database schema
+- `database/completed-sql-scripts/messages_schema.sql` - Database schema
 
 **Files Modified:**
 - `src/App.jsx` - Integrated ChatWidget (shows only when logged in)

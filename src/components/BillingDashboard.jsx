@@ -14,6 +14,8 @@ export default function BillingDashboard() {
   });
   const [projects, setProjects] = useState([]);
   const [overdueProjects, setOverdueProjects] = useState([]);
+  const [dueTodayProjects, setDueTodayProjects] = useState([]);
+  const [showDueTodayChooser, setShowDueTodayChooser] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState('month');
   const [selectedProject, setSelectedProject] = useState(null);
@@ -27,62 +29,112 @@ export default function BillingDashboard() {
 
   useEffect(() => {
     const handleEscape = (e) => {
-      if (e.key === 'Escape' && selectedProject) {
+      if (e.key !== 'Escape') return;
+
+      if (showDueTodayChooser) {
+        setShowDueTodayChooser(false);
+        return;
+      }
+
+      if (selectedProject) {
         closeProjectDetails();
       }
     };
     
     window.addEventListener('keydown', handleEscape);
     return () => window.removeEventListener('keydown', handleEscape);
-  }, [selectedProject]);
+  }, [selectedProject, showDueTodayChooser]);
 
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      // Get all projects
+      // 1. Get all projects
       const projectsRes = await ProjectService.getAll();
       const dbProjects = projectsRes.data || [];
 
-      // Fetch unbilled orphan time entries (direct to client, no project)
-      const orphansRes = await TimeEntryService.getAll({ 
-        is_invoiced: false,
-        project_id_is_null: true 
+      // Initialize projects with billing fields
+      const projectMap = {};
+      dbProjects.forEach(p => {
+        projectMap[p.id] = {
+          ...p,
+          billable_hours: 0,
+          orphan_entries: [] // Using same array name for consistency, though these aren't orphans
+        };
       });
-      const orphans = orphansRes.data || [];
 
-      // Group orphans by client to create "Virtual Projects"
+      // 2. Fetch ALL time entries and filter in memory to handle schema inconsistencies
+      // This ensures we don't break if is_invoiced column is missing or null
+      const unbilledRes = await TimeEntryService.getAll();
+      const allEntries = unbilledRes.data || [];
+
+      // Filter for unbilled items only
+      const unbilledEntries = allEntries.filter(entry => {
+        // Exclude if explicitly marked invoiced
+        if (entry.status === 'invoiced') return false;
+        if (entry.is_invoiced === true) return false;
+        
+        // Include everything else (status=pending, ready_to_bill, active, null, etc)
+        // treating null/undefined is_invoiced as false (unbilled)
+        return true;
+      });
+      
+
+      // 3. Distribute entries to projects or create virtual projects
       const virtualProjectsMap = {};
-      orphans.forEach(entry => {
-        if (!entry.client_id) return;
-        
-        if (!virtualProjectsMap[entry.client_id]) {
-          virtualProjectsMap[entry.client_id] = {
-            id: `virtual-${entry.client_id}`,
-            project_number: 'ADHOC',
-            name: 'Ad-hoc / Direct Time',
-            client: entry.client, // { id, client_name }
-            client_id: entry.client_id,
-            status: 'ready_to_bill',
-            billing_date: entry.entry_date, // Use latest entry date?
-            billable_hours: 0,
-            is_virtual: true,
-            orphan_entries: []
-          };
-        }
-        
-        // Update summary stats
-        const vp = virtualProjectsMap[entry.client_id];
-        vp.billable_hours += (entry.duration_hours || 0);
-        vp.orphan_entries.push(entry);
-        
-        // Keep billing date as the oldest entry date (so it shows as overdue if old)
-        if (entry.entry_date < vp.billing_date) {
-            vp.billing_date = entry.entry_date;
+
+      unbilledEntries.forEach(entry => {
+        // Skip if duration is 0 or null
+          if (!entry.duration_hours) return;
+
+        if (entry.project_id && projectMap[entry.project_id]) {
+          // Add to existing project
+          const p = projectMap[entry.project_id];
+          p.billable_hours += (entry.duration_hours || 0);
+        } else {
+          // It's an orphan or project not found
+          // Only process if it has a client (otherwise it's junk data)
+          // If client object is missing but client_id text exists, use that.
+          const clientId = entry.client_id || entry.client?.id;
+          
+          if (!clientId) return;
+
+          if (!virtualProjectsMap[clientId]) {
+            // Try to find client name from entry.client object, or if we have a list of clients...
+            // Fallback to "Client {id}" if unknown
+            const clientName = entry.client?.client_name || 'Client ' + clientId.substr(0,8);
+
+            virtualProjectsMap[clientId] = {
+              id: `virtual-${clientId}`,
+              project_number: 'ADHOC',
+              name: 'Ad-hoc / Direct Time',
+              client: { id: clientId, client_name: clientName },
+              client_id: clientId,
+              status: 'ready_to_bill',
+              billing_date: entry.entry_date,
+              billable_hours: 0,
+              is_virtual: true,
+              orphan_entries: []
+            };
+          }
+          
+          const vp = virtualProjectsMap[clientId];
+          vp.billable_hours += (entry.duration_hours || 0);
+          vp.orphan_entries.push(entry);
+          
+          // Use oldest unbilled entry as billing reference date
+          if (entry.entry_date < vp.billing_date) {
+              vp.billing_date = entry.entry_date;
+          }
         }
       });
 
       const virtualProjects = Object.values(virtualProjectsMap);
-      const allProjects = [...dbProjects, ...virtualProjects];
+      
+      // Combine normal projects and virtual projects
+      // We keep ALL normal projects (even with 0 hours) to maintain dashboard consistency
+      // unless we want to filter them. The previous version kept them.
+      const populatedProjects = Object.values(projectMap);
+      const allProjects = [...populatedProjects, ...virtualProjects];
 
       // Calculate billing urgency
       const today = new Date();
@@ -119,6 +171,7 @@ export default function BillingDashboard() {
       });
 
       setOverdueProjects(overdue);
+      setDueTodayProjects(dueToday);
 
       // Sort projects by billing date
       const sortedProjects = allProjects.sort((a, b) => {
@@ -129,11 +182,28 @@ export default function BillingDashboard() {
       });
 
       setProjects(sortedProjects.slice(0, 10)); // Show latest 10
+      
     } catch (error) {
       console.error('Error loading dashboard:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDueTodayClick = () => {
+    if (!dueTodayProjects || dueTodayProjects.length === 0) return;
+
+    if (dueTodayProjects.length === 1) {
+      handleProjectClick(dueTodayProjects[0]);
+      return;
+    }
+
+    setShowDueTodayChooser(true);
+  };
+
+  const handleChooseDueTodayProject = (project) => {
+    setShowDueTodayChooser(false);
+    handleProjectClick(project);
   };
 
   const handleMarkInvoiced = async (projectId, invoiceOnlyUninvoiced = true, specificEntryIds = null) => {
@@ -459,7 +529,16 @@ export default function BillingDashboard() {
               <p className={`font-semibold ${stats.overdueCount > 0 ? 'text-red-800' : 'text-orange-800'}`}>
                 {stats.overdueCount > 0 && `${stats.overdueCount} OVERDUE billing(s)!`}
                 {stats.overdueCount > 0 && stats.dueTodayCount > 0 && ' • '}
-                {stats.dueTodayCount > 0 && `${stats.dueTodayCount} due TODAY`}
+                {stats.dueTodayCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleDueTodayClick}
+                    className="underline underline-offset-2 hover:opacity-80"
+                    title="View job(s) due today"
+                  >
+                    {`${stats.dueTodayCount} due TODAY`}
+                  </button>
+                )}
               </p>
               {overdueProjects.length > 0 && (
                 <p className="text-sm text-gray-600 mt-1">
@@ -469,6 +548,70 @@ export default function BillingDashboard() {
               )}
             </div>
             <Bell className={`w-5 h-5 ${stats.overdueCount > 0 ? 'text-red-500 animate-bounce' : 'text-orange-500'}`} />
+          </div>
+        </div>
+      )}
+
+      {/* Due Today Chooser Modal */}
+      {showDueTodayChooser && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+          onClick={() => setShowDueTodayChooser(false)}
+        >
+          <div
+            className="bg-white rounded-lg shadow-xl max-w-xl w-full overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-orange-50">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Due today</h2>
+                <p className="text-sm text-gray-600">Select a job to open</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDueTodayChooser(false)}
+                className="p-2 hover:bg-orange-100 rounded-full transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+
+            <div className="p-4">
+              <div className="space-y-2">
+                {[...dueTodayProjects]
+                  .sort((a, b) => {
+                    const aName = (a.project_number || a.name || '').toString();
+                    const bName = (b.project_number || b.name || '').toString();
+                    return aName.localeCompare(bName);
+                  })
+                  .map((p) => {
+                    const hours = (p.billable_hours ?? p.total_hours ?? 0);
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => handleChooseDueTodayProject(p)}
+                        className="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="font-medium text-gray-900">
+                              {p.project_number ? `${p.project_number} — ${p.name}` : p.name}
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              {p.client?.client_name || 'N/A'}
+                            </div>
+                          </div>
+                          <div className="text-sm font-medium text-blue-600 whitespace-nowrap">
+                            {Number(hours).toFixed(2)}h
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -535,7 +678,6 @@ export default function BillingDashboard() {
           </div>
         </div>
       </div>
-
       {/* Projects Ready for Billing */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-6 border-b border-gray-200">

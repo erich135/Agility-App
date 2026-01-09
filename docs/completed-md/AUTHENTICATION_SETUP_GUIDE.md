@@ -38,7 +38,7 @@ Users can reset forgotten passwords:
 - `src/components/LoginPage.jsx` - ForgotPasswordForm component (inside LoginPage)
 - `src/components/ResetPassword.jsx` - Password reset page
 - `api/send-password-reset.js` - Sends password reset emails
-- `database/add_password_reset.sql` - Database schema migration
+- `database/completed-sql-scripts/add_password_reset.sql` - Database schema migration
 
 **New Database Fields:**
 - `password_reset_token` - Unique token for password reset link
@@ -160,7 +160,7 @@ ALTER TABLE users ADD COLUMN password_reset_sent_at TIMESTAMPTZ;
 ### 1. Apply Database Migration
 ```bash
 # Run this SQL in your Supabase console or via CLI
-cat database/add_password_reset.sql | psql $DATABASE_URL
+cat database/completed-sql-scripts/add_password_reset.sql | psql $DATABASE_URL
 ```
 
 ### 2. Configure Email Service

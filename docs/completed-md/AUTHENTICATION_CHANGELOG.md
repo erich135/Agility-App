@@ -21,13 +21,13 @@ New API endpoint for sending password reset emails:
 - Sends reset email with unique link
 - Handles errors gracefully
 
-### 3. **database/add_password_reset.sql**
+### 3. **database/completed-sql-scripts/add_password_reset.sql**
 Database migration to add password reset functionality:
 - Adds `password_reset_token` column
 - Adds `password_reset_sent_at` column
 - Creates indexes for token lookup
 
-### 4. **AUTHENTICATION_SETUP_GUIDE.md**
+### 4. **docs/completed-md/AUTHENTICATION_SETUP_GUIDE.md**
 Comprehensive technical guide:
 - Implementation details for each feature
 - Database schema documentation
@@ -35,7 +35,7 @@ Comprehensive technical guide:
 - Setup and testing instructions
 - Production deployment checklist
 
-### 5. **AUTHENTICATION_USER_GUIDE.md**
+### 5. **docs/completed-md/AUTHENTICATION_USER_GUIDE.md**
 End-user guide:
 - Instructions for admins inviting users
 - First-time setup guide
@@ -69,7 +69,7 @@ End-user guide:
 
 **Lines Modified:** 9, import; 89, route
 
-### 3. **TIME_BILLING_ROADMAP.md** ✏️
+### 3. **docs/completed-md/TIME_BILLING_ROADMAP.md** ✏️
 **Changes:**
 - Updated Phase 1 section header from "Next Priority" to "In Progress ✅"
 - Marked all authentication items as completed: `[x]`
@@ -85,7 +85,7 @@ End-user guide:
 
 ## 🗄️ Database Changes Required
 
-**SQL Migration - `database/add_password_reset.sql`:**
+**SQL Migration - `database/completed-sql-scripts/add_password_reset.sql`:**
 ```sql
 ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token TEXT UNIQUE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_sent_at TIMESTAMPTZ;
@@ -209,7 +209,7 @@ Run through each scenario:
 1. **Apply database migration:**
    ```bash
    # In Supabase dashboard SQL editor, run:
-   cat database/add_password_reset.sql
+  cat database/completed-sql-scripts/add_password_reset.sql
    ```
 
 2. **Push code changes:**

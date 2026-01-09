@@ -13,7 +13,7 @@ This update replaces RLS (Row Level Security) with app-level granular permission
 
 ## 1. Granular Permissions Catalog
 
-**File:** `database/seed_permissions.sql`
+**File:** `database/completed-sql-scripts/seed_permissions.sql`
 
 ### New Permission Categories
 
@@ -211,7 +211,7 @@ Removed legacy timesheet permissions:
 
 1. **Run Seed SQL in Supabase:**
    ```sql
-   -- Execute database/seed_permissions.sql in Supabase SQL editor
+   -- Execute database/completed-sql-scripts/seed_permissions.sql in Supabase SQL editor
    ```
    This will populate the `permissions` table with all granular keys.
 
@@ -236,7 +236,7 @@ Removed legacy timesheet permissions:
 
 ## Files Changed (8)
 
-1. `database/seed_permissions.sql` – Added 9 granular permissions
+1. `database/completed-sql-scripts/seed_permissions.sql` – Added 9 granular permissions
 2. `src/components/UserManagement.jsx` – Role templates, bulk controls, auto-apply
 3. `src/components/MyCustomers.jsx` – NEW: Consultant customer view
 4. `src/components/BulkAssignCustomers.jsx` – NEW: Bulk assignment tool

@@ -19,6 +19,7 @@ export default function BillingDashboard() {
   const [selectedProject, setSelectedProject] = useState(null);
   const [projectDetails, setProjectDetails] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [selectedEntryIds, setSelectedEntryIds] = useState(new Set());
 
   useEffect(() => {
     loadDashboardData();
@@ -94,7 +95,7 @@ export default function BillingDashboard() {
     }
   };
 
-  const handleMarkInvoiced = async (projectId, invoiceOnlyUninvoiced = true) => {
+  const handleMarkInvoiced = async (projectId, invoiceOnlyUninvoiced = true, specificEntryIds = null) => {
     const invoiceNumber = prompt('Enter invoice number:');
     if (!invoiceNumber) return;
 
@@ -104,9 +105,20 @@ export default function BillingDashboard() {
       const timeEntries = timeEntriesRes.data || [];
       
       // Determine which entries to invoice
-      const entriesToInvoice = invoiceOnlyUninvoiced 
-        ? timeEntries.filter(entry => entry.status !== 'invoiced')
-        : timeEntries;
+      let entriesToInvoice = [];
+      
+      if (specificEntryIds && specificEntryIds.size > 0) {
+         entriesToInvoice = timeEntries.filter(entry => specificEntryIds.has(entry.id));
+      } else {
+        entriesToInvoice = invoiceOnlyUninvoiced 
+          ? timeEntries.filter(entry => entry.status !== 'invoiced')
+          : timeEntries;
+      }
+
+      if (entriesToInvoice.length === 0) {
+        alert("No eligible entries to invoice.");
+        return;
+      }
 
       // Mark time entries as invoiced
       for (const entry of entriesToInvoice) {
@@ -134,6 +146,8 @@ export default function BillingDashboard() {
       loadDashboardData();
       // Reload project details to show updated status
       if (selectedProject && selectedProject.id === projectId) {
+        // Reset selection after invoicing
+        setSelectedEntryIds(new Set());
         const updatedProject = { ...selectedProject, status: projectStatus };
         handleProjectClick(updatedProject);
       }
@@ -146,6 +160,7 @@ export default function BillingDashboard() {
   const handleProjectClick = async (project) => {
     setSelectedProject(project);
     setLoadingDetails(true);
+    setSelectedEntryIds(new Set()); // Reset selection
     
     try {
       console.log('Loading details for project:', project.id, project.name);
@@ -689,10 +704,31 @@ export default function BillingDashboard() {
                                   {entries.map((entry, idx) => {
                                     const entryAmount = (entry.duration_hours || 0) * (entry.hourly_rate || selectedProject.hourly_rate || 0);
                                     const isInvoiced = entry.status === 'invoiced';
+                                    const isSelected = selectedEntryIds.has(entry.id);
+
                                     return (
                                       <div key={idx} className={`p-4 hover:bg-gray-50 transition-colors ${isInvoiced ? 'bg-gray-100 opacity-75' : ''}`}>
                                         <div className="flex justify-between items-start mb-2">
                                           <div className="flex items-center gap-2">
+                                            {/* Selection Checkbox */}
+                                            {!isInvoiced && (
+                                              <input 
+                                                type="checkbox"
+                                                checked={isSelected}
+                                                onChange={(e) => {
+                                                  e.stopPropagation();
+                                                  const newSet = new Set(selectedEntryIds);
+                                                  if (newSet.has(entry.id)) {
+                                                    newSet.delete(entry.id);
+                                                  } else {
+                                                    newSet.add(entry.id);
+                                                  }
+                                                  setSelectedEntryIds(newSet);
+                                                }}
+                                                className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
+                                              />
+                                            )}
+
                                             <User className="w-4 h-4 text-gray-400" />
                                             <span className="font-medium text-gray-900">
                                               {entry.consultant?.full_name || 'Unknown Consultant'}
@@ -788,13 +824,24 @@ export default function BillingDashboard() {
                     Mark Ready to Bill
                   </button>
                 )}
-                {(selectedProject.status === 'ready_to_bill' || selectedProject.status === 'invoiced') && projectDetails?.uninvoicedHours > 0 && (
+                {(selectedProject.status === 'ready_to_bill' || selectedProject.status === 'invoiced' || selectedProject.status === 'active') && projectDetails?.uninvoicedHours > 0 && (
                   <button
-                    onClick={() => handleMarkInvoiced(selectedProject.id, true)}
+                    onClick={() => {
+                        // If items are selected, invoice those. Otherwise, trigger bulk logic (which will prompt or default)
+                        // Actually, logic is: if selected, use those. If not, use 'invoiceOnlyUninvoiced=true' for all.
+                        if (selectedEntryIds.size > 0) {
+                            handleMarkInvoiced(selectedProject.id, false, selectedEntryIds);
+                        } else {
+                            handleMarkInvoiced(selectedProject.id, true);
+                        }
+                    }}
                     className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
                   >
                     <Banknote className="w-4 h-4" />
-                    Invoice Uninvoiced Hours ({projectDetails.uninvoicedHours.toFixed(2)}h)
+                    {selectedEntryIds.size > 0 
+                      ? `Invoice Selected (${selectedEntryIds.size})` 
+                      : `Invoice Uninvoiced Hours (${projectDetails.uninvoicedHours.toFixed(2)}h)`
+                    }
                   </button>
                 )}
               </div>

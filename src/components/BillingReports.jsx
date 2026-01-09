@@ -172,7 +172,7 @@ const BillingReports = () => {
       .from('time_entries')
       .select(`
         *,
-        project:projects(id, name, status, billing_date, invoice_number, client:clients(id, client_name), job_type:job_types(id, name, category)),
+        project:projects(id, name, status, estimated_hours, total_hours, billing_date, invoice_number, client:clients(id, client_name), job_type:job_types(id, name, category)),
         consultant:consultants!consultant_id(id, full_name, hourly_rate)
       `)
       .gte('entry_date', filters.dateFrom)
@@ -335,15 +335,46 @@ const BillingReports = () => {
   const generateProductivityReport = async () => {
     const detailedData = await generateDetailedReport();
 
-    // Calculate productivity metrics
-    const productivityData = detailedData.map(entry => ({
-      ...entry,
-      hourlyRate: entry.hourly_rate || 0,
-      revenue: entry.is_billable ? (entry.duration_hours || 0) * (entry.hourly_rate || 0) : 0,
-      efficiency: entry.duration_hours > 0 ? (entry.is_billable ? 1 : 0) : 0
-    }));
+    // Group time entries by Consultant
+    const consultantEfficiency = {};
 
-    return productivityData;
+    detailedData.forEach(entry => {
+      const consultantId = entry.consultant_id || 'unknown';
+      const consultantName = entry.consultant?.full_name || 'Unknown Staff';
+      
+      if (!consultantEfficiency[consultantId]) {
+        // MOCK TARGET HOURS: For demo, assigning random targets between 150-180h depending on ID
+        // In production, this would come from a 'consultant_targets' table
+        const mockTarget = 160; 
+
+        consultantEfficiency[consultantId] = {
+          consultantId,
+          consultantName,
+          totalLoggedHours: 0,
+          totalBillableHours: 0,
+          targetHours: mockTarget, 
+          revenueGenerated: 0,
+          projectsWorkedOn: new Set()
+        };
+      }
+
+      const stats = consultantEfficiency[consultantId];
+      stats.totalLoggedHours += Number(entry.duration_hours || 0);
+      
+      if (entry.is_billable) {
+        stats.totalBillableHours += Number(entry.duration_hours || 0);
+        stats.revenueGenerated += (Number(entry.duration_hours || 0) * Number(entry.hourly_rate || 0));
+      }
+      
+      if (entry.project?.name) stats.projectsWorkedOn.add(entry.project.name);
+    });
+
+    // Calculate Efficiency % (Billable / Target)
+    return Object.values(consultantEfficiency).map(staff => ({
+      ...staff,
+      efficiency: (staff.totalBillableHours / staff.targetHours), // percentage decimal (e.g. 1.1 or 0.8)
+      projectCount: staff.projectsWorkedOn.size
+    }));
   };
 
   const groupByPeriod = (data, groupBy) => {
@@ -537,91 +568,193 @@ const BillingReports = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Billing Reports</h1>
-        <p className="text-gray-600">Comprehensive reporting with advanced filtering capabilities</p>
+    <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 transition-all duration-300">
+      <div className="mb-8 animate-in fade-in slide-in-from-top-4 duration-700">
+        <h1 className="text-4xl font-extrabold text-gray-900 mb-2 tracking-tight">Billing Reports</h1>
+        <p className="text-lg text-gray-600">Comprehensive reporting with advanced filtering capabilities</p>
       </div>
 
       {/* Tab Navigation */}
-      <div className="mb-6">
-        <nav className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+      <div className="mb-8">
+        <nav className="flex space-x-2 bg-gray-100 p-1.5 rounded-xl shadow-inner inline-flex">
           {['filters', 'results'].map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 transform ${
                 activeTab === tab
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'bg-white text-blue-600 shadow-md scale-100'
+                  : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
               }`}
             >
-              {tab === 'filters' ? 'Filters & Settings' : 'Report Results'}
+              {tab === 'filters' ? (
+                <span className="flex items-center">
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
+                  Filters & Settings
+                </span>
+              ) : (
+                <span className="flex items-center">
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                  Report Results
+                </span>
+              )}
             </button>
           ))}
         </nav>
       </div>
 
       {activeTab === 'filters' && (
-        <div className="bg-white rounded-lg shadow-sm border p-6">
-          {/* Report Type Selection */}
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold mb-3">Report Type</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 animate-in fade-in slide-in-from-left-4 duration-500">
+          {/* Report Type Nature Selection */}
+          <div className="mb-10">
+            <h3 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4 flex items-center">
+              <span className="bg-gray-100 text-gray-400 p-1 rounded-md mr-2">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+              </span>
+              Step 1: Choose Report Format
+            </h3>
+            <div className="flex flex-wrap gap-3">
               {[
-                { value: 'summary', label: 'Summary Report', desc: 'Aggregated data by period' },
-                { value: 'detailed', label: 'Detailed Report', desc: 'Individual time entries' },
-                { value: 'client', label: 'Client Report', desc: 'Grouped by client' },
-                { value: 'consultant', label: 'Consultant Report', desc: 'Grouped by consultant' },
-                { value: 'jobtype', label: 'Job Type Report', desc: 'Grouped by job type' },
-                { value: 'productivity', label: 'Productivity Report', desc: 'Efficiency metrics' }
+                { value: 'summary', label: 'Summary', desc: 'Aggregated', icon: '📊' },
+                { value: 'detailed', label: 'Detailed', desc: 'Entries', icon: '📝' },
+                { value: 'client', label: 'Client', desc: 'Customers', icon: '🏢' },
+                { value: 'consultant', label: 'Staff', desc: 'Resource', icon: '👨‍💼' },
+                { value: 'jobtype', label: 'Services', desc: 'Category', icon: '🛠️' },
+                { value: 'productivity', label: 'Efficiency', desc: 'KPIs', icon: '📈' }
               ].map(type => (
-                <label key={type.value} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                  <input
-                    type="radio"
-                    name="reportType"
-                    value={type.value}
-                    checked={filters.reportType === type.value}
-                    onChange={(e) => updateFilter('reportType', e.target.value)}
-                    className="mt-1"
-                  />
-                  <div>
-                    <div className="font-medium">{type.label}</div>
-                    <div className="text-sm text-gray-600">{type.desc}</div>
+                <button
+                  key={type.value}
+                  onClick={() => updateFilter('reportType', type.value)}
+                  className={`flex items-center px-4 py-3 rounded-2xl border-2 transition-all duration-300 group min-w-[140px] ${
+                    filters.reportType === type.value
+                      ? 'border-blue-600 bg-blue-50 text-blue-700 font-extrabold shadow-md ring-4 ring-blue-100/50 -translate-y-1'
+                      : 'border-gray-100 bg-gray-50 text-gray-500 hover:border-gray-300 hover:bg-white hover:shadow-sm'
+                  }`}
+                >
+                  <span className={`mr-3 text-2xl transition-transform duration-300 group-hover:scale-110 ${filters.reportType === type.value ? 'scale-110' : ''}`}>
+                    {type.icon}
+                  </span>
+                  <div className="text-left">
+                    <div className="text-sm border-b border-transparent group-hover:border-gray-200 transition-all font-bold">{type.label}</div>
+                    <div className={`text-[9px] uppercase font-black tracking-wider opacity-60 ${filters.reportType === type.value ? 'text-blue-500' : 'text-gray-400'}`}>
+                      {type.desc}
+                    </div>
                   </div>
-                </label>
+                </button>
               ))}
             </div>
           </div>
 
-          {/* Date Range */}
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold mb-3">Date Range</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">From Date</label>
+          {/* Filter Bar - Modern Horizontal Style */}
+          <div className="space-y-6 mt-10">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest flex items-center">
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
+                Report Filters
+              </h3>
+              <div className="flex items-center space-x-2">
+                <span className="text-[10px] font-bold text-gray-400 uppercase mr-1">Quick Dates:</span>
+                {[
+                  { key: 'thisMonth', label: 'Month' },
+                  { key: 'lastMonth', label: 'Last' },
+                  { key: 'thisYear', label: 'Year' }
+                ].map(range => (
+                  <button
+                    key={range.key}
+                    onClick={() => quickDateRange(range.key)}
+                    className="px-3 py-1 text-xs bg-white hover:bg-blue-50 border border-gray-200 text-gray-600 rounded-lg transition-all shadow-sm font-bold"
+                  >
+                    {range.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-8 gap-4 bg-gray-50 p-5 rounded-2xl border border-gray-200 shadow-inner">
+              {/* Customer */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-extrabold text-gray-500 uppercase ml-1">Customer</label>
+                <select
+                  value={filters.clients.length === 1 ? filters.clients[0] : ''}
+                  onChange={(e) => updateFilter('clients', e.target.value ? [e.target.value] : [])}
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium"
+                >
+                  <option value="">All Customes</option>
+                  {clients.map(c => <option key={c.id} value={c.id}>{c.client_name}</option>)}
+                </select>
+              </div>
+
+              {/* Consultant */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-extrabold text-gray-500 uppercase ml-1">Consultant</label>
+                <select
+                  value={filters.consultants.length === 1 ? filters.consultants[0] : ''}
+                  onChange={(e) => updateFilter('consultants', e.target.value ? [e.target.value] : [])}
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium"
+                >
+                  <option value="">All Staff</option>
+                  {consultants.map(c => <option key={c.id} value={c.id}>{c.full_name}</option>)}
+                </select>
+              </div>
+
+              {/* Service */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-extrabold text-gray-500 uppercase ml-1">Service Type</label>
+                <select
+                  value={filters.jobTypes.length === 1 ? filters.jobTypes[0] : ''}
+                  onChange={(e) => updateFilter('jobTypes', e.target.value ? [e.target.value] : [])}
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium"
+                >
+                  <option value="">Any Service</option>
+                  {jobTypes.map(jt => <option key={jt.id} value={jt.id}>{jt.name}</option>)}
+                </select>
+              </div>
+
+              {/* Status */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-extrabold text-gray-500 uppercase ml-1">Job Status</label>
+                <select
+                  value={filters.projectStatus}
+                  onChange={(e) => updateFilter('projectStatus', e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium"
+                >
+                  <option value="">Any Status</option>
+                  <option value="active">Active</option>
+                  <option value="completed">Completed</option>
+                  <option value="ready_to_bill">Ready to Bill</option>
+                  <option value="billed">Billed</option>
+                </select>
+              </div>
+
+              {/* From */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-extrabold text-gray-500 uppercase ml-1">From</label>
                 <input
                   type="date"
                   value={filters.dateFrom}
                   onChange={(e) => updateFilter('dateFrom', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">To Date</label>
+
+              {/* To */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-extrabold text-gray-500 uppercase ml-1">To</label>
                 <input
                   type="date"
                   value={filters.dateTo}
                   onChange={(e) => updateFilter('dateTo', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Group By</label>
+
+              {/* Group By */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-extrabold text-gray-500 uppercase ml-1">Group By</label>
                 <select
                   value={filters.groupBy}
                   onChange={(e) => updateFilter('groupBy', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium"
                 >
                   <option value="day">Day</option>
                   <option value="week">Week</option>
@@ -629,184 +762,108 @@ const BillingReports = () => {
                   <option value="quarter">Quarter</option>
                 </select>
               </div>
-            </div>
 
-            {/* Quick Date Ranges */}
-            <div className="flex flex-wrap gap-2">
-              {[
-                { key: 'thisMonth', label: 'This Month' },
-                { key: 'lastMonth', label: 'Last Month' },
-                { key: 'last3Months', label: 'Last 3 Months' },
-                { key: 'thisYear', label: 'This Year' }
-              ].map(range => (
+              {/* Billable Toggle */}
+              <div className="flex flex-col justify-end pb-1.5">
+                <label className="flex items-center space-x-2 cursor-pointer group p-1 bg-white border border-gray-200 rounded-xl h-[38px] px-2 shadow-sm">
+                  <div className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={filters.billableOnly}
+                      onChange={(e) => updateFilter('billableOnly', e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-8 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-600"></div>
+                  </div>
+                  <span className="text-[9px] font-extrabold text-gray-400 uppercase group-hover:text-blue-600 transition-colors leading-tight">Billable<br/>Only</span>
+                </label>
+              </div>
+
+              {/* Action Button */}
+              <div className="flex items-end">
                 <button
-                  key={range.key}
-                  onClick={() => quickDateRange(range.key)}
-                  className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                  onClick={generateReport}
+                  disabled={loading}
+                  className="w-full h-[38px] bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-xl font-bold text-xs shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center disabled:opacity-50"
                 >
-                  {range.label}
+                  {loading ? (
+                    <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                      RUN REPORT
+                    </>
+                  )}
                 </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Advanced Filters Toggle */}
-          <div className="mb-4">
-            <button
-              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-              className="flex items-center text-blue-600 hover:text-blue-800"
-            >
-              <span className="mr-2">{showAdvancedFilters ? '▼' : '▶'}</span>
-              Advanced Filters
-            </button>
-          </div>
-
-          {showAdvancedFilters && (
-            <div className="border-t pt-4">
-              {/* Client Filter */}
-              <div className="mb-4">
-                <h4 className="font-medium mb-2">Clients</h4>
-                <div className="max-h-32 overflow-y-auto border rounded-md p-2">
-                  {clients.map(client => (
-                    <label key={client.id} className="flex items-center space-x-2 mb-1">
-                      <input
-                        type="checkbox"
-                        checked={filters.clients.includes(client.id)}
-                        onChange={() => toggleArrayFilter('clients', client.id)}
-                        className="rounded"
-                      />
-                      <span className="text-sm">{client.client_name}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Consultant Filter */}
-              <div className="mb-4">
-                <h4 className="font-medium mb-2">Consultants</h4>
-                <div className="max-h-32 overflow-y-auto border rounded-md p-2">
-                  {consultants.map(consultant => (
-                    <label key={consultant.id} className="flex items-center space-x-2 mb-1">
-                      <input
-                        type="checkbox"
-                        checked={filters.consultants.includes(consultant.id)}
-                        onChange={() => toggleArrayFilter('consultants', consultant.id)}
-                        className="rounded"
-                      />
-                      <span className="text-sm">{consultant.full_name}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Job Type Filter */}
-              <div className="mb-4">
-                <h4 className="font-medium mb-2">Job Types</h4>
-                <div className="max-h-32 overflow-y-auto border rounded-md p-2">
-                  {jobTypes.map(jobType => (
-                    <label key={jobType.id} className="flex items-center space-x-2 mb-1">
-                      <input
-                        type="checkbox"
-                        checked={filters.jobTypes.includes(jobType.id)}
-                        onChange={() => toggleArrayFilter('jobTypes', jobType.id)}
-                        className="rounded"
-                      />
-                      <span className="text-sm">{jobType.name}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Other Filters */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Project Status</label>
-                  <select
-                    value={filters.projectStatus}
-                    onChange={(e) => updateFilter('projectStatus', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="">All Statuses</option>
-                    <option value="active">Active</option>
-                    <option value="completed">Completed</option>
-                    <option value="ready_to_bill">Ready to Bill</option>
-                    <option value="billed">Billed</option>
-                  </select>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="billableOnly"
-                    checked={filters.billableOnly}
-                    onChange={(e) => updateFilter('billableOnly', e.target.checked)}
-                    className="rounded"
-                  />
-                  <label htmlFor="billableOnly" className="text-sm font-medium text-gray-700">
-                    Billable hours only
-                  </label>
-                </div>
               </div>
             </div>
-          )}
-
-          {/* Generate Report Button */}
-          <div className="mt-6">
-            <button
-              onClick={generateReport}
-              disabled={loading}
-              className="w-full md:w-auto px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-            >
-              {loading ? 'Generating Report...' : 'Generate Report'}
-            </button>
           </div>
         </div>
       )}
 
       {activeTab === 'results' && (
-        <div className="bg-white rounded-lg shadow-sm border">
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500">
           {/* Results Header */}
-          <div className="p-6 border-b">
-            <div className="flex justify-between items-center">
+          <div className="p-8 border-b border-gray-100 bg-gray-50/50">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
               <div>
-                <h2 className="text-xl font-semibold">
-                  {filters.reportType.charAt(0).toUpperCase() + filters.reportType.slice(1)} Report
-                </h2>
-                <p className="text-gray-600">
-                  {dayjs(filters.dateFrom).format('MMM DD, YYYY')} - {dayjs(filters.dateTo).format('MMM DD, YYYY')}
+                <div className="flex items-center space-x-2">
+                  <span className="p-2 bg-blue-100 text-blue-700 rounded-lg">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                  </span>
+                  <h2 className="text-2xl font-extrabold text-gray-900">
+                    {filters.reportType.charAt(0).toUpperCase() + filters.reportType.slice(1)} Report
+                  </h2>
+                </div>
+                <p className="text-gray-500 mt-1 font-medium flex items-center">
+                  <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                  {dayjs(filters.dateFrom).format('MMM DD, YYYY')} — {dayjs(filters.dateTo).format('MMM DD, YYYY')}
                 </p>
               </div>
-              <div className="flex space-x-3">
+              <div className="flex space-x-3 w-full md:w-auto">
                 <button
                   onClick={() => setActiveTab('filters')}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-900 border border-gray-300 rounded-md hover:bg-gray-50"
+                  className="flex-1 md:flex-none px-5 py-2.5 text-gray-700 font-bold hover:text-gray-900 border-2 border-gray-200 rounded-xl hover:bg-white hover:border-gray-300 transition-all active:scale-95 flex items-center justify-center"
                 >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                   Modify Filters
                 </button>
                 <button
                   onClick={exportToCSV}
                   disabled={exporting || reportData.length === 0}
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 md:flex-none px-5 py-2.5 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transition-all active:scale-95 flex items-center justify-center"
                 >
-                  {exporting ? 'Exporting...' : 'Export CSV'}
+                  {exporting ? (
+                    <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                      Export CSV
+                    </>
+                  )}
                 </button>
               </div>
             </div>
           </div>
 
           {/* Results Content */}
-          <div className="p-6">
+          <div className="p-0"> {/* Removed padding for full-width table */}
             {reportData.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-gray-500">No data found for the selected filters.</p>
+              <div className="text-center py-20 bg-gray-50/30">
+                <div className="bg-gray-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                </div>
+                <h3 className="text-xl font-bold text-gray-800">No data available</h3>
+                <p className="text-gray-500 mt-2 max-w-sm mx-auto">No time entries match your selected filters. Try adjusting your date range or selecting more clients/consultants.</p>
                 <button
                   onClick={() => setActiveTab('filters')}
-                  className="mt-4 px-4 py-2 text-blue-600 hover:text-blue-800"
+                  className="mt-6 px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-all"
                 >
                   Adjust Filters
                 </button>
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
                 {renderReportTable()}
               </div>
             )}
@@ -817,25 +874,31 @@ const BillingReports = () => {
   );
 
   function renderReportTable() {
+    const tableHeaderClass = "px-6 py-4 text-left text-xs font-extrabold text-gray-700 uppercase tracking-widest bg-gray-100/80 sticky top-0 backdrop-blur-sm z-10 border-b border-gray-200";
+    const tableCellClass = "px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-b border-gray-100 transition-colors";
+    const tableRowClass = "hover:bg-blue-50/40 transition-colors group";
+
     switch (filters.reportType) {
       case 'summary':
         return (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Period</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Hours</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Billable Hours</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Revenue</th>
+          <table className="min-w-full border-collapse">
+            <thead>
+              <tr className="border-b-2 border-gray-200">
+                <th className={tableHeaderClass}>Period</th>
+                <th className={tableHeaderClass}>Total Hours</th>
+                <th className={tableHeaderClass}>Billable Hours</th>
+                <th className={tableHeaderClass}>Total Revenue</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white divide-y divide-gray-50">
               {reportData.map((row, index) => (
-                <tr key={index}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{row.period}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{row.totalHours.toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{row.billableHours.toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">R{row.totalRevenue.toFixed(2)}</td>
+                <tr key={index} className={tableRowClass}>
+                  <td className={`${tableCellClass} font-bold text-gray-900 group-hover:text-blue-700`}>{row.period}</td>
+                  <td className={tableCellClass}>{row.totalHours.toFixed(2)} hrs</td>
+                  <td className={tableCellClass}>
+                    <span className="px-2 py-1 bg-green-50 text-green-700 rounded-md font-medium">{row.billableHours.toFixed(2)} hrs</span>
+                  </td>
+                  <td className={`${tableCellClass} font-bold text-gray-900 text-lg`}>R {row.totalRevenue.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                 </tr>
               ))}
             </tbody>
@@ -844,33 +907,44 @@ const BillingReports = () => {
 
       case 'detailed':
         return (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Consultant</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Job Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hours</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Billable</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th>
+          <table className="min-w-full border-collapse">
+            <thead>
+              <tr className="border-b-2 border-gray-200">
+                <th className={tableHeaderClass}>Date</th>
+                <th className={tableHeaderClass}>Client / Project</th>
+                <th className={tableHeaderClass}>Consultant</th>
+                <th className={tableHeaderClass}>Job Type</th>
+                <th className={tableHeaderClass}>Hours</th>
+                <th className={tableHeaderClass}>Billable</th>
+                <th className={tableHeaderClass}>Revenue</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white divide-y divide-gray-50">
               {reportData.map((entry, index) => (
-                <tr key={index}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.entry_date}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{entry.project?.client?.client_name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{entry.project?.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{entry.consultant?.full_name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{entry.project?.job_type?.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{entry.duration_hours?.toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {entry.is_billable ? <span className="text-green-600">✓</span> : <span className="text-red-600">✗</span>}
+                <tr key={index} className={tableRowClass}>
+                  <td className={`${tableCellClass} font-medium text-gray-900`}>{dayjs(entry.entry_date).format('DD MMM')}</td>
+                  <td className={tableCellClass}>
+                    <div className="font-bold text-gray-900">{entry.project?.client?.client_name}</div>
+                    <div className="text-xs text-gray-500 font-medium">{entry.project?.name}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    R{entry.is_billable ? ((entry.duration_hours || 0) * (entry.hourly_rate || 0)).toFixed(2) : '0.00'}
+                  <td className={tableCellClass}>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
+                      {entry.consultant?.full_name?.split(' ').map(n => n[0]).join('')}
+                    </span>
+                    <span className="ml-2 text-gray-700">{entry.consultant?.full_name}</span>
+                  </td>
+                  <td className={tableCellClass}>
+                    <span className="text-xs font-semibold px-2 py-1 bg-gray-100 rounded text-gray-600 uppercase">{entry.project?.job_type?.name}</span>
+                  </td>
+                  <td className={`${tableCellClass} font-bold text-gray-900`}>{entry.duration_hours?.toFixed(2)}</td>
+                  <td className={tableCellClass}>
+                    {entry.is_billable ? 
+                      <span className="flex items-center text-green-600 font-bold"><svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg> Yes</span> : 
+                      <span className="flex items-center text-gray-400 font-medium italic"><svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg> No</span>
+                    }
+                  </td>
+                  <td className={`${tableCellClass} font-bold text-gray-900`}>
+                    R{entry.is_billable ? ((entry.duration_hours || 0) * (entry.hourly_rate || 0)).toLocaleString(undefined, {minimumFractionDigits: 2}) : '0.00'}
                   </td>
                 </tr>
               ))}
@@ -880,26 +954,49 @@ const BillingReports = () => {
 
       case 'client':
         return (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Hours</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Billable Hours</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Projects</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Consultants</th>
+          <table className="min-w-full border-collapse">
+            <thead>
+              <tr className="border-b-2 border-gray-200">
+                <th className={tableHeaderClass}>Client</th>
+                <th className={tableHeaderClass}>Summary Indicators</th>
+                <th className={tableHeaderClass}>Hours (B/T)</th>
+                <th className={tableHeaderClass}>Revenue</th>
+                <th className={tableHeaderClass}>Projects</th>
+                <th className={tableHeaderClass}>Staff</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white">
               {reportData.map((row, index) => (
-                <tr key={index}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{row.clientName}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{row.totalHours.toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{row.billableHours.toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">R{row.totalRevenue.toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{row.projectCount}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{row.consultantCount}</td>
+                <tr key={index} className={tableRowClass}>
+                  <td className={`${tableCellClass} font-extrabold text-gray-900 text-base`}>{row.clientName}</td>
+                  <td className={tableCellClass}>
+                    <div className="w-full bg-gray-200 rounded-full h-2.5 max-w-[100px]">
+                      <div 
+                        className="bg-blue-600 h-2.5 rounded-full" 
+                        style={{ width: `${Math.min(100, (row.billableHours / (row.totalHours || 1)) * 100)}%` }}
+                      ></div>
+                    </div>
+                    <span className="text-[10px] uppercase font-bold text-gray-400 mt-1 block">Billable: {Math.round((row.billableHours / (row.totalHours || 1)) * 100)}%</span>
+                  </td>
+                  <td className={tableCellClass}>
+                    <span className="font-bold text-gray-900">{row.billableHours.toFixed(1)}</span>
+                    <span className="text-gray-400 mx-1">/</span>
+                    <span className="text-gray-500">{row.totalHours.toFixed(1)}</span>
+                  </td>
+                  <td className={`${tableCellClass} font-bold text-gray-900 text-lg`}>R {row.totalRevenue.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                  <td className={tableCellClass}>
+                    <span className="px-2 py-1 bg-purple-50 text-purple-700 rounded-lg text-xs font-bold border border-purple-100">{row.projectCount} Jobs</span>
+                  </td>
+                  <td className={tableCellClass}>
+                    <div className="flex -space-x-2 overflow-hidden">
+                      {[...Array(Math.min(3, row.consultantCount))].map((_, i) => (
+                        <div key={i} className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-gray-200 flex items-center justify-center text-[10px] font-bold text-gray-500">
+                          U
+                        </div>
+                      ))}
+                      {row.consultantCount > 3 && <span className="ml-4 text-xs font-bold text-gray-400">+{row.consultantCount - 3}</span>}
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -908,26 +1005,41 @@ const BillingReports = () => {
 
       case 'consultant':
         return (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Consultant</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Hours</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Billable Hours</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Clients</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Projects</th>
+          <table className="min-w-full border-collapse">
+            <thead>
+              <tr className="border-b-2 border-gray-200">
+                <th className={tableHeaderClass}>Consultant</th>
+                <th className={tableHeaderClass}>Total Hours</th>
+                <th className={tableHeaderClass}>Billable Hours</th>
+                <th className={tableHeaderClass}>Revenue</th>
+                <th className={tableHeaderClass}>Coverage</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white">
               {reportData.map((row, index) => (
-                <tr key={index}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{row.consultantName}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{row.totalHours.toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{row.billableHours.toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">R{row.totalRevenue.toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{row.clientCount}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{row.projectCount}</td>
+                <tr key={index} className={tableRowClass}>
+                  <td className={`${tableCellClass} font-bold text-gray-900`}>
+                    <div className="flex items-center">
+                      <div className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold mr-3 shadow-sm">
+                        {row.consultantName.split(' ').map(n => n[0]).join('')}
+                      </div>
+                      {row.consultantName}
+                    </div>
+                  </td>
+                  <td className={`${tableCellClass} text-lg`}>{row.totalHours.toFixed(2)}</td>
+                  <td className={tableCellClass}>
+                    <div className="flex items-center">
+                      <span className="font-bold text-green-700 mr-2">{row.billableHours.toFixed(2)}</span>
+                      <span className="text-xs text-green-500 font-medium">({Math.round((row.billableHours / (row.totalHours || 1)) * 100)}%)</span>
+                    </div>
+                  </td>
+                  <td className={`${tableCellClass} font-bold text-gray-900 text-lg`}>R {row.totalRevenue.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                  <td className={tableCellClass}>
+                    <div className="flex items-center space-x-2">
+                       <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-md text-xs font-bold">{row.clientCount} Clients</span>
+                       <span className="px-2 py-1 bg-indigo-50 text-indigo-700 rounded-md text-xs font-bold">{row.projectCount} Projects</span>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -936,24 +1048,33 @@ const BillingReports = () => {
 
       case 'jobtype':
         return (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Job Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Hours</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Billable Hours</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th>
+          <table className="min-w-full border-collapse">
+            <thead>
+              <tr className="border-b-2 border-gray-200">
+                <th className={tableHeaderClass}>Job Type</th>
+                <th className={tableHeaderClass}>Category</th>
+                <th className={tableHeaderClass}>Total Hours</th>
+                <th className={tableHeaderClass}>Billable %</th>
+                <th className={tableHeaderClass}>Revenue</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white">
               {reportData.map((row, index) => (
-                <tr key={index}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{row.jobTypeName}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{row.category}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{row.totalHours.toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{row.billableHours.toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">R{row.totalRevenue.toFixed(2)}</td>
+                <tr key={index} className={tableRowClass}>
+                  <td className={`${tableCellClass} font-bold text-gray-900`}>{row.jobTypeName}</td>
+                  <td className={tableCellClass}>
+                    <span className="px-2 py-1 bg-amber-50 text-amber-700 rounded-md text-xs font-bold border border-amber-100 uppercase tracking-tighter">{row.category}</span>
+                  </td>
+                  <td className={tableCellClass}>{row.totalHours.toFixed(2)} hrs</td>
+                  <td className={tableCellClass}>
+                    <div className="flex items-center">
+                      <div className="w-16 bg-gray-200 h-1.5 rounded-full mr-2">
+                        <div className="bg-green-500 h-1.5 rounded-full" style={{ width: `${(row.billableHours / (row.totalHours || 1)) * 100}%` }}></div>
+                      </div>
+                      <span className="font-bold text-xs">{Math.round((row.billableHours / (row.totalHours || 1)) * 100)}%</span>
+                    </div>
+                  </td>
+                  <td className={`${tableCellClass} font-bold text-gray-900 text-lg`}>R {row.totalRevenue.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                 </tr>
               ))}
             </tbody>
@@ -962,36 +1083,58 @@ const BillingReports = () => {
 
       case 'productivity':
         return (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Consultant</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Job Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hours</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Billable</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hourly Rate</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Efficiency</th>
+          <table className="min-w-full border-collapse">
+            <thead>
+              <tr className="border-b-2 border-gray-200">
+                <th className={tableHeaderClass}>Consultant Name</th>
+                <th className={tableHeaderClass}>Efficiency Rating</th>
+                <th className={tableHeaderClass}>Worked / Target</th>
+                <th className={tableHeaderClass}>Billable Hours</th>
+                <th className={tableHeaderClass}>Revenue Gen.</th>
+                <th className={tableHeaderClass}>Active Projects</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {reportData.map((entry, index) => (
-                <tr key={index}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.entry_date}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{entry.project?.client?.client_name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{entry.project?.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{entry.consultant?.full_name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{entry.project?.job_type?.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{Number(entry.duration_hours || 0).toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {entry.is_billable ? <span className="text-green-600">✓</span> : <span className="text-red-600">✗</span>}
+            <tbody className="bg-white">
+              {reportData.map((staff, index) => (
+                <tr key={index} className={tableRowClass}>
+                  <td className={`${tableCellClass} font-bold text-gray-900`}>
+                    <div className="flex items-center">
+                      <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-xs font-bold mr-3 uppercase">
+                        {staff.consultantName.split(' ').map(n=>n[0]).join('').substring(0,2)}
+                      </div>
+                      {staff.consultantName}
+                    </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">R{Number(entry.hourlyRate ?? entry.hourly_rate ?? 0).toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">R{Number(entry.revenue ?? 0).toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{Number(entry.efficiency ?? 0).toFixed(2)}</td>
+                  <td className={tableCellClass}>
+                    <div className="flex flex-col w-32">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className={`text-xs font-extrabold ${staff.efficiency >= 1 ? 'text-green-600' : staff.efficiency >= 0.8 ? 'text-amber-500' : 'text-red-500'}`}>
+                          {(staff.efficiency * 100).toFixed(0)}%
+                        </span>
+                        <span className="text-[9px] text-gray-400 uppercase font-bold">Target</span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full ${staff.efficiency >= 1 ? 'bg-green-500' : staff.efficiency >= 0.8 ? 'bg-amber-400' : 'bg-red-400'}`}
+                          style={{ width: `${Math.min(100, staff.efficiency * 100)}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className={tableCellClass}>
+                    <div className="font-bold text-gray-700">{staff.totalBillableHours.toFixed(1)} <span className="text-gray-400 font-normal">/ {staff.targetHours}h</span></div>
+                  </td>
+                  <td className={tableCellClass}>
+                    <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-md font-bold text-xs">
+                      {staff.totalBillableHours.toFixed(1)} HRS
+                    </span>
+                  </td>
+                  <td className={`${tableCellClass} font-bold text-gray-900 text-lg`}>
+                    R {staff.revenueGenerated.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                  </td>
+                  <td className={tableCellClass}>
+                    <span className="text-gray-500 font-medium">{staff.projectCount} Projects</span>
+                  </td>
                 </tr>
               ))}
             </tbody>

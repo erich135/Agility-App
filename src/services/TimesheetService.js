@@ -363,6 +363,12 @@ export const TimeEntryService = {
     if (filters.status) {
       query = query.eq('status', filters.status);
     }
+    if (filters.is_invoiced !== undefined) {
+      query = query.eq('is_invoiced', filters.is_invoiced);
+    }
+    if (filters.project_id_is_null) {
+      query = query.is('project_id', null);
+    }
 
     const { data, error } = await query;
     return { data, error };

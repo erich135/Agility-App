@@ -41,7 +41,48 @@ export default function BillingDashboard() {
     try {
       // Get all projects
       const projectsRes = await ProjectService.getAll();
-      const allProjects = projectsRes.data || [];
+      const dbProjects = projectsRes.data || [];
+
+      // Fetch unbilled orphan time entries (direct to client, no project)
+      const orphansRes = await TimeEntryService.getAll({ 
+        is_invoiced: false,
+        project_id_is_null: true 
+      });
+      const orphans = orphansRes.data || [];
+
+      // Group orphans by client to create "Virtual Projects"
+      const virtualProjectsMap = {};
+      orphans.forEach(entry => {
+        if (!entry.client_id) return;
+        
+        if (!virtualProjectsMap[entry.client_id]) {
+          virtualProjectsMap[entry.client_id] = {
+            id: `virtual-${entry.client_id}`,
+            project_number: 'ADHOC',
+            name: 'Ad-hoc / Direct Time',
+            client: entry.client, // { id, client_name }
+            client_id: entry.client_id,
+            status: 'ready_to_bill',
+            billing_date: entry.entry_date, // Use latest entry date?
+            billable_hours: 0,
+            is_virtual: true,
+            orphan_entries: []
+          };
+        }
+        
+        // Update summary stats
+        const vp = virtualProjectsMap[entry.client_id];
+        vp.billable_hours += (entry.duration_hours || 0);
+        vp.orphan_entries.push(entry);
+        
+        // Keep billing date as the oldest entry date (so it shows as overdue if old)
+        if (entry.entry_date < vp.billing_date) {
+            vp.billing_date = entry.entry_date;
+        }
+      });
+
+      const virtualProjects = Object.values(virtualProjectsMap);
+      const allProjects = [...dbProjects, ...virtualProjects];
 
       // Calculate billing urgency
       const today = new Date();
@@ -99,10 +140,20 @@ export default function BillingDashboard() {
     const invoiceNumber = prompt('Enter invoice number:');
     if (!invoiceNumber) return;
 
+    // Check if this is a virtual project (orphan entries)
+    const isVirtual = projectId.toString().startsWith('virtual-');
+    const clientId = isVirtual ? projectId.replace('virtual-', '') : null;
+
     try {
-      // Get all time entries for this project
-      const timeEntriesRes = await TimeEntryService.getByProject(projectId);
-      const timeEntries = timeEntriesRes.data || [];
+      // Get all time entries for this project (or client orphans)
+      let timeEntries = [];
+      if (isVirtual) {
+        const res = await TimeEntryService.getAll({ client_id: clientId, project_id_is_null: true });
+        timeEntries = res.data || [];
+      } else {
+        const timeEntriesRes = await TimeEntryService.getByProject(projectId);
+        timeEntries = timeEntriesRes.data || [];
+      }
       
       // Determine which entries to invoice
       let entriesToInvoice = [];
@@ -111,7 +162,7 @@ export default function BillingDashboard() {
          entriesToInvoice = timeEntries.filter(entry => specificEntryIds.has(entry.id));
       } else {
         entriesToInvoice = invoiceOnlyUninvoiced 
-          ? timeEntries.filter(entry => entry.status !== 'invoiced')
+          ? timeEntries.filter(entry => entry.status !== 'invoiced' && !entry.is_invoiced)
           : timeEntries;
       }
 
@@ -124,31 +175,35 @@ export default function BillingDashboard() {
       for (const entry of entriesToInvoice) {
         await TimeEntryService.update(entry.id, {
           status: 'invoiced',
+          is_invoiced: true,
           invoice_number: invoiceNumber,
           invoice_date: new Date().toISOString().split('T')[0]
         });
       }
 
-      // Check if all time entries are now invoiced
-      const remainingUninvoiced = timeEntries.filter(e => 
-        e.status !== 'invoiced' && !entriesToInvoice.find(ei => ei.id === e.id)
-      ).length;
+      if (!isVirtual) {
+        // Check if all time entries are now invoiced
+        const remainingUninvoiced = timeEntries.filter(e => 
+          e.status !== 'invoiced' && !e.is_invoiced && !entriesToInvoice.find(ei => ei.id === e.id)
+        ).length;
 
-      // Only mark project as fully invoiced if no uninvoiced entries remain
-      const projectStatus = remainingUninvoiced === 0 ? 'invoiced' : 'ready_to_bill';
-      
-      await ProjectService.update(projectId, {
-        status: projectStatus,
-        invoice_number: invoiceNumber,
-        invoice_date: new Date().toISOString().split('T')[0]
-      });
+        // Only mark project as fully invoiced if no uninvoiced entries remain
+        const projectStatus = remainingUninvoiced === 0 ? 'invoiced' : 'ready_to_bill';
+        
+        await ProjectService.update(projectId, {
+          status: projectStatus,
+          invoice_number: invoiceNumber,
+          invoice_date: new Date().toISOString().split('T')[0]
+        });
+      }
 
       loadDashboardData();
       // Reload project details to show updated status
       if (selectedProject && selectedProject.id === projectId) {
         // Reset selection after invoicing
         setSelectedEntryIds(new Set());
-        const updatedProject = { ...selectedProject, status: projectStatus };
+        const updatedStatus = !isVirtual ? 'ready_to_bill' : 'ready_to_bill'; // Simplification
+        const updatedProject = { ...selectedProject, status: updatedStatus };
         handleProjectClick(updatedProject);
       }
     } catch (error) {
@@ -165,16 +220,22 @@ export default function BillingDashboard() {
     try {
       console.log('Loading details for project:', project.id, project.name);
       
-      // Get all time entries for this project
-      const timeEntriesRes = await TimeEntryService.getByProject(project.id);
-      console.log('Time entries response:', timeEntriesRes);
-      
-      const timeEntries = timeEntriesRes.data || [];
+      let timeEntries = [];
+      if (project.is_virtual) {
+        // Fetch orphan entries for this client
+        const res = await TimeEntryService.getAll({ client_id: project.client_id, project_id_is_null: true });
+        timeEntries = res.data || [];
+      } else {
+        // Get all time entries for this project
+        const timeEntriesRes = await TimeEntryService.getByProject(project.id);
+        timeEntries = timeEntriesRes.data || [];
+      }
+
       console.log('Time entries fetched:', timeEntries.length, timeEntries);
       
       // Separate invoiced and uninvoiced entries
-      const invoicedEntries = timeEntries.filter(entry => entry.status === 'invoiced');
-      const uninvoicedEntries = timeEntries.filter(entry => entry.status !== 'invoiced');
+      const invoicedEntries = timeEntries.filter(entry => entry.status === 'invoiced' || entry.is_invoiced);
+      const uninvoicedEntries = timeEntries.filter(entry => entry.status !== 'invoiced' && !entry.is_invoiced);
       
       // Group time entries by date
       const entriesByDate = timeEntries.reduce((acc, entry) => {

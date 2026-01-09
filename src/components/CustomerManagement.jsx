@@ -253,7 +253,7 @@ const CustomerManagement = () => {
             consultant_id: timeEntry.consultantId,
             job_type_id: timeEntry.jobTypeId || null,
             entry_date: timeEntry.date,
-            hours: parseFloat(timeEntry.hours),
+            duration_hours: parseFloat(timeEntry.hours),
             description: timeEntry.description,
             hourly_rate: timeEntry.hourlyRate ? parseFloat(timeEntry.hourlyRate) : null,
           })
@@ -270,7 +270,7 @@ const CustomerManagement = () => {
             consultant_id: timeEntry.consultantId,
             job_type_id: timeEntry.jobTypeId || null,
             entry_date: timeEntry.date,
-            hours: parseFloat(timeEntry.hours),
+            duration_hours: parseFloat(timeEntry.hours),
             description: timeEntry.description,
             hourly_rate: timeEntry.hourlyRate ? parseFloat(timeEntry.hourlyRate) : null,
             is_invoiced: false
@@ -297,7 +297,7 @@ const CustomerManagement = () => {
     setEditingEntry(entry);
     setTimeEntry({
       date: entry.entry_date,
-      hours: entry.hours.toString(),
+      hours: (entry.duration_hours || entry.hours).toString(),
       description: entry.description || '',
       hourlyRate: entry.hourly_rate?.toString() || '500',
       consultantId: entry.consultant_id || '',

@@ -119,6 +119,7 @@ const BillingReports = () => {
       .from('time_entries')
       .select(`
         *,
+        client:clients(id, client_name),
         project:projects(id, name, status, job_type_id, client:clients(id, client_name)),
         consultant:consultants!consultant_id(id, full_name)
       `)
@@ -136,7 +137,7 @@ const BillingReports = () => {
     let filteredData = data;
     if (filters.clients.length > 0) {
       filteredData = filteredData.filter(entry =>
-        filters.clients.includes(entry.project?.client?.id)
+        filters.clients.includes(entry.client?.id || entry.project?.client?.id)
       );
       console.log('After client filter:', filteredData.length);
     }
@@ -172,6 +173,7 @@ const BillingReports = () => {
       .from('time_entries')
       .select(`
         *,
+        client:clients(id, client_name),
         project:projects(id, name, status, estimated_hours, total_hours, billing_date, invoice_number, client:clients(id, client_name), job_type:job_types(id, name, category)),
         consultant:consultants!consultant_id(id, full_name, hourly_rate)
       `)
@@ -188,7 +190,7 @@ const BillingReports = () => {
     let filteredData = data;
     if (filters.clients.length > 0) {
       filteredData = filteredData.filter(entry =>
-        filters.clients.includes(entry.project?.client?.id)
+        filters.clients.includes(entry.client?.id || entry.project?.client?.id)
       );
       console.log('Detailed - After client filter:', filteredData.length);
     }
@@ -223,8 +225,8 @@ const BillingReports = () => {
     // Group by client
     const clientGroups = {};
     detailedData.forEach(entry => {
-      const clientId = entry.project?.client?.id || 'unknown';
-      const clientName = entry.project?.client?.client_name || 'Unknown Client';
+      const clientId = entry.client?.id || entry.project?.client?.id || 'unknown';
+      const clientName = entry.client?.client_name || entry.project?.client?.client_name || 'Unknown Client';
 
       if (!clientGroups[clientId]) {
         clientGroups[clientId] = {

@@ -340,6 +340,7 @@ export const TimeEntryService = {
       .from('time_entries')
       .select(`
         *,
+        client:clients(id, client_name),
         project:projects(id, project_number, name, client:clients(id, client_name)),
         consultant:consultants(id, full_name)
       `)

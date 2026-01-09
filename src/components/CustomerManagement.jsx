@@ -41,6 +41,11 @@ const CustomerManagement = () => {
   const [reassigningCustomerId, setReassigningCustomerId] = useState(null);
   const [reassignSelection, setReassignSelection] = useState('');
 
+  const toFiniteNumber = (value, fallback = 0) => {
+    const numberValue = typeof value === 'number' ? value : parseFloat(value);
+    return Number.isFinite(numberValue) ? numberValue : fallback;
+  };
+
   // Fetch customers from Supabase
   const fetchCustomers = async () => {
     try {
@@ -640,70 +645,83 @@ const CustomerManagement = () => {
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-gray-200">
-                                {customerTimeEntries[customer.id].map((entry) => (
-                                  <tr key={entry.id} className="hover:bg-gray-50">
-                                    <td className="px-3 py-3 whitespace-nowrap">
-                                      {new Date(entry.entry_date).toLocaleDateString('en-ZA')}
-                                    </td>
-                                    <td className="px-3 py-3 whitespace-nowrap">
-                                      {entry.consultants?.full_name}
-                                    </td>
-                                    <td className="px-3 py-3 whitespace-nowrap">
-                                      {entry.job_types?.name || '-'}
-                                    </td>
-                                    <td className="px-3 py-3 text-gray-700">
-                                      {entry.description}
-                                    </td>
-                                    <td className="px-3 py-3 text-right font-semibold">
-                                      {parseFloat(entry.hours).toFixed(2)}h
-                                    </td>
-                                    <td className="px-3 py-3 text-right font-semibold text-green-600">
-                                      R{(parseFloat(entry.hours) * parseFloat(entry.hourly_rate || 0)).toFixed(2)}
-                                    </td>
-                                    <td className="px-3 py-3 text-center">
-                                      {entry.is_invoiced ? (
-                                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                                          Invoiced
-                                        </span>
-                                      ) : (
-                                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
-                                          Unbilled
-                                        </span>
-                                      )}
-                                    </td>
-                                    <td className="px-3 py-3 text-center">
-                                      {!entry.is_invoiced && (
-                                        <div className="flex items-center justify-center gap-2">
-                                          <button
-                                            onClick={() => handleEditTimeEntry(entry, customer)}
-                                            className="text-blue-600 hover:text-blue-800 text-xs font-medium"
-                                            title="Edit"
-                                          >
-                                            Edit
-                                          </button>
-                                          <button
-                                            onClick={() => handleDeleteTimeEntry(entry.id, customer.id)}
-                                            className="text-red-600 hover:text-red-800 text-xs font-medium"
-                                            title="Delete"
-                                          >
-                                            Delete
-                                          </button>
-                                        </div>
-                                      )}
-                                    </td>
-                                  </tr>
-                                ))}
+                                {customerTimeEntries[customer.id].map((entry) => {
+                                  const hours = toFiniteNumber(entry.duration_hours ?? entry.hours);
+                                  const hourlyRate = toFiniteNumber(entry.hourly_rate);
+                                  const amount = hours * hourlyRate;
+
+                                  return (
+                                    <tr key={entry.id} className="hover:bg-gray-50">
+                                      <td className="px-3 py-3 whitespace-nowrap">
+                                        {new Date(entry.entry_date).toLocaleDateString('en-ZA')}
+                                      </td>
+                                      <td className="px-3 py-3 whitespace-nowrap">
+                                        {entry.consultants?.full_name}
+                                      </td>
+                                      <td className="px-3 py-3 whitespace-nowrap">
+                                        {entry.job_types?.name || '-'}
+                                      </td>
+                                      <td className="px-3 py-3 text-gray-700">
+                                        {entry.description}
+                                      </td>
+                                      <td className="px-3 py-3 text-right font-semibold">
+                                        {hours.toFixed(2)}h
+                                      </td>
+                                      <td className="px-3 py-3 text-right font-semibold text-green-600">
+                                        R{amount.toFixed(2)}
+                                      </td>
+                                      <td className="px-3 py-3 text-center">
+                                        {entry.is_invoiced ? (
+                                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                            Invoiced
+                                          </span>
+                                        ) : (
+                                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
+                                            Unbilled
+                                          </span>
+                                        )}
+                                      </td>
+                                      <td className="px-3 py-3 text-center">
+                                        {!entry.is_invoiced && (
+                                          <div className="flex items-center justify-center gap-2">
+                                            <button
+                                              onClick={() => handleEditTimeEntry(entry, customer)}
+                                              className="text-blue-600 hover:text-blue-800 text-xs font-medium"
+                                              title="Edit"
+                                            >
+                                              Edit
+                                            </button>
+                                            <button
+                                              onClick={() => handleDeleteTimeEntry(entry.id, customer.id)}
+                                              className="text-red-600 hover:text-red-800 text-xs font-medium"
+                                              title="Delete"
+                                            >
+                                              Delete
+                                            </button>
+                                          </div>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
                               </tbody>
                               <tfoot className="bg-gray-50 font-semibold">
                                 <tr>
                                   <td colSpan="4" className="px-3 py-2 text-right">Total:</td>
                                   <td className="px-3 py-2 text-right">
-                                    {customerTimeEntries[customer.id].reduce((sum, e) => sum + parseFloat(e.hours || 0), 0).toFixed(2)}h
+                                    {customerTimeEntries[customer.id]
+                                      .reduce((sum, e) => sum + toFiniteNumber(e.duration_hours ?? e.hours), 0)
+                                      .toFixed(2)}h
                                   </td>
                                   <td className="px-3 py-2 text-right text-green-600">
-                                    R{customerTimeEntries[customer.id].reduce((sum, e) => 
-                                      sum + (parseFloat(e.hours || 0) * parseFloat(e.hourly_rate || 0)), 0
-                                    ).toFixed(2)}
+                                    R{customerTimeEntries[customer.id]
+                                      .reduce(
+                                        (sum, e) =>
+                                          sum +
+                                          (toFiniteNumber(e.duration_hours ?? e.hours) * toFiniteNumber(e.hourly_rate)),
+                                        0
+                                      )
+                                      .toFixed(2)}
                                   </td>
                                   <td colSpan="2"></td>
                                 </tr>

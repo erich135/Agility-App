@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, Play, Square, Plus, Search, X, Calendar } from 'lucide-react';
 import supabase from '../lib/SupabaseClient';
+import { useTimer } from '../contexts/TimerContext';
 
 export default function TimesheetSimple() {
+  const { activeTimer, startTimer: startGlobalTimer, stopTimer: stopGlobalTimer } = useTimer();
   const [clients, setClients] = useState([]);
+  const [clientProjects, setClientProjects] = useState([]);
   const [timeEntries, setTimeEntries] = useState([]);
   const [filteredEntries, setFilteredEntries] = useState([]);
-  const [activeTimer, setActiveTimer] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [customerFilter, setCustomerFilter] = useState('');
   const [selectedClient, setSelectedClient] = useState(null);
+  const [selectedProjectId, setSelectedProjectId] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [formData, setFormData] = useState({
@@ -31,9 +34,9 @@ export default function TimesheetSimple() {
     setDateFrom(thirtyDaysAgo.toISOString().split('T')[0]);
     setDateTo(today.toISOString().split('T')[0]);
     
-    // Timer interval
+    // Timer interval (local display only; source of truth is TimerContext)
     const interval = setInterval(() => {
-      if (activeTimer) {
+      if (activeTimer?.start_time) {
         const start = new Date(activeTimer.start_time);
         const now = new Date();
         setElapsedTime(Math.floor((now - start) / 1000));
@@ -48,6 +51,13 @@ export default function TimesheetSimple() {
       loadTimeEntries();
     }
   }, [dateFrom, dateTo]);
+
+  useEffect(() => {
+    // If clients load after entries, enrich/reload so names show.
+    if (dateFrom && dateTo && clients.length > 0) {
+      loadTimeEntries();
+    }
+  }, [clients]);
 
   useEffect(() => {
     // Filter entries by customer search
@@ -79,26 +89,62 @@ export default function TimesheetSimple() {
     setClients(data || []);
   };
 
+  const loadClientProjects = async (clientId) => {
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('id, project_number, name, status')
+        .eq('client_id', clientId)
+        .order('name');
+
+      if (error) {
+        console.warn('Error loading projects:', error);
+        setClientProjects([]);
+        return;
+      }
+
+      const filtered = (data || []).filter(p => !p.status || (p.status !== 'completed' && p.status !== 'cancelled'));
+      setClientProjects(filtered);
+    } catch (err) {
+      console.warn('Exception loading projects:', err);
+      setClientProjects([]);
+    }
+  };
+
   const loadTimeEntries = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('time_entries')
-      .select(`
-        *,
-        clients(id, client_name),
-        consultants(first_name, last_name)
-      `)
+      .select('*')
       .gte('entry_date', dateFrom)
       .lte('entry_date', dateTo)
       .order('entry_date', { ascending: false });
-    
-    setTimeEntries(data || []);
-    setFilteredEntries(data || []);
-    
-    // Check for active timer
-    const active = data?.find(entry => entry.timer_active);
-    if (active) {
-      setActiveTimer(active);
+
+    if (error) {
+      console.warn('Error loading time entries:', error);
+      setTimeEntries([]);
+      setFilteredEntries([]);
+      return;
     }
+
+    const clientById = new Map((clients || []).map(c => [c.id, c]));
+    const entries = (data || []).map(entry => {
+      const client = entry.client_id ? clientById.get(entry.client_id) : null;
+      const consultants =
+        currentUser && entry.consultant_id === currentUser.id
+          ? { first_name: currentUser.first_name, last_name: currentUser.last_name }
+          : null;
+
+      return {
+        ...entry,
+        clients: client ? { id: client.id, client_name: client.client_name } : null,
+        consultants
+      };
+    });
+
+    setTimeEntries(entries);
+    setFilteredEntries(entries);
+
+    // Active timer is handled globally by TimerContext
   };
 
   const filteredClients = clients.filter(client =>
@@ -107,6 +153,8 @@ export default function TimesheetSimple() {
 
   const handleClientSelect = (client) => {
     setSelectedClient(client);
+    setSelectedProjectId('');
+    loadClientProjects(client.id);
     setFormData({
       description: '',
       duration_hours: '',
@@ -120,49 +168,36 @@ export default function TimesheetSimple() {
       return;
     }
 
-    const { data, error } = await supabase
-      .from('time_entries')
-      .insert({
-        client_id: selectedClient.id,
-        consultant_id: currentUser?.id,
-        entry_date: new Date().toISOString().split('T')[0],
-        description: formData.description,
-        hourly_rate: formData.hourly_rate || null,
-        start_time: new Date().toISOString(),
-        timer_active: true,
-        duration_hours: 0,
-        status: 'draft',
-        is_billable: true,
-      })
-      .select()
-      .single();
+    if (activeTimer) {
+      alert('A timer is already running. Please stop it first.');
+      return;
+    }
 
-    if (!error) {
-      setActiveTimer(data);
+    try {
+      await startGlobalTimer({
+        client: selectedClient,
+        projectId: selectedProjectId || null,
+        description: formData.description,
+        hourlyRate: formData.hourly_rate || null
+      });
       setShowModal(false);
       loadTimeEntries();
+    } catch (e) {
+      console.error(e);
+      alert(e?.message || 'Failed to start timer');
     }
   };
 
   const stopTimer = async () => {
     if (!activeTimer) return;
-
-    const start = new Date(activeTimer.start_time);
-    const end = new Date();
-    const hours = ((end - start) / (1000 * 60 * 60)).toFixed(2);
-
-    await supabase
-      .from('time_entries')
-      .update({
-        end_time: end.toISOString(),
-        duration_hours: hours,
-        timer_active: false,
-      })
-      .eq('id', activeTimer.id);
-
-    setActiveTimer(null);
-    setElapsedTime(0);
-    loadTimeEntries();
+    try {
+      await stopGlobalTimer();
+      setElapsedTime(0);
+      loadTimeEntries();
+    } catch (e) {
+      console.error(e);
+      alert(e?.message || 'Failed to stop timer');
+    }
   };
 
   const saveManualEntry = async () => {
@@ -175,6 +210,7 @@ export default function TimesheetSimple() {
       .from('time_entries')
       .insert({
         client_id: selectedClient.id,
+        project_id: selectedProjectId || null,
         consultant_id: currentUser?.id,
         entry_date: new Date().toISOString().split('T')[0],
         description: formData.description,
@@ -225,7 +261,7 @@ export default function TimesheetSimple() {
               <div className="text-sm opacity-90 mb-1">Timer Running</div>
               <div className="text-2xl font-bold">{formatTime(elapsedTime)}</div>
               <div className="text-sm mt-2 opacity-90">
-                Client: {activeTimer.clients?.client_name || 'Unknown'}
+                Client: {activeTimer.clients?.client_name || selectedClient?.client_name || 'Unknown'}
               </div>
               <div className="text-sm opacity-90">
                 Task: {activeTimer.description}
@@ -468,6 +504,25 @@ export default function TimesheetSimple() {
                     >
                       Change Client
                     </button>
+                  </div>
+
+                  {/* Optional Project Selection */}
+                  <div className="mb-6">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Project (optional)
+                    </label>
+                    <select
+                      value={selectedProjectId}
+                      onChange={(e) => setSelectedProjectId(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">(No project)</option>
+                      {clientProjects.map(p => (
+                        <option key={p.id} value={p.id}>
+                          {(p.project_number ? `${p.project_number} — ` : '') + (p.name || 'Unnamed Project')}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   {/* Time Entry Form */}

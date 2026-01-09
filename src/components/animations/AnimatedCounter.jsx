@@ -22,9 +22,21 @@ export default function AnimatedCounter({
   const [hasAnimated, setHasAnimated] = useState(false);
   const elementRef = useRef(null);
   const animationRef = useRef(null);
+  const latestValueRef = useRef(0);
 
   useEffect(() => {
+    // Always coerce to a sane number.
+    const numeric = Number(value);
+    latestValueRef.current = Number.isFinite(numeric) ? numeric : 0;
+
     if (!startOnView) {
+      animateValue();
+      return;
+    }
+
+    // If we've already animated once (element is on screen), re-animate on value changes.
+    // This makes counters work for async-loaded dashboard stats.
+    if (hasAnimated) {
       animateValue();
       return;
     }
@@ -54,7 +66,7 @@ export default function AnimatedCounter({
   const animateValue = () => {
     const startTime = performance.now();
     const startValue = 0;
-    const endValue = value;
+    const endValue = latestValueRef.current;
 
     const animate = (currentTime) => {
       const elapsed = currentTime - startTime;

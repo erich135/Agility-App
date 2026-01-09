@@ -67,27 +67,10 @@ export default function Sidebar() {
           permission: 'access_cipc'
         },
         { 
-          path: '/calendar', 
-          icon: Calendar, 
-          label: 'Calendar',
-          permission: 'access_calendar'
-        },
-        { 
           path: '/documents', 
           icon: FolderOpen, 
           label: 'Documents',
           permission: 'access_documents'
-        },
-      ]
-    },
-    {
-      title: 'Billing',
-      items: [
-        { 
-          path: '/billing/dashboard', 
-          icon: Banknote, 
-          label: 'Billing Dashboard',
-          permission: 'access_billing_dashboard'
         },
       ]
     },
@@ -168,7 +151,7 @@ export default function Sidebar() {
 
   return (
     <aside 
-      className={`fixed left-0 top-0 h-screen bg-slate-900 text-white transition-all duration-300 z-50 flex flex-col ${
+      className={`fixed left-4 top-4 h-[calc(100vh-2rem)] bg-slate-900 text-white transition-all duration-300 z-50 flex flex-col rounded-2xl shadow-lg overflow-hidden ${
         isCollapsed ? 'w-16' : 'w-64'
       }`}
     >

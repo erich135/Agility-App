@@ -62,21 +62,47 @@ const CalendarTaskManagement = () => {
     };
 
     // Convert tasks to event format for calendar display
-    const taskEvents = tasks
-      .filter(task => task.start_time && task.end_time) // Only show tasks with time slots
+    // Show tasks with time slots, and also show due-date-only tasks as all-day markers.
+    const taskEvents = (tasks || [])
       .filter(task => shouldIncludeItem(task, 'task'))
-      .map(task => ({
-        id: task.id,
-        title: task.title,
-        description: task.description,
-        start_time: task.start_time,
-        end_time: task.end_time,
-        event_type: 'task', // Mark as task for different styling
-        location: null,
-        created_at: task.created_at,
-        _sourceType: 'task', // Internal marker
-        _originalData: task
-      }));
+      .map(task => {
+        // Timed task
+        if (task.start_time && task.end_time) {
+          return {
+            id: task.id,
+            title: task.title,
+            description: task.description,
+            start_time: task.start_time,
+            end_time: task.end_time,
+            event_type: 'task',
+            location: null,
+            created_at: task.created_at,
+            _sourceType: 'task',
+            _originalData: task
+          };
+        }
+
+        // Due-date-only task => show as all-day marker for that date
+        if (task.due_date) {
+          const dateStr = String(task.due_date).slice(0, 10);
+          return {
+            id: task.id,
+            title: task.title,
+            description: task.description,
+            start_time: `${dateStr}T00:00:00`,
+            end_time: `${dateStr}T23:59:59`,
+            event_type: 'task',
+            location: null,
+            created_at: task.created_at,
+            _sourceType: 'task',
+            _originalData: task,
+            _allDay: true
+          };
+        }
+
+        return null;
+      })
+      .filter(Boolean);
 
     // Calendar events already in correct format
     const events = calendarEvents

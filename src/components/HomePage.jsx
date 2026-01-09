@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import AnimatedCounter from './animations/AnimatedCounter';
 import { SkeletonStats, SkeletonCard } from './animations/Skeletons';
+import supabase from '../lib/SupabaseClient';
 import {
   Clock,
   Banknote,
@@ -24,18 +25,87 @@ const HomePage = () => {
   });
   const [loading, setLoading] = useState(true);
 
+  const normalizeCount = (value) => {
+    const n = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(n)) return 0;
+    const i = Math.trunc(n);
+    return i > 0 ? i : 0;
+  };
+
   useEffect(() => {
     loadDashboardData();
   }, []);
 
   const loadDashboardData = async () => {
     try {
-      // Minimal stats – no projects fetching
-      setStats({
-        activeClients: 0,
-        recentDocuments: 0,
-        upcomingTasks: 0
-      });
+      setLoading(true);
+
+      const recentDays = 30;
+      const upcomingDays = 14;
+      const now = new Date();
+      const todayStr = now.toISOString().slice(0, 10);
+      const recentSince = new Date(now);
+      recentSince.setDate(recentSince.getDate() - recentDays);
+      const upcomingUntil = new Date(now);
+      upcomingUntil.setDate(upcomingUntil.getDate() + upcomingDays);
+      const upcomingUntilStr = upcomingUntil.toISOString().slice(0, 10);
+
+      // Active Clients: simplest possible — count rows in clients table.
+      // (Avoids status casing issues and any oddities with head/count-only requests.)
+      let activeClients = 0;
+      {
+        const { data, error } = await supabase
+          .from('clients')
+          .select('id');
+
+        if (error) {
+          console.warn('Clients count error:', error);
+          activeClients = 0;
+        } else {
+          activeClients = normalizeCount(data?.length ?? 0);
+        }
+      }
+
+      // Documents: simplest possible — count rows in documents table.
+      let recentDocuments = 0;
+      {
+        const { data, error } = await supabase
+          .from('documents')
+          .select('id');
+
+        if (error) {
+          console.warn('Documents count error:', error);
+          recentDocuments = 0;
+        } else {
+          recentDocuments = normalizeCount(data?.length ?? 0);
+        }
+      }
+
+      // Upcoming Tasks (next 14 days). If tasks table is missing/blocked, fall back to active projects.
+      let upcomingTasks = 0;
+      {
+        const { count, error } = await supabase
+          .from('tasks')
+          .select('id', { count: 'exact', head: true })
+          .gte('due_date', todayStr)
+          .lte('due_date', upcomingUntilStr);
+
+        if (!error) {
+          upcomingTasks = normalizeCount(count);
+        } else {
+          console.warn('Tasks count error (falling back to projects):', error);
+          const { count: projectCount, error: projectError } = await supabase
+            .from('projects')
+            .select('id', { count: 'exact', head: true })
+            .in('status', ['active', 'on_hold']);
+          if (projectError) {
+            console.warn('Fallback project count error:', projectError);
+          }
+          upcomingTasks = normalizeCount(projectCount);
+        }
+      }
+
+      setStats({ activeClients, recentDocuments, upcomingTasks });
     } catch (error) {
       console.error('Error loading dashboard:', error);
     } finally {
@@ -53,7 +123,7 @@ const HomePage = () => {
   const quickActions = [
     {
       title: 'Timesheet',
-      description: 'Log your time and track projects',
+      description: 'Log time and manage entries',
       icon: Clock,
       link: '/timesheet',
       color: 'bg-blue-500',
@@ -149,7 +219,7 @@ const HomePage = () => {
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 stats-card animate-card-enter stagger-2">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 font-medium">Recent Documents</p>
+              <p className="text-sm text-gray-500 font-medium">Documents</p>
               <p className="text-3xl font-bold text-gray-900 mt-1">
                 <AnimatedCounter value={stats.recentDocuments} duration={900} />
               </p>

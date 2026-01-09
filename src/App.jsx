@@ -1,6 +1,7 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { TimerProvider } from './contexts/TimerContext';
 import { ToastProvider } from './components/Toast';
 import Layout from './components/Layout';
 import HomePage from './components/HomePage';
@@ -120,9 +121,11 @@ function App() {
   return (
     <AuthProvider>
       <ToastProvider>
-        <Router>
-          <AppRoutes />
-        </Router>
+        <TimerProvider>
+          <Router>
+            <AppRoutes />
+          </Router>
+        </TimerProvider>
       </ToastProvider>
     </AuthProvider>
   );

@@ -23,13 +23,15 @@ const CustomerManagement = () => {
   const [consultants, setConsultants] = useState([]);
   const [jobTypes, setJobTypes] = useState([]);
   const [myConsultantId, setMyConsultantId] = useState(null);
+  const [customerProjects, setCustomerProjects] = useState([]);
   const [timeEntry, setTimeEntry] = useState({
     date: new Date().toISOString().split('T')[0],
     hours: '',
     description: '',
     hourlyRate: '500',
     consultantId: '',
-    jobTypeId: ''
+    jobTypeId: '',
+    projectId: ''
   });
   
   // Time history state
@@ -145,6 +147,29 @@ const CustomerManagement = () => {
     setJobTypes(jobTypesData || []);
   };
 
+  const loadProjectsForCustomer = async (customerId) => {
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('id, project_number, name, status')
+        .eq('client_id', customerId)
+        .order('name');
+
+      if (error) {
+        console.warn('Error loading projects for customer:', error);
+        setCustomerProjects([]);
+        return;
+      }
+
+      // Hide completed/cancelled from quick selection if present
+      const filtered = (data || []).filter(p => !p.status || (p.status !== 'completed' && p.status !== 'cancelled'));
+      setCustomerProjects(filtered);
+    } catch (err) {
+      console.warn('Exception loading projects for customer:', err);
+      setCustomerProjects([]);
+    }
+  };
+
   const loadTimeEntriesForCustomer = async (customerId) => {
     try {
       const { data, error } = await supabase
@@ -216,6 +241,7 @@ const CustomerManagement = () => {
       }
     }
     setTimeLogCustomer(customer);
+    loadProjectsForCustomer(customer.id);
     
     // Get default consultant (current user or first consultant)
     const defaultConsultant = (user?.role === 'consultant' && myConsultantId)
@@ -228,7 +254,8 @@ const CustomerManagement = () => {
       description: '',
       hourlyRate: '500',
       consultantId: defaultConsultant?.id || '',
-      jobTypeId: jobTypes[0]?.id || ''
+      jobTypeId: jobTypes[0]?.id || '',
+      projectId: ''
     });
     setShowTimeModal(true);
   };
@@ -252,6 +279,7 @@ const CustomerManagement = () => {
           .update({
             consultant_id: timeEntry.consultantId,
             job_type_id: timeEntry.jobTypeId || null,
+            project_id: timeEntry.projectId || null,
             entry_date: timeEntry.date,
             duration_hours: parseFloat(timeEntry.hours),
             description: timeEntry.description,
@@ -269,6 +297,7 @@ const CustomerManagement = () => {
             client_id: timeLogCustomer.id,
             consultant_id: timeEntry.consultantId,
             job_type_id: timeEntry.jobTypeId || null,
+            project_id: timeEntry.projectId || null,
             entry_date: timeEntry.date,
             duration_hours: parseFloat(timeEntry.hours),
             description: timeEntry.description,
@@ -295,13 +324,15 @@ const CustomerManagement = () => {
   const handleEditTimeEntry = (entry, customer) => {
     setTimeLogCustomer(customer);
     setEditingEntry(entry);
+    loadProjectsForCustomer(customer.id);
     setTimeEntry({
       date: entry.entry_date,
       hours: (entry.duration_hours || entry.hours).toString(),
       description: entry.description || '',
       hourlyRate: entry.hourly_rate?.toString() || '500',
       consultantId: entry.consultant_id || '',
-      jobTypeId: entry.job_type_id || ''
+      jobTypeId: entry.job_type_id || '',
+      projectId: entry.project_id || ''
     });
     setShowTimeModal(true);
   };
@@ -850,6 +881,24 @@ const CustomerManagement = () => {
                     ))}
                   </select>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Project (optional)
+                </label>
+                <select
+                  value={timeEntry.projectId}
+                  onChange={(e) => setTimeEntry({ ...timeEntry, projectId: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">(No project)</option>
+                  {customerProjects.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {(p.project_number ? `${p.project_number} — ` : '') + (p.name || 'Unnamed Project')}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>

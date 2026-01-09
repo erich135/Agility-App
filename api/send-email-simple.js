@@ -1,6 +1,8 @@
 // Simple email API for sending OTP without external dependencies
 // File: /api/send-email-simple.js
 
+import nodemailer from 'nodemailer';
+
 export default async function handler(req, res) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -49,8 +51,6 @@ export default async function handler(req, res) {
     }
 
     // For production, implement actual email sending
-    const nodemailer = require('nodemailer');
-
     const host = process.env.EMAIL_HOST;
     const port = Number(process.env.EMAIL_PORT || 465);
     const secure = String(process.env.EMAIL_SECURE || 'true').toLowerCase() === 'true';

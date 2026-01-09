@@ -1,3 +1,5 @@
+import nodemailer from 'nodemailer';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -10,8 +12,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    const nodemailer = require('nodemailer');
-
     const host = process.env.EMAIL_HOST;
     const port = Number(process.env.EMAIL_PORT || 465);
     const secure = String(process.env.EMAIL_SECURE || 'true').toLowerCase() === 'true';

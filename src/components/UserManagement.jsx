@@ -52,7 +52,8 @@ export default function UserManagement() {
 
   const handleInviteUser = async (e) => {
     e.preventDefault();
-    
+
+    let createdUserId = null;
     try {
       // Generate invitation token
       const token = crypto.randomUUID();
@@ -72,6 +73,8 @@ export default function UserManagement() {
         .single();
 
       if (error) throw error;
+
+      createdUserId = newUser?.id;
 
       // Auto-grant template permissions based on selected role
       await applyRoleTemplate(newUser.id, inviteForm.role);
@@ -111,7 +114,71 @@ export default function UserManagement() {
       loadData();
     } catch (error) {
       console.error('Error inviting user:', error);
+
+      // Roll back DB insert if we created the user but failed to email.
+      if (createdUserId) {
+        try {
+          await supabase.from('user_permissions').delete().eq('user_id', createdUserId);
+        } catch {}
+        try {
+          await supabase.from('users').delete().eq('id', createdUserId);
+        } catch {}
+      }
+
       alert('Failed to invite user: ' + error.message);
+    }
+  };
+
+  const handleResendInvite = async (user) => {
+    if (!user?.email) return;
+    if (user.password_hash) {
+      alert('This user is already active.');
+      return;
+    }
+    if (!user.invitation_token) {
+      alert('No invitation token found for this user.');
+      return;
+    }
+
+    try {
+      const inviteLink = `${window.location.origin}/setup-password?token=${user.invitation_token}`;
+
+      const resp = await fetch('/api/send-invitation-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: user.email,
+          name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email,
+          inviteLink
+        })
+      });
+
+      if (!resp.ok) {
+        let details = '';
+        try {
+          const json = await resp.json();
+          details = json?.details || json?.error || '';
+        } catch {
+          try {
+            details = await resp.text();
+          } catch {
+            details = '';
+          }
+        }
+
+        throw new Error(details || `Resend failed (HTTP ${resp.status})`);
+      }
+
+      await supabase
+        .from('users')
+        .update({ invitation_sent_at: new Date().toISOString() })
+        .eq('id', user.id);
+
+      alert('Invitation resent successfully!');
+      loadData();
+    } catch (e) {
+      console.error('Resend invite error:', e);
+      alert('Failed to resend invitation: ' + (e?.message || 'Unknown error'));
     }
   };
 
@@ -512,6 +579,15 @@ export default function UserManagement() {
                       }
                     </td>
                     <td className="px-6 py-4 text-sm space-x-2">
+                      {!user.password_hash && (
+                        <button
+                          onClick={() => handleResendInvite(user)}
+                          className="text-blue-600 hover:text-blue-900"
+                          title="Resend Invitation"
+                        >
+                          <Mail className="w-4 h-4" />
+                        </button>
+                      )}
                       <button
                         onClick={() => handleShowPermissions(user)}
                         className="text-blue-600 hover:text-blue-900"

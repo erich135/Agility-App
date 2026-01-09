@@ -1,7 +1,7 @@
 // API endpoint for sending email OTP
 // File: /api/send-email-otp.js
 
-const nodemailer = require('nodemailer');
+import nodemailer from 'nodemailer';
 
 // Email configuration
 // Removed hardcoded SMTP credentials

@@ -13,7 +13,7 @@ export default async function handler(req, res) {
 
   // Create Supabase admin client with service role key
   const supabaseAdmin = createClient(
-    process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY,
     {
       auth: {
@@ -31,8 +31,16 @@ export default async function handler(req, res) {
         error: 'Server configuration error: SUPABASE_SERVICE_ROLE_KEY missing'
       });
     }
+
+    const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!url) {
+      console.error('❌ SUPABASE_URL not set');
+      return res.status(500).json({
+        error: 'Server configuration error: SUPABASE_URL missing'
+      });
+    }
     
-    console.log('✅ Supabase URL:', process.env.VITE_SUPABASE_URL?.substring(0, 20) + '...');
+    console.log('✅ Supabase URL:', url.substring(0, 20) + '...');
     console.log('✅ Using Supabase Admin API');
 
     // Use Supabase Auth to send invitation email

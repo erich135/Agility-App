@@ -13,7 +13,7 @@ export default async function handler(req, res) {
 
   // Create Supabase admin client
   const supabaseAdmin = createClient(
-    process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY,
     {
       auth: {
@@ -24,6 +24,21 @@ export default async function handler(req, res) {
   );
 
   try {
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return res.status(500).json({
+        error: 'Server configuration error',
+        details: 'SUPABASE_SERVICE_ROLE_KEY missing'
+      });
+    }
+
+    const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!url) {
+      return res.status(500).json({
+        error: 'Server configuration error',
+        details: 'SUPABASE_URL missing'
+      });
+    }
+
     // Send password reset email using Supabase's email service
     const { error } = await supabaseAdmin.auth.admin.generateLink(
       'magiclink',

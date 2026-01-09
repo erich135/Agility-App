@@ -49,19 +49,28 @@ export default async function handler(req, res) {
     }
 
     // For production, implement actual email sending
-    // You can integrate with your preferred email service here
-    
-    // Simple SMTP implementation using native Node.js
     const nodemailer = require('nodemailer');
-    
-    const transporter = nodemailer.createTransporter({
-      host: 'mail.lmwfinance.co.za',
-      port: 465,
-      secure: true,
-      auth: {
-        user: 'info@lmwfinance.co.za',
-        pass: '@8644Erich'
-      }
+
+    const host = process.env.EMAIL_HOST;
+    const port = Number(process.env.EMAIL_PORT || 465);
+    const secure = String(process.env.EMAIL_SECURE || 'true').toLowerCase() === 'true';
+    const user = process.env.EMAIL_USER;
+    const pass = process.env.EMAIL_PASSWORD;
+    const fromName = process.env.EMAIL_FROM_NAME || 'Agility';
+    const fromAddress = process.env.EMAIL_FROM_ADDRESS || user;
+
+    if (!host || !user || !pass) {
+      return res.status(500).json({
+        error: 'Server configuration error',
+        details: 'Missing EMAIL_HOST / EMAIL_USER / EMAIL_PASSWORD'
+      });
+    }
+
+    const transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure,
+      auth: { user, pass }
     });
 
     const emailHtml = `
@@ -105,8 +114,8 @@ export default async function handler(req, res) {
 
     const info = await transporter.sendMail({
       from: {
-        name: 'LMW Finance',
-        address: 'info@lmwfinance.co.za'
+        name: fromName,
+        address: fromAddress
       },
       to: email,
       subject: subject || 'Your Login Verification Code',
@@ -127,8 +136,7 @@ export default async function handler(req, res) {
     
     return res.status(500).json({
       error: 'Failed to send email',
-      details: error.message,
-      fallback_otp: req.body.otp // For development fallback
+      details: error.message
     });
   }
 }

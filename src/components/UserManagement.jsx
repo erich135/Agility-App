@@ -79,7 +79,7 @@ export default function UserManagement() {
       // Send invitation email via API
       const inviteLink = `${window.location.origin}/setup-password?token=${token}`;
       
-      await fetch('/api/send-invitation-email', {
+      const emailResp = await fetch('/api/send-invitation-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -88,6 +88,22 @@ export default function UserManagement() {
           inviteLink
         })
       });
+
+      if (!emailResp.ok) {
+        let details = '';
+        try {
+          const json = await emailResp.json();
+          details = json?.details || json?.error || '';
+        } catch {
+          try {
+            details = await emailResp.text();
+          } catch {
+            details = '';
+          }
+        }
+
+        throw new Error(details || `Invitation email failed (HTTP ${emailResp.status})`);
+      }
 
       alert('Invitation sent successfully!');
       setShowInviteForm(false);

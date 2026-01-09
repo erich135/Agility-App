@@ -4,15 +4,14 @@
 const nodemailer = require('nodemailer');
 
 // Email configuration
-const EMAIL_CONFIG = {
-  host: 'mail.lmwfinance.co.za',
-  port: 465,
-  secure: true, // SSL
-  auth: {
-    user: 'info@lmwfinance.co.za',
-    pass: '@8644Erich'
-  }
-};
+// Removed hardcoded SMTP credentials
+const host = process.env.EMAIL_HOST;
+const port = Number(process.env.EMAIL_PORT || 465);
+const secure = String(process.env.EMAIL_SECURE || 'true').toLowerCase() === 'true';
+const user = process.env.EMAIL_USER;
+const pass = process.env.EMAIL_PASSWORD;
+const fromName = process.env.EMAIL_FROM_NAME || 'Agility';
+const fromAddress = process.env.EMAIL_FROM_ADDRESS || user;
 
 export default async function handler(req, res) {
   // Set CORS headers
@@ -38,7 +37,12 @@ export default async function handler(req, res) {
       subject: subject,
       timestamp: new Date().toISOString()
     });
-
+    const transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure,
+      auth: { user, pass }
+    });
     // Validate input
     if (!email || !otp) {
       return res.status(400).json({
@@ -97,8 +101,8 @@ export default async function handler(req, res) {
           </div>
           <div class="footer">
             <p>© ${new Date().getFullYear()} LMW Finance. All rights reserved.</p>
-            <p>This is an automated message, please do not reply.</p>
-          </div>
+        name: fromName,
+        address: fromAddress
         </div>
       </body>
       </html>

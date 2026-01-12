@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import Papa from 'papaparse';
+import { normalizeCsvText, buildTrialBalanceEntries } from '../services/trialBalanceParser';
 
 const FinancialStatements = () => {
   const [clients, setClients] = useState([]);
@@ -147,7 +148,8 @@ const FinancialStatements = () => {
       if (fileExtension === 'csv') {
         // Parse CSV file
         const text = await file.text();
-        const result = Papa.parse(text, {
+        const normalizedText = normalizeCsvText(text);
+        const result = Papa.parse(normalizedText, {
           header: true,
           skipEmptyLines: true,
           dynamicTyping: true
@@ -156,39 +158,59 @@ const FinancialStatements = () => {
       } else if (['xlsx', 'xls'].includes(fileExtension)) {
         // Parse Excel file
         const buffer = await file.arrayBuffer();
-        const workbook = XLSX.read(buffer);
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        parsedData = XLSX.utils.sheet_to_json(worksheet);
+        let workbook;
+        try {
+          workbook = XLSX.read(new Uint8Array(buffer), { type: 'array' });
+        } catch (excelParseError) {
+          // Some files saved as .xls are actually CSV or text exports (or HTML/XML).
+          // Inspect as text and choose the best parser.
+          let excelText = '';
+          try {
+            excelText = await file.text();
+          } catch {
+            // ignore
+          }
+
+          const textSample = (excelText || '').slice(0, 8000);
+          const looksLikeCsv =
+            /(^|\r?\n)\s*sep\s*=\s*[,;\t]/i.test(textSample) ||
+            (/debit/i.test(textSample) && /credit/i.test(textSample) && /[,;\t]/.test(textSample));
+          const looksLikeHtml = /<\s*table[\s>]/i.test(textSample);
+          const looksLikeXml = /<\?xml|<\s*workbook[\s>]|<\s*worksheet[\s>]/i.test(textSample);
+
+          if (looksLikeCsv) {
+            const normalizedText = normalizeCsvText(excelText);
+            const result = Papa.parse(normalizedText, {
+              header: true,
+              skipEmptyLines: true,
+              dynamicTyping: true,
+            });
+            parsedData = result.data;
+          } else if (looksLikeHtml || looksLikeXml) {
+            try {
+              workbook = XLSX.read(excelText, { type: 'string' });
+              const sheetName = workbook.SheetNames[0];
+              const worksheet = workbook.Sheets[sheetName];
+              parsedData = XLSX.utils.sheet_to_json(worksheet);
+            } catch {
+              throw new Error('Could not parse this .xls file (HTML/XML). Please export it as a .csv or .xlsx and try again.');
+            }
+          } else {
+            throw new Error('Could not parse this Excel file. Please export it as a .csv or .xlsx and try again.');
+          }
+        }
+
+        // If we successfully parsed text as CSV above, parsedData will already be populated.
+        if (parsedData.length === 0 && workbook) {
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          parsedData = XLSX.utils.sheet_to_json(worksheet);
+        }
       } else {
         throw new Error('Unsupported file format. Please upload CSV or Excel files.');
       }
 
-      // Process the parsed data and create trial balance entries
-      let totalDebits = 0;
-      let totalCredits = 0;
-      const entries = [];
-
-      for (const row of parsedData) {
-        // Map common column names (flexible mapping)
-        const accountCode = row['Account Code'] || row['Account'] || row['Code'] || '';
-        const accountName = row['Account Name'] || row['Account Description'] || row['Description'] || row['Name'] || '';
-        const debitAmount = parseFloat(row['Debit'] || row['Debit Amount'] || row['DR'] || 0);
-        const creditAmount = parseFloat(row['Credit'] || row['Credit Amount'] || row['CR'] || 0);
-
-        if (accountName && (debitAmount || creditAmount)) {
-          entries.push({
-            trial_balance_id: tbData.id,
-            account_code: accountCode,
-            account_name: accountName,
-            debit_amount: debitAmount || 0,
-            credit_amount: creditAmount || 0
-          });
-
-          totalDebits += debitAmount || 0;
-          totalCredits += creditAmount || 0;
-        }
-      }
+      const { entries, totalDebits, totalCredits } = buildTrialBalanceEntries(parsedData, tbData.id);
 
       // Insert trial balance entries
       if (entries.length > 0) {
@@ -201,21 +223,26 @@ const FinancialStatements = () => {
 
       // Update trial balance totals and status
       const isBalanced = Math.abs(totalDebits - totalCredits) < 0.01; // Allow for rounding differences
+
+      const balanceNote = isBalanced
+        ? 'Trial balance is balanced'
+        : `Trial balance out of balance: Debits R${totalDebits.toLocaleString()}, Credits R${totalCredits.toLocaleString()}`;
       
       const { error: updateError } = await supabase
         .from('trial_balances')
         .update({
           total_debits: totalDebits,
           total_credits: totalCredits,
-          status: isBalanced ? 'VALIDATED' : 'ERROR',
-          notes: isBalanced ? 'Trial balance is balanced' : `Trial balance out of balance: Debits R${totalDebits.toLocaleString()}, Credits R${totalCredits.toLocaleString()}`
+          status: isBalanced ? 'VALIDATED' : 'ERROR'
         })
         .eq('id', tbData.id);
 
       if (updateError) throw updateError;
       
       await fetchTrialBalances();
-      alert(`Trial balance uploaded and processed successfully!\nEntries: ${entries.length}\nDebits: R${totalDebits.toLocaleString()}\nCredits: R${totalCredits.toLocaleString()}\nStatus: ${isBalanced ? 'Balanced ✓' : 'Out of Balance ⚠️'}`);
+      alert(
+        `Trial balance uploaded and processed successfully!\nEntries: ${entries.length}\nDebits: R${totalDebits.toLocaleString()}\nCredits: R${totalCredits.toLocaleString()}\n${balanceNote}`
+      );
     } catch (error) {
       console.error('Error uploading file:', error);
       alert('Error uploading file: ' + error.message);
@@ -278,6 +305,8 @@ const FinancialStatements = () => {
       // This would contain the complex logic for generating financial statements
       // For now, we'll create a placeholder record with proper SA format
       const currentYear = new Date().getFullYear();
+      const trialBalance = trialBalances.find((tb) => tb.id === trialBalanceId);
+      const financialYear = trialBalance?.financial_year ?? currentYear;
       
       const sampleStatements = {
         sofp: { // Statement of Financial Position (SA format)
@@ -349,18 +378,40 @@ const FinancialStatements = () => {
         }
       };
 
-      const { data, error } = await supabase
+      const { data: existingStatement, error: existingError } = await supabase
         .from('financial_statements')
-        .insert({
-          client_id: selectedClient,
-          trial_balance_id: trialBalanceId,
-          financial_year: currentYear,
-          statement_of_financial_position: sampleStatements.sofp, // SA format
-          statement_of_comprehensive_income: sampleStatements.soci, // SA format
-          statement_of_changes_in_equity: sampleStatements.soce, // NEW SA format
-          statement_of_cash_flows: sampleStatements.scf, // NEW SA format
-          status: 'DRAFT'
-        });
+        .select('id, trial_balance_id')
+        .eq('client_id', selectedClient)
+        .eq('financial_year', financialYear)
+        .maybeSingle();
+
+      if (existingError) throw existingError;
+
+      if (existingStatement?.id) {
+        const okToOverwrite = window.confirm(
+          `Financial statements already exist for ${financialYear}.\n\nDo you want to overwrite them with a newly generated version?`
+        );
+        if (!okToOverwrite) {
+          alert('Generation cancelled. You can view the existing statements in the View Statements tab.');
+          return;
+        }
+      }
+
+      const { error } = await supabase
+        .from('financial_statements')
+        .upsert(
+          {
+            client_id: selectedClient,
+            trial_balance_id: trialBalanceId,
+            financial_year: financialYear,
+            statement_of_financial_position: sampleStatements.sofp, // SA format
+            statement_of_comprehensive_income: sampleStatements.soci, // SA format
+            statement_of_changes_in_equity: sampleStatements.soce, // NEW SA format
+            statement_of_cash_flows: sampleStatements.scf, // NEW SA format
+            status: 'DRAFT'
+          },
+          { onConflict: 'client_id,financial_year' }
+        );
 
       if (error) throw error;
       
@@ -424,35 +475,51 @@ const FinancialStatements = () => {
       const { data, error } = await supabase
         .from('account_mappings')
         .select('*')
-        .eq('trial_balance_id', trialBalanceId);
+        .eq('client_id', selectedClient);
       
       if (error) {
-        console.warn('Account mappings table may not exist:', error);
+        console.warn('Error fetching account mappings:', error);
         setAccountMappings([]);
         return;
       }
       setAccountMappings(data || []);
     } catch (error) {
-      console.warn('Error fetching account mappings (table may not exist):', error);
+      console.warn('Error fetching account mappings:', error);
       setAccountMappings([]);
     }
   };
 
-  const handleCreateMapping = async (tbEntryId, chartAccountId, statementLineItem) => {
+  const handleCreateMapping = async (tbEntryId, statementLineItem) => {
     try {
+      const entry = trialBalanceEntries.find((e) => e.id === tbEntryId);
+      if (!entry) {
+        alert('Could not find the selected trial balance entry.');
+        return;
+      }
+
+      const statementType = ['ASSET', 'LIABILITY', 'EQUITY'].includes(entry.account_type)
+        ? 'STATEMENT_OF_FINANCIAL_POSITION'
+        : 'STATEMENT_OF_COMPREHENSIVE_INCOME';
+
+      const payload = {
+        client_id: selectedClient,
+        account_number: entry.account_number,
+        line_item_code: statementLineItem,
+        line_item_name: statementLineItem,
+        statement_type: statementType,
+        is_manual: true,
+        confidence: 1.0,
+      };
+
+      // PostgREST upsert needs a conflict target if you're not providing the primary key.
+      // DB unique key: (client_id, account_number, statement_type)
       const { data, error } = await supabase
         .from('account_mappings')
-        .upsert({
-          trial_balance_id: selectedTrialBalance.id,
-          trial_balance_entry_id: tbEntryId,
-          chart_account_id: chartAccountId,
-          statement_line_item: statementLineItem,
-          created_at: new Date().toISOString()
-        });
+        .upsert(payload, { onConflict: 'client_id,account_number,statement_type' });
 
       if (error) {
         console.error('Error creating mapping:', error);
-        alert('Account mappings feature not yet available - table needs to be created in database');
+        alert('Error saving account mapping: ' + (error.message || JSON.stringify(error)));
         return;
       }
       
@@ -461,7 +528,7 @@ const FinancialStatements = () => {
       alert('Account mapping saved successfully!');
     } catch (error) {
       console.error('Error creating mapping:', error);
-      alert('Account mappings feature not yet available - ' + error.message);
+      alert('Error saving account mapping: ' + (error?.message || JSON.stringify(error)));
     }
   };
 
@@ -1109,22 +1176,8 @@ const FinancialStatements = () => {
         console.error('Error deleting trial balance entries:', entriesError);
         throw entriesError;
       }
-      
-      // Try to delete account mappings (table may not exist)
-      try {
-        const { error: mappingsError } = await supabase
-          .from('account_mappings')
-          .delete()
-          .eq('trial_balance_id', trialBalanceId);
-        
-        if (mappingsError) {
-          console.warn('Warning deleting account mappings:', mappingsError);
-          // Don't throw - table might not exist yet
-        }
-      } catch (mappingDeleteError) {
-        console.warn('Account mappings table may not exist:', mappingDeleteError);
-        // Continue with deletion - this is not critical
-      }
+      // NOTE: account_mappings are not tied to a specific trial_balance_id.
+      // They are stored per client/account_number, so we intentionally do not delete them here.
       
       // Delete the trial balance record
       const { error: tbError } = await supabase
@@ -1808,7 +1861,7 @@ const FinancialStatements = () => {
                       onClick={() => setMappingFilter('unmapped')}
                       className={`px-3 py-1 rounded text-sm ${mappingFilter === 'unmapped' ? 'bg-orange-600 text-white' : 'bg-white text-orange-600'}`}
                     >
-                      Unmapped ({trialBalanceEntries.filter(entry => !accountMappings.find(m => m.trial_balance_entry_id === entry.id)).length})
+                      Unmapped ({trialBalanceEntries.filter(entry => !accountMappings.find(m => m.account_number === entry.account_number)).length})
                     </button>
                     <button
                       onClick={() => setMappingFilter('mapped')}
@@ -1828,14 +1881,13 @@ const FinancialStatements = () => {
                   <div className="space-y-2 max-h-96 overflow-y-auto">
                     {trialBalanceEntries
                       .filter(entry => {
-                        const isMapped = accountMappings.find(m => m.trial_balance_entry_id === entry.id);
+                        const isMapped = accountMappings.find(m => m.account_number === entry.account_number);
                         if (mappingFilter === 'mapped') return isMapped;
                         if (mappingFilter === 'unmapped') return !isMapped;
                         return true;
                       })
                       .map((entry) => {
-                        const mapping = accountMappings.find(m => m.trial_balance_entry_id === entry.id);
-                        const chartAccount = mapping ? chartOfAccounts.find(c => c.id === mapping.chart_account_id) : null;
+                        const mapping = accountMappings.find(m => m.account_number === entry.account_number);
                         
                         return (
                           <div key={entry.id} className={`p-3 rounded border ${mapping ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'}`}>
@@ -1843,13 +1895,13 @@ const FinancialStatements = () => {
                               <div className="flex-1">
                                 <div className="font-medium text-sm">{entry.account_name}</div>
                                 <div className="text-xs text-gray-500 mt-1">
-                                  {entry.account_code && `Code: ${entry.account_code} | `}
+                                  {entry.account_number && `Code: ${entry.account_number} | `}
                                   Debit: R{entry.debit_amount?.toLocaleString() || '0'} | 
                                   Credit: R{entry.credit_amount?.toLocaleString() || '0'}
                                 </div>
-                                {mapping && chartAccount && (
+                                {mapping && (
                                   <div className="text-xs text-green-600 mt-1">
-                                    ✓ Mapped to: {chartAccount.account_number} - {chartAccount.account_name}
+                                    ✓ Mapped to: {mapping.statement_type} / {mapping.line_item_name}
                                   </div>
                                 )}
                               </div>
@@ -1865,26 +1917,35 @@ const FinancialStatements = () => {
                               <div className="grid grid-cols-2 gap-2">
                                 <select 
                                   className="text-xs p-2 border rounded"
-                                  value={mapping?.chart_account_id || ''}
+                                  value={mapping?.line_item_code || ''}
                                   onChange={(e) => {
-                                    const chartAccountId = e.target.value;
-                                    if (chartAccountId) {
-                                      const chartAccount = chartOfAccounts.find(c => c.id === chartAccountId);
-                                      const statementLineItem = getStatementLineItem(chartAccount.account_type, chartAccount.account_name);
-                                      handleCreateMapping(entry.id, chartAccountId, statementLineItem);
-                                    }
+                                    const statementLineItem = e.target.value;
+                                    if (statementLineItem) handleCreateMapping(entry.id, statementLineItem);
                                   }}
                                 >
-                                  <option value="">Select Chart Account...</option>
-                                  {chartOfAccounts.map(account => (
-                                    <option key={account.id} value={account.id}>
-                                      {account.account_number} - {account.account_name}
-                                    </option>
+                                  <option value="">Select Line Item...</option>
+                                  {[
+                                    'current_assets',
+                                    'non_current_assets',
+                                    'other_assets',
+                                    'current_liabilities',
+                                    'non_current_liabilities',
+                                    'share_capital',
+                                    'retained_earnings',
+                                    'other_equity',
+                                    'revenue',
+                                    'other_income',
+                                    'cost_of_sales',
+                                    'administrative_expenses',
+                                    'selling_expenses',
+                                    'operating_expenses',
+                                  ].map((code) => (
+                                    <option key={code} value={code}>{code}</option>
                                   ))}
                                 </select>
                                 {mapping && (
                                   <div className="text-xs p-2 bg-blue-50 border rounded">
-                                    Line Item: {mapping.statement_line_item}
+                                    Line Item: {mapping.line_item_name}
                                   </div>
                                 )}
                               </div>

@@ -119,14 +119,16 @@ export const AuthProvider = ({ children }) => {
   // Check if user has a specific permission
   const hasPermission = (permissionKey) => {
     if (!user) return false;
-    if (user.role === 'admin') return true; // Admins have all permissions
+    // Removed automatic admin override to allow granular control
+    // if (user.role === 'admin') return true; 
     return user.permissions?.includes(permissionKey) || false;
   };
 
   // Check if user has any of the given permissions
   const hasAnyPermission = (permissionKeys) => {
     if (!user) return false;
-    if (user.role === 'admin') return true;
+    // Removed automatic admin override to allow granular control
+    // if (user.role === 'admin') return true; 
     return permissionKeys.some(key => user.permissions?.includes(key));
   };
 

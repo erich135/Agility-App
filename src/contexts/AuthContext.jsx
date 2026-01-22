@@ -20,7 +20,7 @@ export const AuthProvider = ({ children }) => {
     const checkSession = () => {
       try {
         // DEVELOPMENT MODE: Auto-login with dev user
-        const DEV_MODE = true;
+        const DEV_MODE = false;
         if (DEV_MODE) {
           const devUser = {
             id: 'dev-user-id',

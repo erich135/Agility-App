@@ -4,6 +4,7 @@ import { Briefcase, Plus, Edit2, Trash2, Clock, User, Calendar, ChevronDown, Che
 import { ProjectService, ClientService, JobTypeService, TimeEntryService } from '../services/TimesheetService';
 import { useToast } from './Toast';
 import supabase from '../lib/SupabaseClient';
+import formatSupabaseError from '../lib/formatSupabaseError';
 import AnimatedCounter, { AnimatedPercentage } from './animations/AnimatedCounter';
 import { SkeletonCard, SkeletonStats, PageLoader } from './animations/Skeletons';
 
@@ -136,7 +137,7 @@ export default function ProjectManagement() {
       }
 
       if (result.error) {
-        toast.error('Error saving project: ' + result.error.message);
+        toast.error('Error saving project: ' + formatSupabaseError(result.error));
         return;
       }
 
@@ -144,7 +145,7 @@ export default function ProjectManagement() {
       setEditingId(null);
       resetForm();
     } catch (error) {
-      toast.error('Error saving project: ' + error.message);
+      toast.error('Error saving project: ' + formatSupabaseError(error));
     }
   };
 

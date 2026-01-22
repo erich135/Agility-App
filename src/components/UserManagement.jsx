@@ -76,6 +76,29 @@ export default function UserManagement() {
 
       createdUserId = newUser?.id;
 
+      // If role is consultant, create consultant record
+      if (inviteForm.role === 'consultant') {
+        const { error: consultantError } = await supabase
+          .from('consultants')
+          .insert({
+            user_id: newUser.id,
+            full_name: `${inviteForm.first_name} ${inviteForm.last_name}`,
+            email: inviteForm.email,
+            phone: '',
+            designation: 'Consultant',
+            hourly_rate: 850.00,
+            default_hourly_rate: 850.00,
+            is_active: true,
+            can_approve_timesheets: false,
+            role: 'consultant'
+          });
+
+        if (consultantError) {
+          console.error('Failed to create consultant record:', consultantError);
+          throw new Error('Failed to create consultant profile: ' + consultantError.message);
+        }
+      }
+
       // Auto-grant template permissions based on selected role
       await applyRoleTemplate(newUser.id, inviteForm.role);
 
@@ -117,6 +140,9 @@ export default function UserManagement() {
 
       // Roll back DB insert if we created the user but failed to email.
       if (createdUserId) {
+        try {
+          await supabase.from('consultants').delete().eq('user_id', createdUserId);
+        } catch {}
         try {
           await supabase.from('user_permissions').delete().eq('user_id', createdUserId);
         } catch {}

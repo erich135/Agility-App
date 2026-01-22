@@ -25,14 +25,14 @@ END $$;
 
 DELETE FROM public.activity_logs
 WHERE user_id IN (
-  '660e8400-e29b-41d4-a716-446655440001'::uuid,
-  '660e8400-e29b-41d4-a716-446655440002'::uuid,
-  '660e8400-e29b-41d4-a716-446655440003'::uuid,
-  '660e8400-e29b-41d4-a716-446655440004'::uuid,
-  '660e8400-e29b-41d4-a716-446655440005'::uuid
+  '660e8400-e29b-41d4-a716-446655440001',
+  '660e8400-e29b-41d4-a716-446655440002',
+  '660e8400-e29b-41d4-a716-446655440003',
+  '660e8400-e29b-41d4-a716-446655440004',
+  '660e8400-e29b-41d4-a716-446655440005'
 );
 
-RAISE NOTICE 'Deleted activity logs';
+DO $$ BEGIN RAISE NOTICE 'Deleted activity logs'; END $$;
 
 -- ============================================================================
 -- 2. DELETE USER PERMISSIONS (Demo users only)
@@ -40,14 +40,14 @@ RAISE NOTICE 'Deleted activity logs';
 
 DELETE FROM public.user_permissions
 WHERE user_id IN (
-  '550e8400-e29b-41d4-a716-446655440001'::uuid,
-  '550e8400-e29b-41d4-a716-446655440002'::uuid,
-  '550e8400-e29b-41d4-a716-446655440003'::uuid,
-  '550e8400-e29b-41d4-a716-446655440004'::uuid,
-  '550e8400-e29b-41d4-a716-446655440005'::uuid
+  '550e8400-e29b-41d4-a716-446655440001',
+  '550e8400-e29b-41d4-a716-446655440002',
+  '550e8400-e29b-41d4-a716-446655440003',
+  '550e8400-e29b-41d4-a716-446655440004',
+  '550e8400-e29b-41d4-a716-446655440005'
 );
 
-RAISE NOTICE 'Deleted user permissions';
+DO $$ BEGIN RAISE NOTICE 'Deleted user permissions'; END $$;
 
 -- ============================================================================
 -- 3. DELETE PERMISSIONS (Demo permissions only)
@@ -68,7 +68,7 @@ WHERE key IN (
   'reports.export'
 );
 
-RAISE NOTICE 'Deleted permissions';
+DO $$ BEGIN RAISE NOTICE 'Deleted permissions'; END $$;
 
 -- ============================================================================
 -- 4. DELETE NOTIFICATIONS (Demo notifications only)
@@ -77,14 +77,14 @@ RAISE NOTICE 'Deleted permissions';
 DELETE FROM public.notifications
 WHERE recipient_type = 'consultant' 
 AND recipient_id IN (
-  '660e8400-e29b-41d4-a716-446655440001'::uuid,
-  '660e8400-e29b-41d4-a716-446655440002'::uuid,
-  '660e8400-e29b-41d4-a716-446655440003'::uuid,
-  '660e8400-e29b-41d4-a716-446655440004'::uuid,
-  '660e8400-e29b-41d4-a716-446655440005'::uuid
+  '660e8400-e29b-41d4-a716-446655440001',
+  '660e8400-e29b-41d4-a716-446655440002',
+  '660e8400-e29b-41d4-a716-446655440003',
+  '660e8400-e29b-41d4-a716-446655440004',
+  '660e8400-e29b-41d4-a716-446655440005'
 );
 
-RAISE NOTICE 'Deleted notifications';
+DO $$ BEGIN RAISE NOTICE 'Deleted notifications'; END $$;
 
 -- ============================================================================
 -- 5. DELETE DOCUMENTS (Demo documents only - by uploaded_by)
@@ -93,7 +93,7 @@ RAISE NOTICE 'Deleted notifications';
 DELETE FROM public.documents
 WHERE uploaded_by IN ('John Smith', 'Sarah Jones', 'Mike Brown', 'Lisa Wilson', 'David Taylor');
 
-RAISE NOTICE 'Deleted documents';
+DO $$ BEGIN RAISE NOTICE 'Deleted documents'; END $$;
 
 -- ============================================================================
 -- 6. DELETE DOCUMENT DEADLINES (Demo deadlines - by created_by)
@@ -101,14 +101,14 @@ RAISE NOTICE 'Deleted documents';
 
 DELETE FROM public.document_deadlines
 WHERE created_by IN (
-  '660e8400-e29b-41d4-a716-446655440001'::uuid,
-  '660e8400-e29b-41d4-a716-446655440002'::uuid,
-  '660e8400-e29b-41d4-a716-446655440003'::uuid,
-  '660e8400-e29b-41d4-a716-446655440004'::uuid,
-  '660e8400-e29b-41d4-a716-446655440005'::uuid
+  '660e8400-e29b-41d4-a716-446655440001',
+  '660e8400-e29b-41d4-a716-446655440002',
+  '660e8400-e29b-41d4-a716-446655440003',
+  '660e8400-e29b-41d4-a716-446655440004',
+  '660e8400-e29b-41d4-a716-446655440005'
 );
 
-RAISE NOTICE 'Deleted document deadlines';
+DO $$ BEGIN RAISE NOTICE 'Deleted document deadlines'; END $$;
 
 -- ============================================================================
 -- 7. DELETE FILING HISTORY (Demo records - created recently)
@@ -118,7 +118,7 @@ RAISE NOTICE 'Deleted document deadlines';
 DELETE FROM public.filing_history
 WHERE created_at > NOW() - INTERVAL '1 hour';
 
-RAISE NOTICE 'Deleted filing history';
+DO $$ BEGIN RAISE NOTICE 'Deleted filing history'; END $$;
 
 -- ============================================================================
 -- 8. DELETE EVENT ATTENDEES
@@ -126,14 +126,14 @@ RAISE NOTICE 'Deleted filing history';
 
 DELETE FROM public.event_attendees
 WHERE user_id IN (
-  '550e8400-e29b-41d4-a716-446655440001'::uuid,
-  '550e8400-e29b-41d4-a716-446655440002'::uuid,
-  '550e8400-e29b-41d4-a716-446655440003'::uuid,
-  '550e8400-e29b-41d4-a716-446655440004'::uuid,
-  '550e8400-e29b-41d4-a716-446655440005'::uuid
+  '550e8400-e29b-41d4-a716-446655440001',
+  '550e8400-e29b-41d4-a716-446655440002',
+  '550e8400-e29b-41d4-a716-446655440003',
+  '550e8400-e29b-41d4-a716-446655440004',
+  '550e8400-e29b-41d4-a716-446655440005'
 );
 
-RAISE NOTICE 'Deleted event attendees';
+DO $$ BEGIN RAISE NOTICE 'Deleted event attendees'; END $$;
 
 -- ============================================================================
 -- 9. DELETE CALENDAR EVENTS
@@ -141,14 +141,14 @@ RAISE NOTICE 'Deleted event attendees';
 
 DELETE FROM public.calendar_events
 WHERE created_by IN (
-  '660e8400-e29b-41d4-a716-446655440001'::uuid,
-  '660e8400-e29b-41d4-a716-446655440002'::uuid,
-  '660e8400-e29b-41d4-a716-446655440003'::uuid,
-  '660e8400-e29b-41d4-a716-446655440004'::uuid,
-  '660e8400-e29b-41d4-a716-446655440005'::uuid
+  '660e8400-e29b-41d4-a716-446655440001',
+  '660e8400-e29b-41d4-a716-446655440002',
+  '660e8400-e29b-41d4-a716-446655440003',
+  '660e8400-e29b-41d4-a716-446655440004',
+  '660e8400-e29b-41d4-a716-446655440005'
 );
 
-RAISE NOTICE 'Deleted calendar events';
+DO $$ BEGIN RAISE NOTICE 'Deleted calendar events'; END $$;
 
 -- ============================================================================
 -- 10. DELETE TASK ASSIGNMENTS
@@ -156,14 +156,14 @@ RAISE NOTICE 'Deleted calendar events';
 
 DELETE FROM public.task_assignments
 WHERE user_id IN (
-  '550e8400-e29b-41d4-a716-446655440001'::uuid,
-  '550e8400-e29b-41d4-a716-446655440002'::uuid,
-  '550e8400-e29b-41d4-a716-446655440003'::uuid,
-  '550e8400-e29b-41d4-a716-446655440004'::uuid,
-  '550e8400-e29b-41d4-a716-446655440005'::uuid
+  '550e8400-e29b-41d4-a716-446655440001',
+  '550e8400-e29b-41d4-a716-446655440002',
+  '550e8400-e29b-41d4-a716-446655440003',
+  '550e8400-e29b-41d4-a716-446655440004',
+  '550e8400-e29b-41d4-a716-446655440005'
 );
 
-RAISE NOTICE 'Deleted task assignments';
+DO $$ BEGIN RAISE NOTICE 'Deleted task assignments'; END $$;
 
 -- ============================================================================
 -- 11. DELETE TASKS
@@ -171,14 +171,14 @@ RAISE NOTICE 'Deleted task assignments';
 
 DELETE FROM public.tasks
 WHERE created_by IN (
-  '660e8400-e29b-41d4-a716-446655440001'::uuid,
-  '660e8400-e29b-41d4-a716-446655440002'::uuid,
-  '660e8400-e29b-41d4-a716-446655440003'::uuid,
-  '660e8400-e29b-41d4-a716-446655440004'::uuid,
-  '660e8400-e29b-41d4-a716-446655440005'::uuid
+  '660e8400-e29b-41d4-a716-446655440001',
+  '660e8400-e29b-41d4-a716-446655440002',
+  '660e8400-e29b-41d4-a716-446655440003',
+  '660e8400-e29b-41d4-a716-446655440004',
+  '660e8400-e29b-41d4-a716-446655440005'
 );
 
-RAISE NOTICE 'Deleted tasks';
+DO $$ BEGIN RAISE NOTICE 'Deleted tasks'; END $$;
 
 -- ============================================================================
 -- 12. DELETE FINANCIAL STATEMENTS
@@ -188,7 +188,7 @@ RAISE NOTICE 'Deleted tasks';
 DELETE FROM public.financial_statements
 WHERE created_at > NOW() - INTERVAL '1 hour';
 
-RAISE NOTICE 'Deleted financial statements';
+DO $$ BEGIN RAISE NOTICE 'Deleted financial statements'; END $$;
 
 -- ============================================================================
 -- 13. DELETE TRIAL BALANCE ENTRIES
@@ -201,7 +201,7 @@ WHERE trial_balance_id IN (
   WHERE created_at > NOW() - INTERVAL '1 hour'
 );
 
-RAISE NOTICE 'Deleted trial balance entries';
+DO $$ BEGIN RAISE NOTICE 'Deleted trial balance entries'; END $$;
 
 -- ============================================================================
 -- 14. DELETE TRIAL BALANCES
@@ -210,7 +210,7 @@ RAISE NOTICE 'Deleted trial balance entries';
 DELETE FROM public.trial_balances
 WHERE created_at > NOW() - INTERVAL '1 hour';
 
-RAISE NOTICE 'Deleted trial balances';
+DO $$ BEGIN RAISE NOTICE 'Deleted trial balances'; END $$;
 
 -- ============================================================================
 -- 15. DELETE ACCOUNT MAPPINGS
@@ -220,7 +220,7 @@ RAISE NOTICE 'Deleted trial balances';
 DELETE FROM public.account_mappings
 WHERE created_at > NOW() - INTERVAL '1 hour';
 
-RAISE NOTICE 'Deleted account mappings';
+DO $$ BEGIN RAISE NOTICE 'Deleted account mappings'; END $$;
 
 -- ============================================================================
 -- 16. DELETE CHART OF ACCOUNTS
@@ -230,80 +230,77 @@ RAISE NOTICE 'Deleted account mappings';
 DELETE FROM public.chart_of_accounts
 WHERE created_at > NOW() - INTERVAL '1 hour';
 
-RAISE NOTICE 'Deleted chart of accounts';
+DO $$ BEGIN RAISE NOTICE 'Deleted chart of accounts'; END $$;
 
 -- ============================================================================
--- 17. DELETE TIME ENTRIES
+-- 17. DELETE ALL TIME ENTRIES
 -- ============================================================================
 
-DELETE FROM public.time_entries
-WHERE consultant_id IN (
-  '660e8400-e29b-41d4-a716-446655440001'::uuid,
-  '660e8400-e29b-41d4-a716-446655440002'::uuid,
-  '660e8400-e29b-41d4-a716-446655440003'::uuid,
-  '660e8400-e29b-41d4-a716-446655440004'::uuid,
-  '660e8400-e29b-41d4-a716-446655440005'::uuid
-);
+-- Delete all time entries (user will create new ones)
+TRUNCATE TABLE public.time_entries CASCADE;
 
-RAISE NOTICE 'Deleted time entries';
+DO $$ BEGIN RAISE NOTICE 'Deleted all time entries'; END $$;
 
 -- ============================================================================
--- 18. DELETE PROJECTS
+-- 18. DELETE ALL PROJECTS
 -- ============================================================================
 
-DELETE FROM public.projects
-WHERE id IN (
-  '770e8400-e29b-41d4-a716-446655440001'::uuid,
-  '770e8400-e29b-41d4-a716-446655440002'::uuid,
-  '770e8400-e29b-41d4-a716-446655440003'::uuid,
-  '770e8400-e29b-41d4-a716-446655440004'::uuid,
-  '770e8400-e29b-41d4-a716-446655440005'::uuid
-);
+-- Delete all projects (user will create new ones)
+TRUNCATE TABLE public.projects CASCADE;
 
-RAISE NOTICE 'Deleted projects';
+DO $$ BEGIN RAISE NOTICE 'Deleted all projects'; END $$;
 
 -- ============================================================================
--- 19. DELETE TIMESHEET NOTIFICATIONS
+-- 19. DELETE ALL BILLING DATA
+-- ============================================================================
+
+-- Delete all billing reminders (user will create new ones)
+TRUNCATE TABLE public.billing_reminders CASCADE;
+
+DO $$ BEGIN RAISE NOTICE 'Deleted all billing data'; END $$;
+
+-- ============================================================================
+-- 20. DELETE TIMESHEET NOTIFICATIONS
 -- ============================================================================
 
 DELETE FROM public.timesheet_notifications
 WHERE recipient_id IN (
-  '660e8400-e29b-41d4-a716-446655440001'::uuid,
-  '660e8400-e29b-41d4-a716-446655440002'::uuid,
-  '660e8400-e29b-41d4-a716-446655440003'::uuid,
-  '660e8400-e29b-41d4-a716-446655440004'::uuid,
-  '660e8400-e29b-41d4-a716-446655440005'::uuid
+  '660e8400-e29b-41d4-a716-446655440001',
+  '660e8400-e29b-41d4-a716-446655440002',
+  '660e8400-e29b-41d4-a716-446655440003',
+  '660e8400-e29b-41d4-a716-446655440004',
+  '660e8400-e29b-41d4-a716-446655440005'
 );
 
-RAISE NOTICE 'Deleted timesheet notifications';
+DO $$ BEGIN RAISE NOTICE 'Deleted timesheet notifications'; END $$;
 
 -- ============================================================================
--- 20. DELETE CONSULTANT CLIENT RATES
+-- 21. DELETE CONSULTANT CLIENT RATES
 -- ============================================================================
 
 DELETE FROM public.consultant_client_rates
 WHERE consultant_id IN (
-  '660e8400-e29b-41d4-a716-446655440001'::uuid,
-  '660e8400-e29b-41d4-a716-446655440002'::uuid,
-  '660e8400-e29b-41d4-a716-446655440003'::uuid,
-  '660e8400-e29b-41d4-a716-446655440004'::uuid,
-  '660e8400-e29b-41d4-a716-446655440005'::uuid
+  '660e8400-e29b-41d4-a716-446655440001',
+  '660e8400-e29b-41d4-a716-446655440002',
+  '660e8400-e29b-41d4-a716-446655440003',
+  '660e8400-e29b-41d4-a716-446655440004',
+  '660e8400-e29b-41d4-a716-446655440005'
 );
 
-RAISE NOTICE 'Deleted consultant client rates';
+DO $$ BEGIN RAISE NOTICE 'Deleted consultant client rates'; END $$;
 
 -- ============================================================================
--- 21. DELETE DIRECTORS (Demo directors only - created recently)
+-- 22. DELETE DIRECTORS (Demo directors only - created recently)
 -- ============================================================================
 
 -- Delete directors created in the last hour
 DELETE FROM public.directors
 WHERE created_at > NOW() - INTERVAL '1 hour';
 
-RAISE NOTICE 'Deleted directors';
+DO $$ BEGIN RAISE NOTICE 'Deleted directors'; END $$;
 
 -- ============================================================================
--- 22. DELETE JOB TYPES
+-- 23. DELETE JOB TYPES
 -- ============================================================================
 
 DELETE FROM public.job_types
@@ -320,89 +317,100 @@ WHERE name IN (
   'Client Review'
 );
 
-RAISE NOTICE 'Deleted job types';
+DO $$ BEGIN RAISE NOTICE 'Deleted job types'; END $$;
 
 -- ============================================================================
--- 23. DELETE CONSULTANTS
+-- 24. DELETE CONSULTANTS
 -- ============================================================================
 
+-- Delete demo consultants by their specific IDs
 DELETE FROM public.consultants
 WHERE id IN (
-  '660e8400-e29b-41d4-a716-446655440001'::uuid,
-  '660e8400-e29b-41d4-a716-446655440002'::uuid,
-  '660e8400-e29b-41d4-a716-446655440003'::uuid,
-  '660e8400-e29b-41d4-a716-446655440004'::uuid,
-  '660e8400-e29b-41d4-a716-446655440005'::uuid
+  '660e8400-e29b-41d4-a716-446655440001',
+  '660e8400-e29b-41d4-a716-446655440002',
+  '660e8400-e29b-41d4-a716-446655440003',
+  '660e8400-e29b-41d4-a716-446655440004',
+  '660e8400-e29b-41d4-a716-446655440005'
 );
 
-RAISE NOTICE 'Deleted consultants';
+-- Also delete consultants created in the last hour (from recent seed runs)
+-- This catches consultants that may have been created with different IDs
+DELETE FROM public.consultants
+WHERE created_at > NOW() - INTERVAL '1 hour'
+AND id NOT IN (
+  SELECT id FROM public.consultants
+  WHERE email LIKE '%@lmwfinance.co.za' -- Preserve actual company consultants
+);
+
+DO $$ BEGIN RAISE NOTICE 'Deleted consultants'; END $$;
 
 -- ============================================================================
--- 24. DELETE MESSAGES (if any between demo users)
+-- 25. DELETE MESSAGES (if any between demo users)
 -- ============================================================================
 
 DELETE FROM public.messages
 WHERE sender_id IN (
-  '550e8400-e29b-41d4-a716-446655440001'::uuid,
-  '550e8400-e29b-41d4-a716-446655440002'::uuid,
-  '550e8400-e29b-41d4-a716-446655440003'::uuid,
-  '550e8400-e29b-41d4-a716-446655440004'::uuid,
-  '550e8400-e29b-41d4-a716-446655440005'::uuid
+  '550e8400-e29b-41d4-a716-446655440001',
+  '550e8400-e29b-41d4-a716-446655440002',
+  '550e8400-e29b-41d4-a716-446655440003',
+  '550e8400-e29b-41d4-a716-446655440004',
+  '550e8400-e29b-41d4-a716-446655440005'
 )
 OR receiver_id IN (
-  '550e8400-e29b-41d4-a716-446655440001'::uuid,
-  '550e8400-e29b-41d4-a716-446655440002'::uuid,
-  '550e8400-e29b-41d4-a716-446655440003'::uuid,
-  '550e8400-e29b-41d4-a716-446655440004'::uuid,
-  '550e8400-e29b-41d4-a716-446655440005'::uuid
+  '550e8400-e29b-41d4-a716-446655440001',
+  '550e8400-e29b-41d4-a716-446655440002',
+  '550e8400-e29b-41d4-a716-446655440003',
+  '550e8400-e29b-41d4-a716-446655440004',
+  '550e8400-e29b-41d4-a716-446655440005'
 );
 
-RAISE NOTICE 'Deleted messages';
+DO $$ BEGIN RAISE NOTICE 'Deleted messages'; END $$;
 
 -- ============================================================================
--- 25. DELETE NOTIFICATION PREFERENCES (Demo users only)
+-- 26. DELETE NOTIFICATION PREFERENCES (Demo users only)
 -- ============================================================================
 
 DELETE FROM public.notification_preferences
 WHERE user_id IN (
-  '550e8400-e29b-41d4-a716-446655440001'::uuid,
-  '550e8400-e29b-41d4-a716-446655440002'::uuid,
-  '550e8400-e29b-41d4-a716-446655440003'::uuid,
-  '550e8400-e29b-41d4-a716-446655440004'::uuid,
-  '550e8400-e29b-41d4-a716-446655440005'::uuid
+  '550e8400-e29b-41d4-a716-446655440001',
+  '550e8400-e29b-41d4-a716-446655440002',
+  '550e8400-e29b-41d4-a716-446655440003',
+  '550e8400-e29b-41d4-a716-446655440004',
+  '550e8400-e29b-41d4-a716-446655440005'
 );
 
-RAISE NOTICE 'Deleted notification preferences';
+DO $$ BEGIN RAISE NOTICE 'Deleted notification preferences'; END $$;
 
 -- ============================================================================
--- 26. DELETE USER OTPS (Demo users only)
+-- 27. DELETE USER OTPS (Demo users only)
 -- ============================================================================
 
 DELETE FROM public.user_otps
 WHERE user_id IN (
-  '550e8400-e29b-41d4-a716-446655440001'::uuid,
-  '550e8400-e29b-41d4-a716-446655440002'::uuid,
-  '550e8400-e29b-41d4-a716-446655440003'::uuid,
-  '550e8400-e29b-41d4-a716-446655440004'::uuid,
-  '550e8400-e29b-41d4-a716-446655440005'::uuid
+  '550e8400-e29b-41d4-a716-446655440001',
+  '550e8400-e29b-41d4-a716-446655440002',
+  '550e8400-e29b-41d4-a716-446655440003',
+  '550e8400-e29b-41d4-a716-446655440004',
+  '550e8400-e29b-41d4-a716-446655440005'
 );
 
-RAISE NOTICE 'Deleted user OTPs';
+DO $$ BEGIN RAISE NOTICE 'Deleted user OTPs'; END $$;
 
 -- ============================================================================
--- 27. DELETE USERS (Demo users only)
+-- 28. DELETE USERS (Demo users only)
 -- ============================================================================
 
 DELETE FROM public.users
 WHERE id IN (
-  '550e8400-e29b-41d4-a716-446655440001'::uuid,
-  '550e8400-e29b-41d4-a716-446655440002'::uuid,
-  '550e8400-e29b-41d4-a716-446655440003'::uuid,
-  '550e8400-e29b-41d4-a716-446655440004'::uuid,
-  '550e8400-e29b-41d4-a716-446655440005'::uuid
-);
+  '550e8400-e29b-41d4-a716-446655440001',
+  '550e8400-e29b-41d4-a716-446655440002',
+  '550e8400-e29b-41d4-a716-446655440003',
+  '550e8400-e29b-41d4-a716-446655440004',
+  '550e8400-e29b-41d4-a716-446655440005'
+)
+OR email = 'dev@test.com';
 
-RAISE NOTICE 'Deleted users';
+DO $$ BEGIN RAISE NOTICE 'Deleted users'; END $$;
 
 -- ============================================================================
 -- FINAL VERIFICATION

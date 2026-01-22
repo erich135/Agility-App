@@ -14,7 +14,7 @@ import { SkeletonStats, SkeletonCard } from './animations/Skeletons';
 // TIMER WIDGET COMPONENT
 // Floating timer that shows current running time
 // ============================================
-const TimerWidget = ({ activeTimer, onStop, elapsedTime }) => {
+const TimerWidget = ({ activeTimer, onStop, onPause, onResume, elapsedTime, isPaused }) => {
   const formatTime = (seconds) => {
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
@@ -25,24 +25,46 @@ const TimerWidget = ({ activeTimer, onStop, elapsedTime }) => {
   if (!activeTimer) return null;
 
   return (
-    <div className="fixed bottom-6 right-6 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl shadow-2xl p-4 z-50 min-w-[280px] animate-pulse-soft hover-lift">
+    <div className={`fixed bottom-6 right-6 ${isPaused ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' : 'bg-gradient-to-r from-green-500 to-emerald-600'} text-white rounded-2xl shadow-2xl p-4 z-50 min-w-[320px] hover-lift`}>
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-xs opacity-80 mb-1">Timer Running</div>
+          <div className="text-xs opacity-80 mb-1">{isPaused ? 'Timer Paused' : 'Timer Running'}</div>
           <div className="text-3xl font-mono font-bold">{formatTime(elapsedTime)}</div>
-          <div className="text-sm mt-1 opacity-90 truncate max-w-[180px]">
+          <div className="text-sm mt-1 opacity-90 truncate max-w-[200px]">
             {activeTimer.project?.name || 'Project'}
           </div>
         </div>
-        <button
-          onClick={onStop}
-          className="bg-white/20 hover:bg-white/30 rounded-xl p-3 transition-all hover:scale-110"
-          title="Stop Timer"
-        >
-          <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
-            <rect x="6" y="6" width="12" height="12" rx="2" />
-          </svg>
-        </button>
+        <div className="flex gap-2">
+          {!isPaused ? (
+            <button
+              onClick={onPause}
+              className="bg-white/20 hover:bg-white/30 rounded-xl p-3 transition-all hover:scale-110"
+              title="Pause Timer"
+            >
+              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                <rect x="6" y="4" width="4" height="16" />
+                <rect x="14" y="4" width="4" height="16" />
+              </svg>
+            </button>
+          ) : (
+            <button
+              onClick={onResume}
+              className="bg-white/20 hover:bg-white/30 rounded-xl p-3 transition-all hover:scale-110"
+              title="Resume Timer"
+            >
+              <polygon fill="currentColor" points="5 3 19 12 5 21" className="w-6 h-6" />
+            </button>
+          )}
+          <button
+            onClick={onStop}
+            className="bg-white/20 hover:bg-white/30 rounded-xl p-3 transition-all hover:scale-110"
+            title="Stop Timer"
+          >
+            <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+              <rect x="6" y="6" width="12" height="12" rx="2" />
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -663,6 +685,7 @@ const Timesheet = () => {
   const [clientProjects, setClientProjects] = useState([]);
   const [timeEntries, setTimeEntries] = useState([]);
   const [activeTimer, setActiveTimer] = useState(null);
+  const [timerPaused, setTimerPaused] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [showTimerModal, setShowTimerModal] = useState(false);
   const [showProjectModal, setShowProjectModal] = useState(false);
@@ -833,8 +856,49 @@ const Timesheet = () => {
     }
     
     setActiveTimer(null);
+    setTimerPaused(false);
     await loadTimeEntries();
     showSuccess('Timer stopped and time entry saved!');
+  };
+
+  const handlePauseTimer = async () => {
+    if (!activeTimer) return;
+    
+    const { error } = await supabase
+      .from('time_entries')
+      .update({
+        is_paused: true,
+        paused_at: new Date().toISOString()
+      })
+      .eq('id', activeTimer.id);
+    
+    if (error) {
+      setError('Failed to pause timer');
+      return;
+    }
+    
+    setTimerPaused(true);
+    showSuccess('Timer paused!');
+  };
+
+  const handleResumeTimer = async () => {
+    if (!activeTimer) return;
+    
+    const { error } = await supabase
+      .from('time_entries')
+      .update({
+        is_paused: false,
+        resumed_at: new Date().toISOString()
+      })
+      .eq('id', activeTimer.id);
+    
+    if (error) {
+      setError('Failed to resume timer');
+      return;
+    }
+    
+    setTimerPaused(false);
+    showSuccess('Timer resumed!');
   };
 
   const handleQuickEntry = async (entry) => {
@@ -1099,7 +1163,10 @@ const Timesheet = () => {
       <TimerWidget
         activeTimer={activeTimer}
         onStop={handleStopTimer}
+        onPause={handlePauseTimer}
+        onResume={handleResumeTimer}
         elapsedTime={elapsedTime}
+        isPaused={timerPaused}
       />
 
       {/* Start Timer Modal */}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Square, Clock, Plus, Trash2, Edit2, Save, X } from 'lucide-react';
+import { Play, Square, Clock, Plus, Trash2, Edit2, Save, X, Pause } from 'lucide-react';
 import supabase from '../lib/SupabaseClient';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -12,6 +12,7 @@ export default function TimesheetNew() {
   const [todayEntries, setTodayEntries] = useState([]);
   const [weekStats, setWeekStats] = useState({});
   const [activeTimer, setActiveTimer] = useState(null);
+  const [timerPaused, setTimerPaused] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [loading, setLoading] = useState(true);
   const [editingEntry, setEditingEntry] = useState(null);
@@ -41,7 +42,7 @@ export default function TimesheetNew() {
   }, [selectedClient]);
 
   useEffect(() => {
-    if (activeTimer) {
+    if (activeTimer && !timerPaused) {
       const startTime = new Date(activeTimer.start_time).getTime();
       timerInterval.current = setInterval(() => {
         const elapsed = Math.floor((Date.now() - startTime) / 1000);
@@ -52,12 +53,11 @@ export default function TimesheetNew() {
         clearInterval(timerInterval.current);
         timerInterval.current = null;
       }
-      setTimerSeconds(0);
     }
     return () => {
       if (timerInterval.current) clearInterval(timerInterval.current);
     };
-  }, [activeTimer]);
+  }, [activeTimer, timerPaused]);
 
   const loadInitialData = async () => {
     setLoading(true);
@@ -170,6 +170,7 @@ export default function TimesheetNew() {
     
     if (data) {
       setActiveTimer(data);
+      setTimerPaused(data.is_paused || false);
     }
   };
 
@@ -219,8 +220,41 @@ export default function TimesheetNew() {
     if (!error) {
       setActiveTimer(null);
       setTimerSeconds(0);
+      setTimerPaused(false);
       await loadTodayEntries(consultant.id);
       await loadWeekStats(consultant.id);
+    }
+  };
+
+  const handlePauseTimer = async () => {
+    if (!activeTimer) return;
+
+    const { error } = await supabase
+      .from('time_entries')
+      .update({
+        is_paused: true,
+        paused_at: new Date().toISOString()
+      })
+      .eq('id', activeTimer.id);
+
+    if (!error) {
+      setTimerPaused(true);
+    }
+  };
+
+  const handleResumeTimer = async () => {
+    if (!activeTimer) return;
+
+    const { error } = await supabase
+      .from('time_entries')
+      .update({
+        is_paused: false,
+        resumed_at: new Date().toISOString()
+      })
+      .eq('id', activeTimer.id);
+
+    if (!error) {
+      setTimerPaused(false);
     }
   };
 
@@ -328,22 +362,43 @@ export default function TimesheetNew() {
         </div>
         
         {activeTimer && (
-          <div className="bg-red-50 border border-red-200 rounded-lg px-6 py-3">
+          <div className={`${timerPaused ? 'bg-yellow-50 border-yellow-200' : 'bg-red-50 border-red-200'} border rounded-lg px-6 py-3`}>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                <span className="text-sm font-medium text-red-900">Timer Running</span>
+                <div className={`w-3 h-3 ${timerPaused ? 'bg-yellow-500' : 'bg-red-500'} rounded-full ${!timerPaused ? 'animate-pulse' : ''}`}></div>
+                <span className={`text-sm font-medium ${timerPaused ? 'text-yellow-900' : 'text-red-900'}`}>
+                  {timerPaused ? 'Timer Paused' : 'Timer Running'}
+                </span>
               </div>
-              <div className="text-2xl font-mono font-bold text-red-600">
+              <div className="text-2xl font-mono font-bold text-blue-600">
                 {formatTime(timerSeconds)}
               </div>
-              <button
-                onClick={handleStopTimer}
-                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors flex items-center gap-2"
-              >
-                <Square className="w-4 h-4 fill-current" />
-                Stop
-              </button>
+              <div className="flex gap-2">
+                {!timerPaused ? (
+                  <button
+                    onClick={handlePauseTimer}
+                    className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors flex items-center gap-2"
+                  >
+                    <Pause className="w-4 h-4" />
+                    Pause
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleResumeTimer}
+                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors flex items-center gap-2"
+                  >
+                    <Play className="w-4 h-4 fill-current" />
+                    Resume
+                  </button>
+                )}
+                <button
+                  onClick={handleStopTimer}
+                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors flex items-center gap-2"
+                >
+                  <Square className="w-4 h-4 fill-current" />
+                  Stop
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -552,8 +607,8 @@ export default function TimesheetNew() {
                           {entry.projects?.name}
                         </span>
                         {entry.timer_active && (
-                          <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full font-medium">
-                            Running
+                          <span className={`px-2 py-0.5 ${entry.is_paused ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'} text-xs rounded-full font-medium`}>
+                            {entry.is_paused ? 'Paused' : 'Running'}
                           </span>
                         )}
                       </div>

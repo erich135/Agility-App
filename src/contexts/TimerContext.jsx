@@ -13,6 +13,8 @@ export const TimerProvider = ({ children }) => {
   const [consultant, setConsultant] = useState(null);
   const [activeTimer, setActiveTimer] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [timerPaused, setTimerPaused] = useState(false);
+  const [pausedTime, setPausedTime] = useState(0);
   const reminderPromptOpenRef = useRef(false);
 
   const loadConsultant = async () => {
@@ -83,6 +85,7 @@ export const TimerProvider = ({ children }) => {
       };
 
       setActiveTimer(enriched);
+      setTimerPaused(row.is_paused || false);
       return enriched;
     } finally {
       setLoading(false);
@@ -154,6 +157,40 @@ export const TimerProvider = ({ children }) => {
     if (error) throw error;
 
     setActiveTimer(null);
+    setTimerPaused(false);
+    setPausedTime(0);
+  };
+
+  const pauseTimer = async () => {
+    if (!activeTimer?.id) return;
+
+    const { error } = await supabase
+      .from('time_entries')
+      .update({
+        paused_at: new Date().toISOString(),
+        is_paused: true
+      })
+      .eq('id', activeTimer.id);
+
+    if (error) throw error;
+
+    setTimerPaused(true);
+  };
+
+  const resumeTimer = async () => {
+    if (!activeTimer?.id) return;
+
+    const { error } = await supabase
+      .from('time_entries')
+      .update({
+        resumed_at: new Date().toISOString(),
+        is_paused: false
+      })
+      .eq('id', activeTimer.id);
+
+    if (error) throw error;
+
+    setTimerPaused(false);
   };
 
   useEffect(() => {
@@ -232,12 +269,15 @@ export const TimerProvider = ({ children }) => {
     () => ({
       consultant,
       activeTimer,
+      timerPaused,
       loading,
       refreshActiveTimer,
       startTimer,
-      stopTimer
+      stopTimer,
+      pauseTimer,
+      resumeTimer
     }),
-    [consultant, activeTimer, loading]
+    [consultant, activeTimer, timerPaused, loading]
   );
 
   return <TimerContext.Provider value={value}>{children}</TimerContext.Provider>;

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Square, Clock } from 'lucide-react';
+import { Square, Clock, Pause, Play } from 'lucide-react';
 import { useTimer } from '../contexts/TimerContext';
 
 const formatElapsed = (seconds) => {
@@ -13,7 +13,7 @@ const formatElapsed = (seconds) => {
 };
 
 export default function GlobalTimerCard() {
-  const { activeTimer, stopTimer } = useTimer();
+  const { activeTimer, stopTimer, timerPaused, pauseTimer, resumeTimer } = useTimer();
   const [elapsed, setElapsed] = useState(0);
 
   const startTime = useMemo(() => {
@@ -23,7 +23,10 @@ export default function GlobalTimerCard() {
   }, [activeTimer?.start_time]);
 
   useEffect(() => {
-    if (!startTime) return;
+    if (!startTime || timerPaused) {
+      // Stop counting when paused
+      return;
+    }
 
     const tick = () => {
       const now = new Date();
@@ -33,41 +36,79 @@ export default function GlobalTimerCard() {
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [startTime]);
+  }, [startTime, timerPaused]);
 
   if (!activeTimer) return null;
 
   return (
     <div className="fixed bottom-4 right-4 z-50">
-      <div className="overdue-pulse bg-red-600 border-2 border-red-700 shadow-lg rounded-2xl w-[320px]">
+      <div className={`overdue-pulse ${timerPaused ? 'bg-yellow-600 border-yellow-700' : 'bg-red-600 border-red-700'} border-2 shadow-lg rounded-2xl w-[320px]`}>
         <div className="p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-2">
-              <div className="p-2 bg-white/20 rounded-xl">
+              <div className={`p-2 ${timerPaused ? 'bg-yellow-400/20' : 'bg-white/20'} rounded-xl`}>
                 <Clock className="w-5 h-5 text-white" />
               </div>
               <div>
-                <div className="text-sm font-extrabold text-white tracking-wide uppercase">Timer Running</div>
+                <div className="text-sm font-extrabold text-white tracking-wide uppercase">
+                  {timerPaused ? 'Timer Paused' : 'Timer Running'}
+                </div>
                 <div className="text-xs text-white/90">
                   {activeTimer.clients?.client_name || 'Client'}
                 </div>
               </div>
             </div>
 
-            <button
-              onClick={async () => {
-                try {
-                  await stopTimer();
-                } catch (e) {
-                  console.error(e);
-                  alert('Failed to stop timer');
-                }
-              }}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white text-red-700 text-sm font-extrabold hover:bg-red-50 border-2 border-white"
-            >
-              <Square className="w-4 h-4" />
-              Stop
-            </button>
+            <div className="flex gap-2">
+              {!timerPaused ? (
+                <button
+                  onClick={async () => {
+                    try {
+                      await pauseTimer();
+                    } catch (e) {
+                      console.error(e);
+                      alert('Failed to pause timer');
+                    }
+                  }}
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white text-yellow-600 text-sm font-extrabold hover:bg-yellow-50 border-2 border-white"
+                  title="Pause Timer"
+                >
+                  <Pause className="w-4 h-4" />
+                  Pause
+                </button>
+              ) : (
+                <button
+                  onClick={async () => {
+                    try {
+                      await resumeTimer();
+                    } catch (e) {
+                      console.error(e);
+                      alert('Failed to resume timer');
+                    }
+                  }}
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white text-green-600 text-sm font-extrabold hover:bg-green-50 border-2 border-white"
+                  title="Resume Timer"
+                >
+                  <Play className="w-4 h-4" />
+                  Resume
+                </button>
+              )}
+              <button
+                onClick={async () => {
+                  try {
+                    await stopTimer();
+                  } catch (e) {
+                    console.error(e);
+                    alert('Failed to stop timer');
+                  }
+                }}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white text-red-700 text-sm font-extrabold hover:bg-red-50 border-2 border-white"
+                title="Stop Timer"
+              >
+                <Square className="w-4 h-4" />
+                Stop
+              </button>
+            </div>
           </div>
 
           <div className="mt-3 text-2xl font-extrabold text-white tabular-nums">

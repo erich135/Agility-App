@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Play, Square, Plus, Search, X, Calendar } from 'lucide-react';
+import { Clock, Play, Square, Plus, Search, X, Calendar, Pause } from 'lucide-react';
 import supabase from '../lib/SupabaseClient';
 import { useTimer } from '../contexts/TimerContext';
 
 export default function TimesheetSimple() {
-  const { activeTimer, startTimer: startGlobalTimer, stopTimer: stopGlobalTimer } = useTimer();
+  const { activeTimer, startTimer: startGlobalTimer, stopTimer: stopGlobalTimer, timerPaused, pauseTimer: pauseGlobalTimer, resumeTimer: resumeGlobalTimer } = useTimer();
   const [clients, setClients] = useState([]);
   const [clientProjects, setClientProjects] = useState([]);
   const [timeEntries, setTimeEntries] = useState([]);
@@ -36,7 +36,7 @@ export default function TimesheetSimple() {
     
     // Timer interval (local display only; source of truth is TimerContext)
     const interval = setInterval(() => {
-      if (activeTimer?.start_time) {
+      if (activeTimer?.start_time && !timerPaused) {
         const start = new Date(activeTimer.start_time);
         const now = new Date();
         setElapsedTime(Math.floor((now - start) / 1000));
@@ -44,7 +44,7 @@ export default function TimesheetSimple() {
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [activeTimer]);
+  }, [activeTimer, timerPaused]);
 
   useEffect(() => {
     if (dateFrom && dateTo) {
@@ -200,6 +200,26 @@ export default function TimesheetSimple() {
     }
   };
 
+  const pauseTimer = async () => {
+    if (!activeTimer) return;
+    try {
+      await pauseGlobalTimer();
+    } catch (e) {
+      console.error(e);
+      alert(e?.message || 'Failed to pause timer');
+    }
+  };
+
+  const resumeTimer = async () => {
+    if (!activeTimer) return;
+    try {
+      await resumeGlobalTimer();
+    } catch (e) {
+      console.error(e);
+      alert(e?.message || 'Failed to resume timer');
+    }
+  };
+
   const saveManualEntry = async () => {
     if (!selectedClient || !formData.description || !formData.duration_hours) {
       alert('Please fill in all required fields');
@@ -255,10 +275,10 @@ export default function TimesheetSimple() {
 
       {/* Active Timer Card */}
       {activeTimer && (
-        <div className="mb-6 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg p-6 text-white shadow-lg">
+        <div className={`mb-6 ${timerPaused ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' : 'bg-gradient-to-r from-green-500 to-emerald-600'} rounded-lg p-6 text-white shadow-lg`}>
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm opacity-90 mb-1">Timer Running</div>
+              <div className="text-sm opacity-90 mb-1">{timerPaused ? 'Timer Paused' : 'Timer Running'}</div>
               <div className="text-2xl font-bold">{formatTime(elapsedTime)}</div>
               <div className="text-sm mt-2 opacity-90">
                 Client: {activeTimer.clients?.client_name || selectedClient?.client_name || 'Unknown'}
@@ -267,13 +287,32 @@ export default function TimesheetSimple() {
                 Task: {activeTimer.description}
               </div>
             </div>
-            <button
-              onClick={stopTimer}
-              className="bg-white text-red-600 px-6 py-3 rounded-lg font-semibold hover:bg-red-50 flex items-center gap-2"
-            >
-              <Square size={20} fill="currentColor" />
-              Stop Timer
-            </button>
+            <div className="flex gap-2">
+              {!timerPaused ? (
+                <button
+                  onClick={pauseTimer}
+                  className="bg-white text-yellow-600 px-6 py-3 rounded-lg font-semibold hover:bg-yellow-50 flex items-center gap-2"
+                >
+                  <Pause size={20} />
+                  Pause
+                </button>
+              ) : (
+                <button
+                  onClick={resumeTimer}
+                  className="bg-white text-green-600 px-6 py-3 rounded-lg font-semibold hover:bg-green-50 flex items-center gap-2"
+                >
+                  <Play size={20} fill="currentColor" />
+                  Resume
+                </button>
+              )}
+              <button
+                onClick={stopTimer}
+                className="bg-white text-red-600 px-6 py-3 rounded-lg font-semibold hover:bg-red-50 flex items-center gap-2"
+              >
+                <Square size={20} fill="currentColor" />
+                Stop Timer
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -407,7 +446,9 @@ export default function TimesheetSimple() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-right">
                       {entry.timer_active ? (
-                        <span className="text-green-600">Running...</span>
+                        <span className={entry.is_paused ? "text-yellow-600" : "text-green-600"}>
+                          {entry.is_paused ? 'Paused...' : 'Running...'}
+                        </span>
                       ) : (
                         <span className="text-blue-600">{parseFloat(entry.duration_hours || 0).toFixed(2)}h</span>
                       )}

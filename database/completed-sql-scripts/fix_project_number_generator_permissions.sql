@@ -1,23 +1,23 @@
 -- ============================================================================
--- FIX: Project creation still fails after GRANTs
+-- FIX: Project creation fails with project_number generator permissions
 -- ============================================================================
 -- Symptom:
 --   Creating a project fails with:
 --     code=42501 message="permission denied for schema public"
 --
--- Root cause (common in this repo):
---   The trigger `trigger_generate_project_number` calls the PL/pgSQL function
---   `generate_project_number()`. The newer race-condition-safe implementation
---   may CREATE/ALTER yearly sequences (e.g. project_number_seq_2026).
---   When the INSERT is executed as the `anon` role, the trigger function runs
---   with invoker privileges and can fail while creating/altering those sequences.
+-- Root cause:
+--   The trigger `trigger_generate_project_number` calls the trigger function
+--   `generate_project_number()`. The race-condition-safe implementation may
+--   CREATE/ALTER yearly sequences (e.g. project_number_seq_2026). When the
+--   INSERT is executed as a low-privilege role, the trigger function can fail
+--   while creating/altering those sequences.
 --
 -- Fix approach:
 --   Make the helper functions SECURITY DEFINER so they run with the function
 --   owner's privileges (typically `postgres` when run in Supabase SQL Editor),
 --   avoiding the need to GRANT CREATE ON SCHEMA public to `anon`.
 --
--- Run in Supabase SQL Editor.
+-- Safe to re-run.
 
 BEGIN;
 
@@ -40,6 +40,11 @@ DECLARE
     seq_name VARCHAR;
     next_val INTEGER;
 BEGIN
+    -- Guard: only allow 4-digit years (prevents unexpected SQL formatting)
+    IF year_val IS NULL OR year_val !~ '^\d{4}$' THEN
+        RAISE EXCEPTION 'Invalid year_val: % (expected YYYY)', year_val;
+    END IF;
+
     seq_name := 'project_number_seq_' || year_val;
 
     -- Check if sequence exists

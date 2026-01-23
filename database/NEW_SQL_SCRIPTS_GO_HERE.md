@@ -13,3 +13,8 @@ This keeps new scripts easy to spot and avoids re-running older migrations by ac
 - If it still fails, your `projects` trigger/function may be trying to create yearly sequences for `project_number` (e.g. `project_number_seq_2026`). Run `database/NEW_SQL_SCRIPTS_GO_HERE/04_fix_project_number_generator_permissions.sql`.
 - If it fails after that with missing permissions on related tables, run `database/NEW_SQL_SCRIPTS_GO_HERE/05_fix_projects_trigger_side_effect_permissions.sql`.
 - Use `comprehensive_permissions_fix.sql` only for throwaway/dev environments; it grants very broad access.
+
+## Project number generator edits
+
+- Canonical script: `database/completed-sql-scripts/fix_project_number_generator_permissions.sql`.
+- If you need to change the numbering format (prefix, padding, etc), edit the `public.generate_project_number()` body and re-run the script in Supabase SQL Editor.

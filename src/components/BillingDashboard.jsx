@@ -302,13 +302,26 @@ export default function BillingDashboard() {
       }
 
       console.log('Time entries fetched:', timeEntries.length, timeEntries);
+
+      // Sort oldest -> newest for consistent display (and PDF export)
+      const sortedTimeEntries = [...timeEntries].sort((a, b) => {
+        const dateCmp = new Date(a.entry_date) - new Date(b.entry_date);
+        if (dateCmp !== 0) return dateCmp;
+
+        const aTs = a.start_time || a.created_at;
+        const bTs = b.start_time || b.created_at;
+        if (aTs && bTs) return new Date(aTs) - new Date(bTs);
+        if (aTs) return -1;
+        if (bTs) return 1;
+        return 0;
+      });
       
       // Separate invoiced and uninvoiced entries
-      const invoicedEntries = timeEntries.filter(entry => entry.status === 'invoiced' || entry.is_invoiced);
-      const uninvoicedEntries = timeEntries.filter(entry => entry.status !== 'invoiced' && !entry.is_invoiced);
+      const invoicedEntries = sortedTimeEntries.filter(entry => entry.status === 'invoiced' || entry.is_invoiced);
+      const uninvoicedEntries = sortedTimeEntries.filter(entry => entry.status !== 'invoiced' && !entry.is_invoiced);
       
       // Group time entries by date
-      const entriesByDate = timeEntries.reduce((acc, entry) => {
+      const entriesByDate = sortedTimeEntries.reduce((acc, entry) => {
         const date = entry.entry_date;
         if (!acc[date]) {
           acc[date] = [];
@@ -318,8 +331,8 @@ export default function BillingDashboard() {
       }, {});
 
       // Calculate totals
-      const totalHours = timeEntries.reduce((sum, entry) => sum + (entry.duration_hours || 0), 0);
-      const totalAmount = timeEntries.reduce((sum, entry) => {
+      const totalHours = sortedTimeEntries.reduce((sum, entry) => sum + (entry.duration_hours || 0), 0);
+      const totalAmount = sortedTimeEntries.reduce((sum, entry) => {
         const hours = entry.duration_hours || 0;
         const rate = entry.hourly_rate || project.hourly_rate || 0;
         return sum + (hours * rate);
@@ -342,7 +355,7 @@ export default function BillingDashboard() {
       }, 0);
 
       setProjectDetails({
-        timeEntries,
+        timeEntries: sortedTimeEntries,
         invoicedEntries,
         uninvoicedEntries,
         entriesByDate,
@@ -419,12 +432,20 @@ export default function BillingDashboard() {
       doc.text('No time entries recorded', 20, yPos);
     } else {
       // Group by date
-      const sortedDates = Object.keys(projectDetails.entriesByDate).sort((a, b) => new Date(b) - new Date(a));
+      const sortedDates = Object.keys(projectDetails.entriesByDate).sort((a, b) => new Date(a) - new Date(b));
       
       doc.setFontSize(10);
       sortedDates.forEach(date => {
         const entries = projectDetails.entriesByDate[date];
-        const dayTotal = entries.reduce((sum, entry) => sum + (entry.duration_hours || 0), 0);
+        const sortedEntries = [...entries].sort((a, b) => {
+          const aTs = a.start_time || a.created_at;
+          const bTs = b.start_time || b.created_at;
+          if (aTs && bTs) return new Date(aTs) - new Date(bTs);
+          if (aTs) return -1;
+          if (bTs) return 1;
+          return 0;
+        });
+        const dayTotal = sortedEntries.reduce((sum, entry) => sum + (entry.duration_hours || 0), 0);
 
         // Check if we need a new page
         if (yPos > 260) {
@@ -443,7 +464,7 @@ export default function BillingDashboard() {
         yPos += 10;
 
         // Entries for this date
-        entries.forEach(entry => {
+        sortedEntries.forEach(entry => {
           if (yPos > 270) {
             doc.addPage();
             yPos = 20;
@@ -879,9 +900,17 @@ export default function BillingDashboard() {
                     ) : (
                       <div className="space-y-4">
                         {Object.entries(projectDetails.entriesByDate)
-                          .sort(([dateA], [dateB]) => new Date(dateB) - new Date(dateA))
+                          .sort(([dateA], [dateB]) => new Date(dateA) - new Date(dateB))
                           .map(([date, entries]) => {
-                            const dayTotal = entries.reduce((sum, entry) => sum + (entry.duration_hours || 0), 0);
+                            const sortedEntries = [...entries].sort((a, b) => {
+                              const aTs = a.start_time || a.created_at;
+                              const bTs = b.start_time || b.created_at;
+                              if (aTs && bTs) return new Date(aTs) - new Date(bTs);
+                              if (aTs) return -1;
+                              if (bTs) return 1;
+                              return 0;
+                            });
+                            const dayTotal = sortedEntries.reduce((sum, entry) => sum + (entry.duration_hours || 0), 0);
                             return (
                               <div key={date} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
                                 {/* Date Header */}
@@ -904,7 +933,7 @@ export default function BillingDashboard() {
 
                                 {/* Time Entries for this date */}
                                 <div className="divide-y divide-gray-100">
-                                  {entries.map((entry, idx) => {
+                                  {sortedEntries.map((entry, idx) => {
                                     const entryAmount = (entry.duration_hours || 0) * (entry.hourly_rate || selectedProject.hourly_rate || 0);
                                     const isInvoiced = entry.status === 'invoiced';
                                     const isSelected = selectedEntryIds.has(entry.id);

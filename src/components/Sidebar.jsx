@@ -17,6 +17,7 @@ import {
   Calendar,
   FolderOpen,
   ClipboardList,
+  UserCheck,
   Shield,
   Menu
 } from 'lucide-react';
@@ -71,6 +72,18 @@ export default function Sidebar() {
           icon: FolderOpen, 
           label: 'Documents',
           permission: 'access_documents'
+        },
+        { 
+          path: '/person-register', 
+          icon: UserCheck, 
+          label: 'Person Register',
+          permission: 'access_customers'
+        },
+        { 
+          path: '/jobs', 
+          icon: ClipboardList, 
+          label: 'Job Register',
+          permission: 'access_customers'
         },
       ]
     },
@@ -132,6 +145,20 @@ export default function Sidebar() {
           path: '/settings/users', 
           icon: Shield, 
           label: 'User Management',
+          permission: 'manage_users',
+          adminOnly: true
+        },
+        { 
+          path: '/settings/document-categories', 
+          icon: FolderOpen, 
+          label: 'Doc Categories',
+          permission: 'manage_users',
+          adminOnly: true
+        },
+        { 
+          path: '/settings/job-templates', 
+          icon: ClipboardList, 
+          label: 'Job Templates',
           permission: 'manage_users',
           adminOnly: true
         },

@@ -28,6 +28,10 @@ import BillingDashboardNew from './components/BillingDashboardNew';
 import BillingSimple from './components/BillingSimple';
 import BillingReports from './components/BillingReports';
 import UserManagement from './components/UserManagement';
+import DocumentCategories from './components/DocumentCategories';
+import PersonRegister from './components/PersonRegister';
+import JobRegister from './components/JobRegister';
+import JobTemplates from './components/JobTemplates';
 
 // Protected Route component with Layout
 const ProtectedRoute = ({ children, requiredPermission }) => {
@@ -110,6 +114,10 @@ function AppRoutes() {
       {/* Admin Routes */}
       <Route path="/management" element={<ProtectedRoute requiredPermission="system_settings"><SystemManagement /></ProtectedRoute>} />
       <Route path="/settings/users" element={<ProtectedRoute requiredPermission="manage_users"><UserManagement /></ProtectedRoute>} />
+      <Route path="/settings/document-categories" element={<ProtectedRoute requiredPermission="manage_users"><DocumentCategories /></ProtectedRoute>} />
+      <Route path="/person-register" element={<ProtectedRoute requiredPermission="access_customers"><PersonRegister /></ProtectedRoute>} />
+      <Route path="/jobs" element={<ProtectedRoute requiredPermission="access_customers"><JobRegister /></ProtectedRoute>} />
+      <Route path="/settings/job-templates" element={<ProtectedRoute requiredPermission="manage_users"><JobTemplates /></ProtectedRoute>} />
 
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import supabase from '../lib/SupabaseClient';
+import JSZip from 'jszip';
 
 const STATUS_CONFIG = {
   not_started: { label: 'Not Started', color: 'bg-gray-100 text-gray-700 border-gray-200', dot: 'bg-gray-400' },
@@ -37,6 +38,38 @@ const EMPTY_JOB = {
   quoted_amount: '', notes: '',
 };
 
+// Smart suggestions: map job types to recommended document category names
+const JOB_DOC_SUGGESTIONS = {
+  cipc_bo_filing: [
+    'Directors/Members IDs', 'Proof of Address', 'Beneficial Ownership (BO-1)',
+    'Share Certificates & Registers', 'Registration Documents', 'Mandates',
+  ],
+  cipc_annual_return: [
+    'Registration Documents', 'Annual Returns', 'Directors/Members IDs',
+  ],
+  cipc_director_change: [
+    'Directors/Members IDs', 'Proof of Address', 'Director Changes (CoR39)',
+    'Registration Documents', 'Resolutions',
+  ],
+  sars_tax_return: [
+    'Tax Returns (ITR12/IT14)', 'Assessments', 'IRP5s & IT3s', 'Bank Statements',
+  ],
+  sars_vat: [
+    'VAT201', 'Tax Clearance (TCC)', 'Bank Statements', 'Invoices',
+  ],
+  trust_filing: [
+    'Trust Deed', 'Letters of Authority', 'Resolutions',
+    "Master's Office Correspondence", 'Directors/Members IDs',
+  ],
+};
+
+const LINK_TYPE_CONFIG = {
+  supporting: { label: 'Supporting', color: 'bg-blue-100 text-blue-700', icon: '📎' },
+  output: { label: 'Output', color: 'bg-green-100 text-green-700', icon: '📤' },
+  mandate: { label: 'Mandate', color: 'bg-amber-100 text-amber-700', icon: '📋' },
+  correspondence: { label: 'Correspondence', color: 'bg-purple-100 text-purple-700', icon: '✉️' },
+};
+
 export default function JobRegister() {
   const { user } = useAuth();
 
@@ -67,6 +100,15 @@ export default function JobRegister() {
   const [expandedJobId, setExpandedJobId] = useState(null);
   const [newChecklistItem, setNewChecklistItem] = useState('');
 
+  // Document linking
+  const [jobDocuments, setJobDocuments] = useState({}); // { jobId: [{ ...link, document }] }
+  const [clientDocuments, setClientDocuments] = useState([]); // docs for the expanded job's client
+  const [showDocPicker, setShowDocPicker] = useState(false);
+  const [docPickerSearch, setDocPickerSearch] = useState('');
+  const [docLinkType, setDocLinkType] = useState('supporting');
+  const [downloadingPack, setDownloadingPack] = useState(false);
+  const [docCategories, setDocCategories] = useState([]); // all categories for suggestions
+
   // Messages
   const [successMsg, setSuccessMsg] = useState(null);
   const [error, setError] = useState(null);
@@ -78,6 +120,18 @@ export default function JobRegister() {
     fetchInitialData();
   }, []);
 
+  // When a job is expanded, fetch its linked documents and the client's available documents
+  useEffect(() => {
+    if (expandedJobId) {
+      fetchJobDocuments(expandedJobId);
+      const job = jobs.find(j => j.id === expandedJobId);
+      if (job?.client_id) fetchClientDocuments(job.client_id);
+    } else {
+      setShowDocPicker(false);
+      setDocPickerSearch('');
+    }
+  }, [expandedJobId, jobs]);
+
   const showSuccess = (msg) => {
     setSuccessMsg(msg);
     setTimeout(() => setSuccessMsg(null), 4000);
@@ -87,8 +141,15 @@ export default function JobRegister() {
 
   const fetchInitialData = async () => {
     setLoading(true);
-    await Promise.all([fetchCustomers(), fetchTemplates(), fetchJobs()]);
+    await Promise.all([fetchCustomers(), fetchTemplates(), fetchJobs(), fetchDocCategories()]);
     setLoading(false);
+  };
+
+  const fetchDocCategories = async () => {
+    try {
+      const { data } = await supabase.from('document_categories').select('*').eq('is_active', true);
+      setDocCategories(data || []);
+    } catch (err) { console.error('Failed to fetch doc categories:', err); }
   };
 
   const fetchCustomers = async () => {
@@ -401,6 +462,168 @@ export default function JobRegister() {
         [item.job_id]: (prev[item.job_id] || []).filter(ci => ci.id !== item.id),
       }));
     } catch (err) { setError(err.message); }
+  };
+
+  // ============== DOCUMENT LINKING ==============
+
+  const fetchJobDocuments = async (jobId) => {
+    try {
+      const { data: links } = await supabase
+        .from('job_document_links')
+        .select('*, documents(*)')
+        .eq('job_id', jobId)
+        .order('linked_at', { ascending: false });
+
+      // Also fetch category tags for each linked document
+      const docIds = (links || []).map(l => l.document_id).filter(Boolean);
+      let tagMap = {};
+      if (docIds.length > 0) {
+        const { data: tags } = await supabase
+          .from('document_category_tags')
+          .select('document_id, category_id, document_categories(name, icon)')
+          .in('document_id', docIds);
+        (tags || []).forEach(t => {
+          if (!tagMap[t.document_id]) tagMap[t.document_id] = [];
+          tagMap[t.document_id].push(t.document_categories);
+        });
+      }
+
+      const enriched = (links || []).map(l => ({
+        ...l,
+        document: l.documents,
+        docCategories: tagMap[l.document_id] || [],
+      }));
+
+      setJobDocuments(prev => ({ ...prev, [jobId]: enriched }));
+    } catch (err) { console.error('Failed to fetch job documents:', err); }
+  };
+
+  const fetchClientDocuments = async (clientId) => {
+    try {
+      const { data } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('client_id', clientId)
+        .order('uploaded_at', { ascending: false });
+
+      // Fetch tags for all client documents
+      const docIds = (data || []).map(d => d.id);
+      let tagMap = {};
+      if (docIds.length > 0) {
+        const { data: tags } = await supabase
+          .from('document_category_tags')
+          .select('document_id, category_id, document_categories(name, icon)')
+          .in('document_id', docIds);
+        (tags || []).forEach(t => {
+          if (!tagMap[t.document_id]) tagMap[t.document_id] = [];
+          tagMap[t.document_id].push(t.document_categories);
+        });
+      }
+
+      setClientDocuments((data || []).map(d => ({ ...d, docCategories: tagMap[d.id] || [] })));
+    } catch (err) { console.error('Failed to fetch client documents:', err); }
+  };
+
+  const linkDocument = async (jobId, documentId, linkType = 'supporting') => {
+    try {
+      const { error: insErr } = await supabase.from('job_document_links').insert([{
+        job_id: jobId,
+        document_id: documentId,
+        link_type: linkType,
+        linked_by: user?.id || null,
+      }]);
+      if (insErr) {
+        if (insErr.code === '23505') { setError('Document already linked to this job'); return; }
+        throw insErr;
+      }
+      await logActivity(jobId, 'document_linked', 'Document linked to job');
+      await fetchJobDocuments(jobId);
+      showSuccess('Document linked');
+    } catch (err) { setError(err.message); }
+  };
+
+  const unlinkDocument = async (jobId, linkId) => {
+    try {
+      const { error: delErr } = await supabase.from('job_document_links').delete().eq('id', linkId);
+      if (delErr) throw delErr;
+      await logActivity(jobId, 'document_unlinked', 'Document removed from job');
+      await fetchJobDocuments(jobId);
+    } catch (err) { setError(err.message); }
+  };
+
+  const downloadJobPack = async (job) => {
+    const docs = jobDocuments[job.id] || [];
+    if (docs.length === 0) { setError('No documents linked to this job'); return; }
+
+    try {
+      setDownloadingPack(true);
+      const zip = new JSZip();
+      const customerName = getCustomerName(job.client_id);
+      let downloadErrors = [];
+
+      for (const link of docs) {
+        const doc = link.document;
+        if (!doc?.file_path) continue;
+        try {
+          const { data: blob, error: dlErr } = await supabase.storage
+            .from('client-documents')
+            .download(doc.file_path);
+          if (dlErr) throw dlErr;
+
+          // Use a subfolder based on link type
+          const folder = LINK_TYPE_CONFIG[link.link_type]?.label || 'Documents';
+          const fileName = doc.document_name || doc.file_name || 'document';
+          zip.file(`${folder}/${fileName}`, blob);
+        } catch (err) {
+          console.error(`Failed to download ${doc.document_name}:`, err);
+          downloadErrors.push(doc.document_name || doc.file_name);
+        }
+      }
+
+      const content = await zip.generateAsync({ type: 'blob' });
+      const safeName = `${job.title} - ${customerName}`.replace(/[^a-zA-Z0-9 \-_]/g, '').trim();
+      const url = URL.createObjectURL(content);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${safeName}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+
+      await logActivity(job.id, 'job_pack_downloaded', `Downloaded job pack (${docs.length} files)`);
+
+      if (downloadErrors.length > 0) {
+        showSuccess(`Pack downloaded (${downloadErrors.length} file(s) could not be included)`);
+      } else {
+        showSuccess(`Job pack downloaded — ${docs.length} file(s)`);
+      }
+    } catch (err) {
+      console.error(err);
+      setError('Failed to create job pack: ' + err.message);
+    } finally {
+      setDownloadingPack(false);
+    }
+  };
+
+  // Get suggested categories for a job type
+  const getSuggestedCategories = (jobType) => {
+    return JOB_DOC_SUGGESTIONS[jobType] || [];
+  };
+
+  // Check which suggested categories have documents linked
+  const getSuggestionStatus = (jobId, jobType) => {
+    const suggestions = getSuggestedCategories(jobType);
+    if (suggestions.length === 0) return [];
+    const linkedDocs = jobDocuments[jobId] || [];
+    const linkedCatNames = new Set();
+    linkedDocs.forEach(link => {
+      (link.docCategories || []).forEach(cat => linkedCatNames.add(cat.name));
+    });
+    return suggestions.map(catName => ({
+      name: catName,
+      satisfied: linkedCatNames.has(catName),
+    }));
   };
 
   // ============== ACTIVITY LOG ==============
@@ -781,6 +1004,188 @@ export default function JobRegister() {
                           </div>
                         </div>
                       </div>
+
+                      {/* ============ DOCUMENTS SECTION ============ */}
+                      {(() => {
+                        const linkedDocs = jobDocuments[job.id] || [];
+                        const suggestions = getSuggestionStatus(job.id, job.job_type);
+                        const alreadyLinkedIds = new Set(linkedDocs.map(l => l.document_id));
+                        const availableDocs = clientDocuments.filter(d => !alreadyLinkedIds.has(d.id));
+                        const filteredPickerDocs = docPickerSearch.trim()
+                          ? availableDocs.filter(d =>
+                              (d.document_name || '').toLowerCase().includes(docPickerSearch.toLowerCase()) ||
+                              (d.file_name || '').toLowerCase().includes(docPickerSearch.toLowerCase()) ||
+                              (d.docCategories || []).some(c => c.name.toLowerCase().includes(docPickerSearch.toLowerCase()))
+                            )
+                          : availableDocs;
+
+                        return (
+                          <div className="mt-6 pt-6 border-t border-gray-200">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-3">
+                                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                  </svg>
+                                  Job Documents ({linkedDocs.length})
+                                </h4>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {linkedDocs.length > 0 && (
+                                  <button
+                                    onClick={() => downloadJobPack(job)}
+                                    disabled={downloadingPack}
+                                    className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-xs font-medium flex items-center gap-1.5 disabled:opacity-50 transition-colors"
+                                  >
+                                    {downloadingPack ? (
+                                      <><div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div> Creating Pack...</>
+                                    ) : (
+                                      <><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> Download Job Pack</>
+                                    )}
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => { setShowDocPicker(!showDocPicker); setDocPickerSearch(''); }}
+                                  className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs font-medium flex items-center gap-1.5 transition-colors"
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                  </svg>
+                                  {showDocPicker ? 'Close' : 'Link Documents'}
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Smart Suggestions Banner */}
+                            {suggestions.length > 0 && (
+                              <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                                <p className="text-xs font-medium text-amber-800 mb-2">📋 Recommended documents for {job.job_type?.replace(/_/g, ' ')}:</p>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {suggestions.map(s => (
+                                    <span key={s.name} className={`text-xs px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                                      s.satisfied
+                                        ? 'bg-green-100 text-green-700 border border-green-200'
+                                        : 'bg-white text-amber-700 border border-amber-300'
+                                    }`}>
+                                      {s.satisfied ? '✓' : '○'} {s.name}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Linked Documents List */}
+                            {linkedDocs.length > 0 ? (
+                              <div className="space-y-1.5 mb-3">
+                                {linkedDocs.map(link => {
+                                  const doc = link.document;
+                                  if (!doc) return null;
+                                  const ltCfg = LINK_TYPE_CONFIG[link.link_type] || LINK_TYPE_CONFIG.supporting;
+                                  const sizeStr = doc.file_size
+                                    ? doc.file_size > 1048576
+                                      ? `${(doc.file_size / 1048576).toFixed(1)} MB`
+                                      : `${(doc.file_size / 1024).toFixed(1)} KB`
+                                    : '';
+                                  return (
+                                    <div key={link.id} className="flex items-center gap-3 px-3 py-2 bg-white border border-gray-200 rounded-lg hover:border-blue-200 transition-colors group">
+                                      <span className="text-lg flex-shrink-0">{ltCfg.icon}</span>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm text-gray-800 truncate font-medium">{doc.document_name || doc.file_name}</p>
+                                        <div className="flex items-center gap-2 mt-0.5">
+                                          <span className={`text-[10px] px-1.5 py-0.5 rounded ${ltCfg.color}`}>{ltCfg.label}</span>
+                                          {(link.docCategories || []).slice(0, 3).map(cat => (
+                                            <span key={cat.name} className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">
+                                              {cat.icon} {cat.name}
+                                            </span>
+                                          ))}
+                                          {sizeStr && <span className="text-[10px] text-gray-400">{sizeStr}</span>}
+                                        </div>
+                                      </div>
+                                      <button
+                                        onClick={() => unlinkDocument(job.id, link.id)}
+                                        title="Remove from job"
+                                        className="text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0"
+                                      >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-gray-400 italic mb-3">
+                                No documents linked. Click "Link Documents" to attach client files to this job.
+                              </p>
+                            )}
+
+                            {/* Document Picker */}
+                            {showDocPicker && (
+                              <div className="border border-blue-200 rounded-lg bg-blue-50 p-3">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <input
+                                    type="text"
+                                    value={docPickerSearch}
+                                    onChange={e => setDocPickerSearch(e.target.value)}
+                                    placeholder="Search client documents..."
+                                    className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                  />
+                                  <select
+                                    value={docLinkType}
+                                    onChange={e => setDocLinkType(e.target.value)}
+                                    className="px-2 py-1.5 border border-gray-300 rounded-lg text-xs bg-white"
+                                  >
+                                    {Object.entries(LINK_TYPE_CONFIG).map(([k, v]) => (
+                                      <option key={k} value={k}>{v.icon} {v.label}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div className="max-h-48 overflow-y-auto space-y-1">
+                                  {filteredPickerDocs.length > 0 ? (
+                                    filteredPickerDocs.map(doc => {
+                                      const sizeStr = doc.file_size
+                                        ? doc.file_size > 1048576
+                                          ? `${(doc.file_size / 1048576).toFixed(1)} MB`
+                                          : `${(doc.file_size / 1024).toFixed(1)} KB`
+                                        : '';
+                                      return (
+                                        <div key={doc.id}
+                                          className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-gray-100 hover:border-blue-300 cursor-pointer transition-colors"
+                                          onClick={() => linkDocument(job.id, doc.id, docLinkType)}
+                                        >
+                                          <svg className="w-4 h-4 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                          </svg>
+                                          <div className="flex-1 min-w-0">
+                                            <p className="text-sm text-gray-800 truncate">{doc.document_name || doc.file_name}</p>
+                                            <div className="flex items-center gap-1.5 mt-0.5">
+                                              {(doc.docCategories || []).slice(0, 3).map(cat => (
+                                                <span key={cat.name} className="text-[10px] px-1 py-0.5 rounded bg-gray-100 text-gray-500">
+                                                  {cat.icon} {cat.name}
+                                                </span>
+                                              ))}
+                                              {sizeStr && <span className="text-[10px] text-gray-400">{sizeStr}</span>}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      );
+                                    })
+                                  ) : (
+                                    <p className="text-xs text-gray-500 text-center py-3">
+                                      {clientDocuments.length === 0
+                                        ? 'No documents uploaded for this client yet.'
+                                        : availableDocs.length === 0
+                                          ? 'All client documents are already linked to this job.'
+                                          : 'No documents match your search.'}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>

@@ -149,6 +149,13 @@ export default function Sidebar() {
           adminOnly: true
         },
         { 
+          path: '/settings/job-statuses', 
+          icon: Settings, 
+          label: 'Job Statuses',
+          permission: 'manage_users',
+          adminOnly: true
+        },
+        { 
           path: '/settings/document-categories', 
           icon: FolderOpen, 
           label: 'Doc Categories',

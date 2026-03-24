@@ -32,6 +32,7 @@ import DocumentCategories from './components/DocumentCategories';
 import PersonRegister from './components/PersonRegister';
 import JobRegister from './components/JobRegister';
 import JobTemplates from './components/JobTemplates';
+import StatusManager from './components/StatusManager';
 
 // Protected Route component with Layout
 const ProtectedRoute = ({ children, requiredPermission }) => {
@@ -118,6 +119,7 @@ function AppRoutes() {
       <Route path="/person-register" element={<ProtectedRoute requiredPermission="access_customers"><PersonRegister /></ProtectedRoute>} />
       <Route path="/jobs" element={<ProtectedRoute requiredPermission="access_customers"><JobRegister /></ProtectedRoute>} />
       <Route path="/settings/job-templates" element={<ProtectedRoute requiredPermission="manage_users"><JobTemplates /></ProtectedRoute>} />
+      <Route path="/settings/job-statuses" element={<ProtectedRoute requiredPermission="manage_users"><StatusManager /></ProtectedRoute>} />
 
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />

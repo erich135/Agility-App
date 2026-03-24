@@ -2,8 +2,10 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import supabase from '../lib/SupabaseClient';
 import JSZip from 'jszip';
+import JobKanbanBoard from './JobKanbanBoard';
+import { generateProgressReportPDF } from '../services/jobProgressPDF';
 
-const STATUS_CONFIG = {
+const FALLBACK_STATUS_CONFIG = {
   not_started: { label: 'Not Started', color: 'bg-gray-100 text-gray-700 border-gray-200', dot: 'bg-gray-400' },
   in_progress: { label: 'In Progress', color: 'bg-blue-100 text-blue-700 border-blue-200', dot: 'bg-blue-500' },
   waiting_client: { label: 'Waiting on Client', color: 'bg-yellow-100 text-yellow-700 border-yellow-200', dot: 'bg-yellow-500' },
@@ -78,6 +80,7 @@ export default function JobRegister() {
   const [customers, setCustomers] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [checklistItems, setChecklistItems] = useState({});
+  const [jobStatuses, setJobStatuses] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Filters
@@ -141,7 +144,7 @@ export default function JobRegister() {
 
   const fetchInitialData = async () => {
     setLoading(true);
-    await Promise.all([fetchCustomers(), fetchTemplates(), fetchJobs(), fetchDocCategories()]);
+    await Promise.all([fetchCustomers(), fetchTemplates(), fetchJobs(), fetchDocCategories(), fetchJobStatuses()]);
     setLoading(false);
   };
 
@@ -150,6 +153,17 @@ export default function JobRegister() {
       const { data } = await supabase.from('document_categories').select('*').eq('is_active', true);
       setDocCategories(data || []);
     } catch (err) { console.error('Failed to fetch doc categories:', err); }
+  };
+
+  const fetchJobStatuses = async () => {
+    try {
+      const { data } = await supabase
+        .from('job_statuses')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order');
+      setJobStatuses(data || []);
+    } catch (err) { console.error('Failed to fetch job statuses:', err); }
   };
 
   const fetchCustomers = async () => {
@@ -200,13 +214,29 @@ export default function JobRegister() {
     }
   };
 
+  // Build dynamic status config from DB (with fallback)
+  const STATUS_CONFIG = useMemo(() => {
+    if (jobStatuses.length === 0) return FALLBACK_STATUS_CONFIG;
+    const cfg = {};
+    jobStatuses.forEach(s => {
+      cfg[s.key] = { label: s.label, color: s.color_bg, dot: s.color_dot };
+    });
+    return cfg;
+  }, [jobStatuses]);
+
+  // Set of closed status keys for "active" filter
+  const closedStatusKeys = useMemo(() => {
+    if (jobStatuses.length === 0) return new Set(['completed', 'cancelled']);
+    return new Set(jobStatuses.filter(s => s.is_closed).map(s => s.key));
+  }, [jobStatuses]);
+
   // ============== FILTERING & SORTING ==============
 
   const filteredJobs = useMemo(() => {
     let filtered = jobs;
 
     if (filterStatus === 'active') {
-      filtered = filtered.filter(j => !['completed', 'cancelled'].includes(j.status));
+      filtered = filtered.filter(j => !closedStatusKeys.has(j.status));
     } else if (filterStatus && filterStatus !== 'all') {
       filtered = filtered.filter(j => j.status === filterStatus);
     }
@@ -244,7 +274,7 @@ export default function JobRegister() {
     });
 
     return filtered;
-  }, [jobs, filterStatus, filterCustomer, filterCategory, filterPriority, searchTerm, sortBy, sortDir]);
+  }, [jobs, filterStatus, filterCustomer, filterCategory, filterPriority, searchTerm, sortBy, sortDir, closedStatusKeys]);
 
   // Customer name lookup
   const getCustomerName = (clientId) => customers.find(c => c.id === clientId)?.client_name || '';
@@ -674,7 +704,7 @@ export default function JobRegister() {
 
   // Stats
   const stats = useMemo(() => {
-    const activeJobs = jobs.filter(j => !['completed', 'cancelled'].includes(j.status));
+    const activeJobs = jobs.filter(j => !closedStatusKeys.has(j.status));
     const overdue = activeJobs.filter(j => {
       if (!j.date_due) return false;
       return new Date(j.date_due) < new Date(new Date().toDateString());
@@ -683,13 +713,13 @@ export default function JobRegister() {
       total: jobs.length,
       active: activeJobs.length,
       overdue: overdue.length,
-      completed: jobs.filter(j => j.status === 'completed').length,
+      completed: jobs.filter(j => closedStatusKeys.has(j.status)).length,
       byCategory: Object.entries(CATEGORY_CONFIG).map(([key, cfg]) => ({
         key, ...cfg,
         count: activeJobs.filter(j => j.category === key).length,
       })).filter(c => c.count > 0),
     };
-  }, [jobs]);
+  }, [jobs, closedStatusKeys]);
 
   // ============== RENDER ==============
 
@@ -705,13 +735,44 @@ export default function JobRegister() {
                 Track CIPC filings, SARS returns, payroll, trust admin & all client work
               </p>
             </div>
-            <button onClick={openAddForm}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-2 self-start">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              New Job
-            </button>
+            <div className="flex items-center gap-2 self-start">
+              {/* View Toggle */}
+              <div className="flex items-center bg-gray-100 rounded-lg p-0.5">
+                <button
+                  onClick={() => setViewMode('table')}
+                  className={`p-2 rounded-md transition-colors ${
+                    viewMode === 'table'
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-400 hover:text-gray-600'
+                  }`}
+                  title="Table view"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => setViewMode('board')}
+                  className={`p-2 rounded-md transition-colors ${
+                    viewMode === 'board'
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-400 hover:text-gray-600'
+                  }`}
+                  title="Board view"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+                  </svg>
+                </button>
+              </div>
+              <button onClick={openAddForm}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                New Job
+              </button>
+            </div>
           </div>
 
           {/* Stats Bar */}
@@ -787,6 +848,19 @@ export default function JobRegister() {
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
             <p className="mt-4 text-gray-600">Loading jobs...</p>
           </div>
+        ) : viewMode === 'board' ? (
+          <JobKanbanBoard
+            jobs={filteredJobs}
+            customers={customers}
+            checklistItems={checklistItems}
+            jobStatuses={jobStatuses}
+            statusConfig={STATUS_CONFIG}
+            onQuickStatus={handleQuickStatus}
+            onEdit={openEditForm}
+            onExpand={setExpandedJobId}
+            expandedJobId={expandedJobId}
+            getDueStatus={getDueStatus}
+          />
         ) : filteredJobs.length === 0 ? (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-16 text-center">
             <svg className="mx-auto h-16 w-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1005,6 +1079,25 @@ export default function JobRegister() {
                         </div>
                       </div>
 
+                      {/* Export Progress Report */}
+                      <div className="mt-4 pt-4 border-t border-gray-200 flex items-center gap-2">
+                        <button
+                          onClick={() => generateProgressReportPDF({
+                            job,
+                            customerName,
+                            checklistItems: items,
+                            statusConfig: STATUS_CONFIG,
+                            categoryConfig: CATEGORY_CONFIG,
+                          })}
+                          className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-xs font-medium flex items-center gap-1.5 transition-colors"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          Export Progress Report (PDF)
+                        </button>
+                      </div>
+
                       {/* ============ DOCUMENTS SECTION ============ */}
                       {(() => {
                         const linkedDocs = jobDocuments[job.id] || [];
@@ -1193,6 +1286,174 @@ export default function JobRegister() {
             })}
           </div>
         )}
+
+        {/* BOARD VIEW - JOB DETAIL MODAL */}
+        {viewMode === 'board' && expandedJobId && (() => {
+          const job = filteredJobs.find(j => j.id === expandedJobId);
+          if (!job) return null;
+          const customerName = getCustomerName(job.client_id);
+          const items = checklistItems[job.id] || [];
+          const progress = getChecklistProgress(job.id);
+          const dueInfo = job.status !== 'completed' ? getDueStatus(job.date_due) : null;
+          const statusCfg = STATUS_CONFIG[job.status] || STATUS_CONFIG.not_started || { label: job.status, color: '', dot: '' };
+          const catCfg = CATEGORY_CONFIG[job.category] || CATEGORY_CONFIG.general;
+
+          return (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setExpandedJobId(null)}>
+              <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                {/* Header */}
+                <div className="sticky top-0 bg-white px-6 py-4 border-b border-gray-200 flex items-center justify-between z-10">
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-lg font-semibold text-gray-900 truncate">{job.title}</h2>
+                    <div className="flex items-center gap-3 mt-1">
+                      <span className="text-sm text-gray-500">{customerName}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${catCfg.color}`}>{catCfg.label}</span>
+                      <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border ${statusCfg.color}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`}></span>
+                        {statusCfg.label}
+                      </span>
+                      {dueInfo && (
+                        <span className={`text-xs ${dueInfo.class}`}>{dueInfo.label}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 ml-4">
+                    <button onClick={() => openEditForm(job)}
+                      className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                    <button onClick={() => setExpandedJobId(null)} className="text-gray-400 hover:text-gray-600">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="px-6 py-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Column 1: Job Details */}
+                    <div className="space-y-3">
+                      <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Job Details</h4>
+                      {job.description && <DetailRow label="Description" value={job.description} />}
+                      <DetailRow label="Job Type" value={job.job_type} />
+                      {job.tax_year && <DetailRow label="Tax Year" value={job.tax_year} />}
+                      {job.period && <DetailRow label="Period" value={job.period} />}
+                      {job.date_due && <DetailRow label="Due Date" value={new Date(job.date_due).toLocaleDateString('en-ZA')} />}
+                      {job.assigned_to_name && <DetailRow label="Assigned To" value={job.assigned_to_name} />}
+                      {job.is_recurring && <DetailRow label="Recurring" value={job.recurrence_pattern || 'Yes'} />}
+                      {job.quoted_amount && <DetailRow label="Quoted" value={`R ${parseFloat(job.quoted_amount).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}`} />}
+                      {job.notes && <DetailRow label="Notes" value={job.notes} />}
+                      <DetailRow label="Created" value={job.date_created ? new Date(job.date_created).toLocaleDateString('en-ZA') : '-'} />
+                      {job.date_started && <DetailRow label="Started" value={new Date(job.date_started).toLocaleDateString('en-ZA')} />}
+                      {job.date_completed && <DetailRow label="Completed" value={new Date(job.date_completed).toLocaleDateString('en-ZA')} />}
+                    </div>
+
+                    {/* Column 2: Checklist */}
+                    <div className="md:col-span-2 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                          Checklist {progress && `(${progress.done}/${progress.total})`}
+                        </h4>
+                        {progress && (
+                          <div className="flex items-center gap-2">
+                            <div className="w-24 bg-gray-200 rounded-full h-2">
+                              <div className={`h-2 rounded-full transition-all ${progress.pct === 100 ? 'bg-green-500' : 'bg-blue-500'}`}
+                                style={{ width: `${progress.pct}%` }} />
+                            </div>
+                            <span className="text-xs text-gray-500">{progress.pct}%</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {items.length > 0 ? (
+                        <div className="space-y-1">
+                          {items.map(item => (
+                            <div key={item.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${item.is_completed ? 'bg-green-50' : 'bg-white border border-gray-200'}`}>
+                              <button onClick={() => toggleChecklistItem(item)}
+                                className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                                  item.is_completed
+                                    ? 'bg-green-500 border-green-500 text-white'
+                                    : 'border-gray-300 hover:border-blue-400'
+                                }`}>
+                                {item.is_completed && (
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
+                              </button>
+                              <span className={`flex-1 text-sm ${item.is_completed ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                                {item.title}
+                                {item.is_required && !item.is_completed && <span className="text-red-400 ml-1">*</span>}
+                              </span>
+                              {item.is_completed && item.completed_by_name && (
+                                <span className="text-xs text-gray-400">{item.completed_by_name}</span>
+                              )}
+                              <button onClick={() => deleteChecklistItem(item)}
+                                className="text-gray-300 hover:text-red-500 transition-colors flex-shrink-0">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-400 italic">No checklist items. Add one below or use a template when creating jobs.</p>
+                      )}
+
+                      {/* Add checklist item */}
+                      <div className="flex gap-2 mt-2">
+                        <input type="text" value={newChecklistItem}
+                          onChange={e => setNewChecklistItem(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') addChecklistItem(job.id); }}
+                          placeholder="Add a checklist item..."
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                        <button onClick={() => addChecklistItem(job.id)}
+                          className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+                          Add
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Export Progress Report + Quick Status */}
+                  <div className="mt-4 pt-4 border-t border-gray-200 flex items-center gap-3">
+                    <button
+                      onClick={() => generateProgressReportPDF({
+                        job,
+                        customerName,
+                        checklistItems: items,
+                        statusConfig: STATUS_CONFIG,
+                        categoryConfig: CATEGORY_CONFIG,
+                      })}
+                      className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-xs font-medium flex items-center gap-1.5 transition-colors"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Export Progress Report (PDF)
+                    </button>
+                    {!closedStatusKeys.has(job.status) && (
+                      <select
+                        value={job.status}
+                        onChange={e => handleQuickStatus(job, e.target.value)}
+                        className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white"
+                      >
+                        {Object.entries(STATUS_CONFIG).map(([k, v]) => (
+                          <option key={k} value={k}>{v.label}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ADD/EDIT MODAL */}
         {showForm && (

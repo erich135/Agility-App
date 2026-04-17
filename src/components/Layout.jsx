@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import GlobalTimerCard from './GlobalTimerCard';
+import NotificationBell from './NotificationBell';
 // import BillingNotifications from './BillingNotifications';
 // import NotificationCenter from './NotificationCenter';
 
@@ -49,6 +50,7 @@ export default function Layout({ children }) {
               <div className="flex items-center space-x-4">
                 {/* <BillingNotifications /> */}
                 {/* <NotificationCenter /> */}
+                <NotificationBell />
                 <div className="hidden md:block text-right">
                   <p className="text-sm font-medium text-gray-900">
                     {user?.full_name || user?.first_name || 'User'}

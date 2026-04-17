@@ -12,7 +12,15 @@ const FALLBACK_STATUS_CONFIG = {
   in_progress: { label: 'In Progress', color: 'bg-blue-100 text-blue-700 border-blue-200', dot: 'bg-blue-500' },
   waiting_client: { label: 'Waiting on Client', color: 'bg-yellow-100 text-yellow-700 border-yellow-200', dot: 'bg-yellow-500' },
   waiting_sars: { label: 'Waiting on SARS', color: 'bg-orange-100 text-orange-700 border-orange-200', dot: 'bg-orange-500' },
+  waiting_cipc: { label: 'Waiting on CIPC', color: 'bg-amber-100 text-amber-700 border-amber-200', dot: 'bg-amber-500' },
+  waiting_dol: { label: 'Waiting on Dept of Labour', color: 'bg-lime-100 text-lime-700 border-lime-200', dot: 'bg-lime-500' },
+  waiting_masters: { label: "Waiting on Master's Office", color: 'bg-rose-100 text-rose-700 border-rose-200', dot: 'bg-rose-500' },
+  waiting_bank: { label: 'Waiting on Bank', color: 'bg-cyan-100 text-cyan-700 border-cyan-200', dot: 'bg-cyan-500' },
+  waiting_third_party: { label: 'Waiting on Third Party', color: 'bg-stone-100 text-stone-700 border-stone-200', dot: 'bg-stone-500' },
+  submitted: { label: 'Submitted / Filed', color: 'bg-sky-100 text-sky-700 border-sky-200', dot: 'bg-sky-500' },
+  ready_for_review: { label: 'Ready for Review', color: 'bg-violet-100 text-violet-700 border-violet-200', dot: 'bg-violet-500' },
   under_review: { label: 'Under Review', color: 'bg-purple-100 text-purple-700 border-purple-200', dot: 'bg-purple-500' },
+  on_hold: { label: 'On Hold', color: 'bg-zinc-100 text-zinc-700 border-zinc-200', dot: 'bg-zinc-400' },
   completed: { label: 'Completed', color: 'bg-green-100 text-green-700 border-green-200', dot: 'bg-green-500' },
   cancelled: { label: 'Cancelled', color: 'bg-red-100 text-red-700 border-red-200', dot: 'bg-red-400' },
 };
@@ -29,8 +37,13 @@ const CATEGORY_CONFIG = {
   sars: { label: 'SARS', color: 'bg-green-50 text-green-700' },
   trusts: { label: 'Trusts', color: 'bg-purple-50 text-purple-700' },
   payroll: { label: 'Payroll', color: 'bg-yellow-50 text-yellow-700' },
+  labour: { label: 'Labour', color: 'bg-orange-50 text-orange-700' },
   accounting: { label: 'Accounting', color: 'bg-indigo-50 text-indigo-700' },
   advisory: { label: 'Advisory', color: 'bg-teal-50 text-teal-700' },
+  bbbee: { label: 'B-BBEE', color: 'bg-amber-50 text-amber-700' },
+  secretarial: { label: 'Secretarial', color: 'bg-slate-50 text-slate-700' },
+  banking: { label: 'Banking', color: 'bg-cyan-50 text-cyan-700' },
+  insurance: { label: 'Insurance', color: 'bg-rose-50 text-rose-700' },
   general: { label: 'General', color: 'bg-gray-50 text-gray-700' },
 };
 
@@ -55,15 +68,101 @@ const JOB_DOC_SUGGESTIONS = {
     'Directors/Members IDs', 'Proof of Address', 'Director Changes (CoR39)',
     'Registration Documents', 'Resolutions',
   ],
+  cipc_new_registration: [
+    'Directors/Members IDs', 'Proof of Address', 'Registration Documents',
+    'MOI / CK Founding Statements', 'Share Certificates & Registers',
+  ],
+  cipc_cc_conversion: [
+    'Registration Documents', 'MOI / CK Founding Statements', 'Directors/Members IDs',
+  ],
+  cipc_share_transfer: [
+    'Share Certificates & Registers', 'Board Resolutions', 'Registration Documents',
+  ],
   sars_tax_return: [
     'Tax Returns (ITR12/IT14)', 'Assessments', 'IRP5s & IT3s', 'Bank Statements',
+  ],
+  sars_itr12: [
+    'Tax Returns (ITR12/IT14)', 'IRP5s & IT3s', 'Assessments', 'Bank Statements',
   ],
   sars_vat: [
     'VAT201', 'Tax Clearance (TCC)', 'Bank Statements', 'Invoices',
   ],
+  sars_emp201: [
+    'EMP201 / EMP501', 'Payslips', 'Bank Statements',
+  ],
+  sars_emp501: [
+    'EMP201 / EMP501', 'IRP5 Certificates', 'Payslips',
+  ],
+  sars_provisional: [
+    'Provisional Tax (IRP6)', 'Financial Statements', 'Management Accounts',
+  ],
+  sars_tcc: [
+    'Tax Clearance (TCC)', 'Tax Returns (ITR12/IT14)',
+  ],
+  sars_dispute: [
+    'Assessments', 'Objections & Appeals', 'SARS Correspondence', 'Tax Returns (ITR12/IT14)',
+  ],
+  sars_dividends_tax: [
+    'Dividends Tax', 'Board Resolutions', 'Bank Statements',
+  ],
+  sars_transfer_duty: [
+    'Transfer Duty', 'Bank Statements',
+  ],
+  trust_registration: [
+    'Trust Deed', 'Directors/Members IDs', 'Proof of Address', 'Letters of Authority',
+  ],
+  trust_itr12t: [
+    'Trust Tax Returns (ITR12T)', 'Trust Deed', 'Financial Statements',
+  ],
+  trust_amendment: [
+    'Trust Deed', 'Trust Amendments', 'Letters of Authority', "Master's Office Correspondence",
+  ],
   trust_filing: [
     'Trust Deed', 'Letters of Authority', 'Resolutions',
     "Master's Office Correspondence", 'Directors/Members IDs',
+  ],
+  labour_uif_registration: [
+    'UIF Registration & Declarations', 'Registration Documents', 'Directors/Members IDs',
+  ],
+  labour_uif_monthly: [
+    'UIF Registration & Declarations', 'Payslips',
+  ],
+  labour_roe_coida: [
+    'Return of Earnings (COIDA)', 'Workmen\'s Compensation', 'Payslips',
+  ],
+  labour_wc_registration: [
+    'Workmen\'s Compensation', 'Registration Documents', 'Directors/Members IDs',
+  ],
+  labour_rma_roe: [
+    'Rand Mutual Assurance (RMA)', 'Return of Earnings (COIDA)', 'Payslips',
+  ],
+  labour_ee_report: [
+    'Employment Equity', 'Employment Contracts',
+  ],
+  labour_wsp_atr: [
+    'Workplace Skills Plan (WSP/ATR)',
+  ],
+  bbbee_eme_affidavit: [
+    'B-BBEE Certificates', 'Sworn Affidavits (EME)', 'Financial Statements',
+  ],
+  bbbee_verification: [
+    'B-BBEE Certificates', 'Verification Reports', 'Ownership & Management',
+  ],
+  payroll_monthly: [
+    'Payslips', 'Employment Contracts', 'Bank Statements',
+  ],
+  payroll_year_end: [
+    'EMP501 Reconciliation', 'IRP5 Certificates', 'Payslips',
+  ],
+  financial_statements: [
+    'Financial Statements', 'Trial Balances', 'Working Papers', 'Bank Statements',
+  ],
+  accounting_independent_review: [
+    'Audit / Review Reports', 'Financial Statements', 'Working Papers',
+  ],
+  general_onboarding: [
+    'Directors/Members IDs', 'Proof of Address', 'Registration Documents',
+    'Engagement Letters', 'Mandates',
   ],
 };
 

@@ -30,6 +30,7 @@
     "recharts": "^2.10.0",
     "tesseract.js": "^5.1.1",
     "vite": "^4.5.14",
+    "web-push": "^3.6.7",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

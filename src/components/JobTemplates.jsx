@@ -6,8 +6,13 @@ const CATEGORY_OPTIONS = [
   { value: 'sars', label: 'SARS' },
   { value: 'trusts', label: 'Trusts' },
   { value: 'payroll', label: 'Payroll' },
+  { value: 'labour', label: 'Labour' },
   { value: 'accounting', label: 'Accounting' },
   { value: 'advisory', label: 'Advisory' },
+  { value: 'bbbee', label: 'B-BBEE' },
+  { value: 'secretarial', label: 'Secretarial' },
+  { value: 'banking', label: 'Banking' },
+  { value: 'insurance', label: 'Insurance' },
   { value: 'general', label: 'General' },
 ];
 

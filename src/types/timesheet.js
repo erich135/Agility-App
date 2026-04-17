@@ -50,12 +50,18 @@ export const TIME_ENTRY_STATUSES = [
 ];
 
 export const JOB_CATEGORIES = [
-  'Tax',
   'CIPC',
+  'SARS',
+  'Trusts',
+  'Payroll',
   'Labour',
   'Accounting',
   'Advisory',
-  'Other'
+  'B-BBEE',
+  'Secretarial',
+  'Banking',
+  'Insurance',
+  'General'
 ];
 
 export const NOTIFICATION_TYPES = [

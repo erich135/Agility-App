@@ -12,8 +12,13 @@ const CATEGORY_CONFIG = {
   sars: { label: 'SARS', color: 'bg-green-50 text-green-700' },
   trusts: { label: 'Trusts', color: 'bg-purple-50 text-purple-700' },
   payroll: { label: 'Payroll', color: 'bg-yellow-50 text-yellow-700' },
+  labour: { label: 'Labour', color: 'bg-orange-50 text-orange-700' },
   accounting: { label: 'Accounting', color: 'bg-indigo-50 text-indigo-700' },
   advisory: { label: 'Advisory', color: 'bg-teal-50 text-teal-700' },
+  bbbee: { label: 'B-BBEE', color: 'bg-amber-50 text-amber-700' },
+  secretarial: { label: 'Secretarial', color: 'bg-slate-50 text-slate-700' },
+  banking: { label: 'Banking', color: 'bg-cyan-50 text-cyan-700' },
+  insurance: { label: 'Insurance', color: 'bg-rose-50 text-rose-700' },
   general: { label: 'General', color: 'bg-gray-50 text-gray-700' },
 };
 

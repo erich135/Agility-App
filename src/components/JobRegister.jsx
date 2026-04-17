@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import supabase from '../lib/SupabaseClient';
 import JSZip from 'jszip';
 import JobKanbanBoard from './JobKanbanBoard';
 import { generateProgressReportPDF } from '../services/jobProgressPDF';
+import { Target } from 'lucide-react';
 
 const FALLBACK_STATUS_CONFIG = {
   not_started: { label: 'Not Started', color: 'bg-gray-100 text-gray-700 border-gray-200', dot: 'bg-gray-400' },
@@ -74,6 +76,7 @@ const LINK_TYPE_CONFIG = {
 
 export default function JobRegister() {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   // Data
   const [jobs, setJobs] = useState([]);
@@ -976,6 +979,15 @@ export default function JobRegister() {
                           ))}
                         </select>
                       )}
+                      {job.status !== 'completed' && job.status !== 'cancelled' && (
+                        <button
+                          onClick={() => navigate(`/focus?jobId=${job.id}`)}
+                          title="Focus on this"
+                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                        >
+                          <Target className="w-4 h-4" />
+                        </button>
+                      )}
                       <button onClick={() => openEditForm(job)} title="Edit"
                         className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1318,6 +1330,14 @@ export default function JobRegister() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 ml-4">
+                    {job.status !== 'completed' && job.status !== 'cancelled' && (
+                      <button
+                        onClick={() => navigate(`/focus?jobId=${job.id}`)}
+                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Focus on this"
+                      >
+                        <Target className="w-5 h-5" />
+                      </button>
+                    )}
                     <button onClick={() => openEditForm(job)}
                       className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -17,7 +17,7 @@ import {
   Calendar,
   FolderOpen,
   ClipboardList,
-  UserCheck,
+  Target,
   Shield,
   Menu
 } from 'lucide-react';
@@ -50,6 +50,12 @@ export default function Sidebar() {
           label: 'Dashboard',
           permission: null // Everyone can see
         },
+        { 
+          path: '/focus', 
+          icon: Target, 
+          label: 'Focus Mode',
+          permission: null
+        },
       ]
     },
     {
@@ -74,12 +80,6 @@ export default function Sidebar() {
           permission: 'access_documents'
         },
         { 
-          path: '/person-register', 
-          icon: UserCheck, 
-          label: 'Person Register',
-          permission: 'access_customers'
-        },
-        { 
           path: '/jobs', 
           icon: ClipboardList, 
           label: 'Job Register',
@@ -88,84 +88,23 @@ export default function Sidebar() {
       ]
     },
     // {
-    //   title: 'Timesheet',
+    //   title: 'Financial',
     //   items: [
     //     { 
-    //       path: '/timesheet', 
-    //       icon: Clock, 
-    //       label: 'Log Time',
-    //       permission: 'access_timesheet'
-    //     },
-    //     { 
-    //       path: '/my-timesheets', 
-    //       icon: ClipboardList, 
-    //       label: 'My Timesheets',
-    //       permission: 'access_my_timesheets'
-    //     },
-    //     { 
-    //       path: '/projects', 
-    //       icon: Briefcase, 
-    //       label: 'Projects',
-    //       permission: 'access_projects'
+    //       path: '/financial-statements', 
+    //       icon: FileText, 
+    //       label: 'Financial Statements',
+    //       permission: 'access_financial_statements'
     //     },
     //   ]
     // },
-    // {
-    //   title: 'Billing',
-    //   items: [
-    //     { 
-    //       path: '/billing', 
-    //       icon: Banknote, 
-    //       label: 'Billing Dashboard',
-    //       permission: 'access_billing_dashboard'
-    //     },
-    //     { 
-    //       path: '/billing/reports', 
-    //       icon: BarChart3, 
-    //       label: 'Billing Reports',
-    //       permission: 'access_billing_reports'
-    //     },
-    //   ]
-    // },
-    {
-      title: 'Financial',
-      items: [
-        { 
-          path: '/financial-statements', 
-          icon: FileText, 
-          label: 'Financial Statements',
-          permission: 'access_financial_statements'
-        },
-      ]
-    },
     {
       title: 'Admin',
       items: [
         { 
-          path: '/settings/users', 
+          path: '/admin', 
           icon: Shield, 
-          label: 'User Management',
-          permission: 'manage_users',
-          adminOnly: true
-        },
-        { 
-          path: '/settings/job-statuses', 
-          icon: Settings, 
-          label: 'Job Statuses',
-          permission: 'manage_users',
-          adminOnly: true
-        },
-        { 
-          path: '/settings/document-categories', 
-          icon: FolderOpen, 
-          label: 'Doc Categories',
-          permission: 'manage_users',
-          adminOnly: true
-        },
-        { 
-          path: '/settings/job-templates', 
-          icon: ClipboardList, 
-          label: 'Job Templates',
+          label: 'Admin',
           permission: 'manage_users',
           adminOnly: true
         },

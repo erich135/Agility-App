@@ -6,7 +6,7 @@ import DocumentManager from './DocumentManager';
 import ActivityLogger from '../lib/ActivityLogger';
 import { useAuth } from '../contexts/AuthContext';
 
-const CustomerManagement = () => {
+const CustomerManagement = ({ embedded = false }) => {
   const { user, isAdmin } = useAuth();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -388,39 +388,52 @@ const CustomerManagement = () => {
     setDocumentsCustomer(null);
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Link 
-                to="/" 
-                className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                Back to Home
-              </Link>
-              <div className="h-6 border-l border-gray-300"></div>
-              <h1 className="text-2xl font-bold text-gray-900">Customer Management</h1>
-            </div>
-            <button 
-              onClick={handleAddCustomer}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center"
+  const content = (
+    <>
+      {/* Header - only when standalone */}
+      {!embedded && (
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-4">
+            <Link 
+              to="/" 
+              className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
-              Add Customer
-            </button>
+              Back to Home
+            </Link>
+            <div className="h-6 border-l border-gray-300"></div>
+            <h1 className="text-2xl font-bold text-gray-900">Customer Management</h1>
           </div>
+          <button 
+            onClick={handleAddCustomer}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center"
+          >
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            Add Customer
+          </button>
         </div>
-      </header>
+      )}
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Add button when embedded (no full header needed) */}
+      {embedded && (
+        <div className="flex justify-end mb-4">
+          <button 
+            onClick={handleAddCustomer}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center"
+          >
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            Add Customer
+          </button>
+        </div>
+      )}
+
+      <div>
         {/* Search and Filters */}
         <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
           <div className="flex flex-col sm:flex-row gap-4">
@@ -812,7 +825,6 @@ const CustomerManagement = () => {
             </div>
           </div>
         </div>
-      </main>
 
       {/* Customer Form Modal */}
       {showForm && (
@@ -987,6 +999,19 @@ const CustomerManagement = () => {
           </div>
         </div>
       )}
+      </div>
+    </>
+  );
+
+  if (embedded) {
+    return content;
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {content}
+      </main>
     </div>
   );
 };

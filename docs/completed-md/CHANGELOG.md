@@ -4,6 +4,47 @@ All notable changes to the Agility App project will be documented in this file.
 
 ---
 
+## [2026-04-17] - Focus Mode, Sidebar Cleanup & Executive Function Features
+
+### ✨ New Features
+
+#### Focus Mode (ASD/ADHD Executive Function Support)
+- **FocusContext.jsx** (new): Focus session management with WIP limits, email windows, countdown timer, 5-minute warnings
+- **FocusSession.jsx** (new): Full focus UI — start form with job picker, active countdown, capture interruption modal, end-of-block decision prompt
+- **InterruptInbox.jsx** (new): Review/resolve/defer captured interruptions with urgency badges and source icons
+- **Parked Sessions**: Resume or abandon parked focus blocks from the right sidebar
+- **Job ↔ Focus integration**: "Link to a job" dropdown in focus form auto-fills task + client; "Focus on this" (Target icon) button in Job Register navigates to Focus Mode pre-filled
+- **Convert to Job**: Briefcase button in Interrupt Inbox creates a Job Register entry from any interruption (maps urgency → priority)
+
+#### Sidebar Cleanup (11 → 7 items)
+- **AdminPage.jsx** (new): Consolidated admin into tabbed page (Users, Job Statuses, Doc Categories, Job Templates)
+- **CustomersPage.jsx** (new): Merged Clients + Person Register into tabbed page
+- Financial Statements removed from sidebar (code preserved)
+- Old URLs redirect with `?tab=` params for bookmarks
+
+### 🔧 Bug Fixes
+
+#### Timer Fixes
+- **TimerContext.jsx**: `stopTimer()` now subtracts paused time correctly (`workedMs = totalMs - pausedTime`)
+- **TimerContext.jsx**: Pause/resume tracks accumulated paused duration via `pauseStartRef`
+- **TimerContext.jsx**: 30-minute reminder replaced blocking `confirm()` with non-blocking toast via `timerReminderCallbackRef`
+
+### 🗃️ Database
+
+#### New Tables (create_focus_tables.sql)
+- `focus_sessions`: id, task_description, next_action, duration_minutes, started_at, ends_at, completed_at, client_name, client_id (FK→clients), job_id (FK→job_register), status, interruptions_count
+- `interrupt_inbox`: id, source, client_name, subject, urgency, next_action, focus_session_id (FK→focus_sessions), status (pending/resolved/deferred/converted), captured_at, resolved_at, defer_until
+- Idempotent SQL — safe to re-run with DO blocks and IF NOT EXISTS throughout
+
+### 📝 Modified Files
+- `src/App.jsx` — Added FocusProvider, FocusSession route, AdminPage/CustomersPage routes with redirects
+- `src/components/Sidebar.jsx` — Cleaned to 7 items: Dashboard, Focus Mode, Customers, CIPC, Documents, Job Register, Admin
+- `src/components/CustomerManagement.jsx` — Added `embedded` prop support
+- `src/components/PersonRegister.jsx` — Added `embedded` prop support
+- `src/components/JobRegister.jsx` — Added "Focus on this" button (Target icon) in table rows and expanded detail view
+
+---
+
 ## [2025-12-17] - Major Schema Fix & Test Infrastructure
 
 ### 🔧 Critical Bug Fixes

@@ -16,6 +16,9 @@ export const TimerProvider = ({ children }) => {
   const [timerPaused, setTimerPaused] = useState(false);
   const [pausedTime, setPausedTime] = useState(0);
   const reminderPromptOpenRef = useRef(false);
+  const pauseStartRef = useRef(null);
+  // Callback for non-blocking timer reminders (set by UI layer)
+  const timerReminderCallbackRef = useRef(null);
 
   const loadConsultant = async () => {
     // DEV MODE: AuthContext uses a stub user id that doesn't match consultants.
@@ -143,14 +146,18 @@ export const TimerProvider = ({ children }) => {
 
     const start = new Date(activeTimer.start_time);
     const end = new Date();
-    const hours = ((end - start) / (1000 * 60 * 60)).toFixed(2);
+    const totalMs = end - start;
+    // Subtract accumulated paused time so duration reflects actual work
+    const workedMs = Math.max(0, totalMs - (pausedTime || 0));
+    const hours = (workedMs / (1000 * 60 * 60)).toFixed(2);
 
     const { error } = await supabase
       .from('time_entries')
       .update({
         end_time: end.toISOString(),
         duration_hours: hours,
-        timer_active: false
+        timer_active: false,
+        is_paused: false
       })
       .eq('id', activeTimer.id);
 
@@ -175,6 +182,8 @@ export const TimerProvider = ({ children }) => {
     if (error) throw error;
 
     setTimerPaused(true);
+    // Store pause start time for later accumulation
+    pauseStartRef.current = Date.now();
   };
 
   const resumeTimer = async () => {
@@ -189,6 +198,12 @@ export const TimerProvider = ({ children }) => {
       .eq('id', activeTimer.id);
 
     if (error) throw error;
+
+    // Accumulate paused duration
+    if (pauseStartRef.current) {
+      setPausedTime(prev => prev + (Date.now() - pauseStartRef.current));
+      pauseStartRef.current = null;
+    }
 
     setTimerPaused(false);
   };
@@ -231,16 +246,25 @@ export const TimerProvider = ({ children }) => {
       reminderPromptOpenRef.current = true;
       try {
         const clientName = activeTimer.clients?.client_name || 'this client';
-        const keepRunning = window.confirm(
-          `Timer is still running for ${clientName}.\n\nOK = keep running\nCancel = stop timer`
-        );
 
-        if (!keepRunning) {
-          try {
-            await stopTimer();
-          } catch (e) {
-            console.error(e);
-            alert('Failed to stop timer');
+        // Use non-blocking callback if registered (e.g. toast), else fallback to confirm
+        if (timerReminderCallbackRef.current) {
+          timerReminderCallbackRef.current({
+            clientName,
+            stopTimer,
+            timerId: activeTimer.id
+          });
+        } else {
+          const keepRunning = window.confirm(
+            `Timer is still running for ${clientName}.\n\nOK = keep running\nCancel = stop timer`
+          );
+
+          if (!keepRunning) {
+            try {
+              await stopTimer();
+            } catch (e) {
+              console.error(e);
+            }
           }
         }
       } finally {
@@ -270,14 +294,16 @@ export const TimerProvider = ({ children }) => {
       consultant,
       activeTimer,
       timerPaused,
+      pausedTime,
       loading,
       refreshActiveTimer,
       startTimer,
       stopTimer,
       pauseTimer,
-      resumeTimer
+      resumeTimer,
+      timerReminderCallbackRef
     }),
-    [consultant, activeTimer, timerPaused, loading]
+    [consultant, activeTimer, timerPaused, pausedTime, loading]
   );
 
   return <TimerContext.Provider value={value}>{children}</TimerContext.Provider>;

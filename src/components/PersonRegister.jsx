@@ -32,7 +32,7 @@ const EMPTY_FORM = {
   notes: '',
 };
 
-export default function PersonRegister() {
+export default function PersonRegister({ embedded = false }) {
   const { user } = useAuth();
   const [persons, setPersons] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -423,18 +423,19 @@ export default function PersonRegister() {
 
   // ============== RENDER ==============
 
-  return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+  const innerContent = (
+    <div className={embedded ? '' : 'max-w-7xl mx-auto'}>
+      {/* Header */}
+      <div className={`${embedded ? '' : 'bg-white rounded-lg shadow-sm border border-gray-200 p-6'} mb-6`}>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          {!embedded && (
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Person Register</h1>
               <p className="text-sm text-gray-600 mt-1">
                 Directors, members, trustees, shareholders & beneficial owners
               </p>
             </div>
+          )}
             <div className="flex items-center gap-3">
               <select
                 value={selectedCustomerId}
@@ -930,6 +931,15 @@ export default function PersonRegister() {
           </>
         )}
       </div>
+  );
+
+  if (embedded) {
+    return innerContent;
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-100 p-6">
+      {innerContent}
     </div>
   );
 }

@@ -2,16 +2,18 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { TimerProvider } from './contexts/TimerContext';
+import { FocusProvider } from './contexts/FocusContext';
 import { ToastProvider } from './components/Toast';
 import Layout from './components/Layout';
+import FocusSession from './components/FocusSession';
 import HomePage from './components/HomePage';
 import LoginPage from './components/LoginPage';
 import SetupPassword from './components/SetupPassword';
 import ResetPassword from './components/ResetPassword';
 import CIPCManagement from './components/CIPCManagement';
-import CustomerManagement from './components/CustomerManagement';
+import CustomersPage from './components/CustomersPage';
 import BulkAssignCustomers from './components/BulkAssignCustomers';
-import SystemManagement from './components/SystemManagement';
+import AdminPage from './components/AdminPage';
 import CalendarTaskManagement from './components/CalendarTaskManagement';
 import DashboardAnalytics from './components/DashboardAnalytics';
 import ClientPortal from './components/ClientPortal';
@@ -27,12 +29,7 @@ import BillingDashboard from './components/BillingDashboard';
 import BillingDashboardNew from './components/BillingDashboardNew';
 import BillingSimple from './components/BillingSimple';
 import BillingReports from './components/BillingReports';
-import UserManagement from './components/UserManagement';
-import DocumentCategories from './components/DocumentCategories';
-import PersonRegister from './components/PersonRegister';
 import JobRegister from './components/JobRegister';
-import JobTemplates from './components/JobTemplates';
-import StatusManager from './components/StatusManager';
 
 // Protected Route component with Layout
 const ProtectedRoute = ({ children, requiredPermission }) => {
@@ -99,7 +96,7 @@ function AppRoutes() {
       <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
       <Route path="/dashboard" element={<ProtectedRoute requiredPermission="access_dashboard"><DashboardAnalytics /></ProtectedRoute>} />
       <Route path="/cipc" element={<ProtectedRoute requiredPermission="access_cipc"><CIPCManagement /></ProtectedRoute>} />
-      <Route path="/customers" element={<ProtectedRoute requiredPermission="access_customers"><CustomerManagement /></ProtectedRoute>} />
+      <Route path="/customers" element={<ProtectedRoute requiredPermission="access_customers"><CustomersPage /></ProtectedRoute>} />
       <Route path="/customers/bulk-assign" element={<ProtectedRoute requiredPermission="customers_bulk_assign"><BulkAssignCustomers /></ProtectedRoute>} />
       <Route path="/calendar" element={<ProtectedRoute requiredPermission="access_calendar"><CalendarTaskManagement /></ProtectedRoute>} />
       <Route path="/billing" element={<Navigate to="/billing/dashboard" replace />} />
@@ -111,15 +108,18 @@ function AppRoutes() {
       <Route path="/documents" element={<ProtectedRoute requiredPermission="access_documents"><DocumentManager /></ProtectedRoute>} />
       <Route path="/financial-statements" element={<ProtectedRoute requiredPermission="access_financial_statements"><FinancialStatements /></ProtectedRoute>} />
       <Route path="/client-portal" element={<ProtectedRoute><ClientPortal /></ProtectedRoute>} />
+      <Route path="/focus" element={<ProtectedRoute><FocusSession /></ProtectedRoute>} />
       
       {/* Admin Routes */}
-      <Route path="/management" element={<ProtectedRoute requiredPermission="system_settings"><SystemManagement /></ProtectedRoute>} />
-      <Route path="/settings/users" element={<ProtectedRoute requiredPermission="manage_users"><UserManagement /></ProtectedRoute>} />
-      <Route path="/settings/document-categories" element={<ProtectedRoute requiredPermission="manage_users"><DocumentCategories /></ProtectedRoute>} />
-      <Route path="/person-register" element={<ProtectedRoute requiredPermission="access_customers"><PersonRegister /></ProtectedRoute>} />
+      <Route path="/admin" element={<ProtectedRoute requiredPermission="manage_users"><AdminPage /></ProtectedRoute>} />
+      {/* Redirects for old admin URLs */}
+      <Route path="/management" element={<Navigate to="/admin" replace />} />
+      <Route path="/settings/users" element={<Navigate to="/admin?tab=users" replace />} />
+      <Route path="/settings/document-categories" element={<Navigate to="/admin?tab=doc-categories" replace />} />
+      <Route path="/person-register" element={<Navigate to="/customers?tab=persons" replace />} />
       <Route path="/jobs" element={<ProtectedRoute requiredPermission="access_customers"><JobRegister /></ProtectedRoute>} />
-      <Route path="/settings/job-templates" element={<ProtectedRoute requiredPermission="manage_users"><JobTemplates /></ProtectedRoute>} />
-      <Route path="/settings/job-statuses" element={<ProtectedRoute requiredPermission="manage_users"><StatusManager /></ProtectedRoute>} />
+      <Route path="/settings/job-templates" element={<Navigate to="/admin?tab=job-templates" replace />} />
+      <Route path="/settings/job-statuses" element={<Navigate to="/admin?tab=job-statuses" replace />} />
 
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
@@ -132,9 +132,11 @@ function App() {
     <AuthProvider>
       <ToastProvider>
         <TimerProvider>
-          <Router>
-            <AppRoutes />
-          </Router>
+          <FocusProvider>
+            <Router>
+              <AppRoutes />
+            </Router>
+          </FocusProvider>
         </TimerProvider>
       </ToastProvider>
     </AuthProvider>

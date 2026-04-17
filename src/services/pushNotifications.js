@@ -1,8 +1,6 @@
 // Push Notification Service
 // Handles: SW registration, push subscription, and sending to backend
 
-import supabase from '../lib/SupabaseClient';
-
 const VAPID_PUBLIC_KEY_STORAGE = 'agility_vapid_public_key';
 
 /**
@@ -69,15 +67,14 @@ export async function subscribeToPush(vapidPublicKey) {
 /**
  * Save push subscription to Supabase via API endpoint
  */
-export async function saveSubscription(subscription) {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Not authenticated');
+export async function saveSubscription(subscription, userId) {
+  if (!userId) throw new Error('Not authenticated');
 
   const response = await fetch('/api/push-subscribe', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      userId: user.id,
+      userId,
       subscription: subscription.toJSON(),
       userAgent: navigator.userAgent
     })
@@ -94,7 +91,7 @@ export async function saveSubscription(subscription) {
 /**
  * Unsubscribe from push notifications
  */
-export async function unsubscribeFromPush() {
+export async function unsubscribeFromPush(userId) {
   const registration = await navigator.serviceWorker.ready;
   const subscription = await registration.pushManager.getSubscription();
 
@@ -102,13 +99,12 @@ export async function unsubscribeFromPush() {
     await subscription.unsubscribe();
 
     // Remove from backend
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
+    if (userId) {
       await fetch('/api/push-subscribe', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: user.id,
+          userId,
           endpoint: subscription.endpoint
         })
       });
@@ -136,15 +132,14 @@ export async function isSubscribedToPush() {
 /**
  * Send a test push notification via the API
  */
-export async function sendTestNotification() {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Not authenticated');
+export async function sendTestNotification(userId) {
+  if (!userId) throw new Error('Not authenticated');
 
   const response = await fetch('/api/push-send', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      userId: user.id,
+      userId,
       title: '🔔 Agility Test',
       body: 'Push notifications are working! You\'ll receive deadline reminders here.',
       url: '/',

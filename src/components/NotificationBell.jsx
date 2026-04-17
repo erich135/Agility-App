@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import {
   subscribeToPush,
   unsubscribeFromPush,
@@ -10,6 +11,7 @@ import {
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
 
 export default function NotificationBell() {
+  const { user } = useAuth();
   const [subscribed, setSubscribed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showPanel, setShowPanel] = useState(false);
@@ -42,7 +44,7 @@ export default function NotificationBell() {
     setLoading(true);
     try {
       if (subscribed) {
-        await unsubscribeFromPush();
+        await unsubscribeFromPush(user?.id);
         setSubscribed(false);
       } else {
         if (!VAPID_PUBLIC_KEY) {
@@ -52,7 +54,7 @@ export default function NotificationBell() {
         const { saveSubscription } = await import('../services/pushNotifications');
         const sub = await subscribeToPush(VAPID_PUBLIC_KEY);
         if (sub) {
-          await saveSubscription(sub);
+          await saveSubscription(sub, user.id);
           setSubscribed(true);
           setPermState('granted');
         } else {
@@ -70,7 +72,7 @@ export default function NotificationBell() {
   async function handleTestPush() {
     setError(null);
     try {
-      await sendTestNotification();
+      await sendTestNotification(user.id);
       setTestSent(true);
       setTimeout(() => setTestSent(false), 3000);
     } catch (err) {
@@ -80,6 +82,7 @@ export default function NotificationBell() {
 
   const isSupported = 'PushManager' in window && 'serviceWorker' in navigator;
   const isDenied = permState === 'denied';
+  const isAuthenticated = !!user;
 
   return (
     <div className="relative">
@@ -113,7 +116,11 @@ export default function NotificationBell() {
           <div className="absolute right-0 top-10 z-50 w-80 bg-white rounded-xl shadow-xl border border-gray-200 p-4">
             <h3 className="font-semibold text-gray-900 mb-3">Push Notifications</h3>
 
-            {!isSupported ? (
+            {!isAuthenticated ? (
+              <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded-lg">
+                Please sign in to enable notifications.
+              </div>
+            ) : !isSupported ? (
               <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded-lg">
                 Your browser doesn't support push notifications. Try Chrome or Edge.
               </div>

@@ -7,7 +7,7 @@ const CACHE_NAME = 'agility-v1';
 const PRECACHE_URLS = [
   '/',
   '/manifest.json',
-  '/agility-logo.png',
+  '/agility-icon-192.png',
   '/favicon.svg'
 ];
 

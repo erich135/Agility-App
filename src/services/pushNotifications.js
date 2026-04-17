@@ -1,7 +1,7 @@
 // Push Notification Service
 // Handles: SW registration, push subscription, and sending to backend
 
-import { supabase } from '../lib/supabase';
+import supabase from '../lib/SupabaseClient';
 
 const VAPID_PUBLIC_KEY_STORAGE = 'agility_vapid_public_key';
 

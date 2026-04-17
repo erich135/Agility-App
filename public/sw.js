@@ -1,7 +1,7 @@
 // Service Worker for Agility PWA
 // Handles: caching for offline support + push notification display
 
-const CACHE_NAME = 'agility-v1';
+const CACHE_NAME = 'agility-v2';
 
 // Assets to cache for offline
 const PRECACHE_URLS = [
@@ -44,7 +44,16 @@ self.addEventListener('fetch', (event) => {
         }
         return response;
       })
-      .catch(() => caches.match(event.request))
+      .catch(() =>
+        caches.match(event.request).then((cached) => {
+          if (cached) return cached;
+          // SPA: serve cached index.html for navigation requests
+          if (event.request.mode === 'navigate') {
+            return caches.match('/');
+          }
+          return new Response('Offline', { status: 503, statusText: 'Offline' });
+        })
+      )
   );
 });
 

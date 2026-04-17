@@ -149,6 +149,13 @@ export default function JobKanbanBoard({
                           </div>
                         )}
 
+                        {/* Status Remarks */}
+                        {job.status_remarks && (
+                          <div className="mt-2 px-2 py-1.5 bg-amber-50 border border-amber-200 rounded text-[11px] text-amber-800 leading-snug">
+                            💬 {job.status_remarks}
+                          </div>
+                        )}
+
                         {/* Progress bar */}
                         {progress && (
                           <div className="flex items-center gap-2 mt-2">

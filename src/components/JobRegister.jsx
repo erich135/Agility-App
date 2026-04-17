@@ -39,7 +39,7 @@ const EMPTY_JOB = {
   tax_year: '', period: '', status: 'not_started', priority: 'medium',
   date_due: '', assigned_to: '', assigned_to_name: '',
   is_recurring: false, recurrence_pattern: '', template_id: '',
-  quoted_amount: '', notes: '',
+  quoted_amount: '', notes: '', status_remarks: '',
 };
 
 // Smart suggestions: map job types to recommended document category names
@@ -303,6 +303,7 @@ export default function JobRegister() {
       recurrence_pattern: job.recurrence_pattern || '',
       template_id: job.template_id || '',
       quoted_amount: job.quoted_amount || '', notes: job.notes || '',
+      status_remarks: job.status_remarks || '',
     });
     setFormCustomerId(job.client_id);
     setEditingId(job.id);
@@ -349,6 +350,7 @@ export default function JobRegister() {
         template_id: formData.template_id || null,
         quoted_amount: formData.quoted_amount ? parseFloat(formData.quoted_amount) : null,
         notes: formData.notes.trim() || null,
+        status_remarks: formData.status_remarks.trim() || null,
         updated_at: new Date().toISOString(),
       };
 
@@ -427,6 +429,10 @@ export default function JobRegister() {
       }
       if (newStatus !== 'completed') {
         updates.date_completed = null;
+      }
+      // Clear remarks when status changes via quick-select
+      if (newStatus !== job.status) {
+        updates.status_remarks = null;
       }
 
       const { error: upErr } = await supabase.from('job_register').update(updates).eq('id', job.id);
@@ -940,9 +946,11 @@ export default function JobRegister() {
                     </div>
                     {/* Status */}
                     <div className="col-span-1">
-                      <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border ${statusCfg.color}`}>
+                      <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border ${statusCfg.color}`}
+                        title={job.status_remarks || ''}>
                         <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`}></span>
                         {statusCfg.label}
+                        {job.status_remarks && <span className="ml-0.5 text-[10px]">💬</span>}
                       </span>
                     </div>
                     {/* Due */}
@@ -1017,6 +1025,12 @@ export default function JobRegister() {
                           {job.assigned_to_name && <DetailRow label="Assigned To" value={job.assigned_to_name} />}
                           {job.is_recurring && <DetailRow label="Recurring" value={job.recurrence_pattern || 'Yes'} />}
                           {job.quoted_amount && <DetailRow label="Quoted" value={`R ${parseFloat(job.quoted_amount).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}`} />}
+                          {job.status_remarks && (
+                            <div className="bg-amber-50 border border-amber-200 rounded-lg p-2">
+                              <span className="text-xs text-amber-600 font-medium">Status Remarks</span>
+                              <p className="text-sm text-amber-900 mt-0.5">{job.status_remarks}</p>
+                            </div>
+                          )}
                           {job.notes && <DetailRow label="Notes" value={job.notes} />}
                           <DetailRow label="Created" value={job.date_created ? new Date(job.date_created).toLocaleDateString('en-ZA') : '-'} />
                           {job.date_started && <DetailRow label="Started" value={new Date(job.date_started).toLocaleDateString('en-ZA')} />}
@@ -1627,6 +1641,17 @@ export default function JobRegister() {
                       <option value="annually">Annually</option>
                     </select>
                   )}
+                </div>
+
+                {/* Status Remarks */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status Remarks</label>
+                  <textarea value={formData.status_remarks}
+                    onChange={e => setFormData(p => ({ ...p, status_remarks: e.target.value }))}
+                    rows={2}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g. Waiting on customer to provide a valuation to finalise the bank letter" />
+                  <p className="text-xs text-gray-400 mt-1">Explain what is needed or why the job is in its current status</p>
                 </div>
 
                 {/* Quoted Amount & Notes */}

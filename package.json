@@ -15,6 +15,8 @@
     "test:quick": "vitest run test/smoke.test.js"
   },
   "dependencies": {
+    "@azure/msal-node": "^5.1.3",
+    "@microsoft/microsoft-graph-client": "^3.0.7",
     "@supabase/supabase-js": "^2.39.4",
     "dayjs": "^1.11.10",
     "html2canvas": "^1.4.1",

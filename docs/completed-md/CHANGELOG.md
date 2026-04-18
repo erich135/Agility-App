@@ -4,6 +4,57 @@ All notable changes to the Agility App project will be documented in this file.
 
 ---
 
+## [2026-04-18] - In-App Email Client (Microsoft 365 Integration)
+
+### ✨ New Features
+
+#### Email Client (Microsoft Graph API)
+- **EmailPage.jsx** (new): Full 3-panel email client — folder sidebar, message list with pagination, message reader
+- **Compose/Reply/Forward**: Modal composer with To, CC, Subject, Body fields; supports new email, reply, reply all, and forward
+- **Folder navigation**: Shows all M365 folders with unread counts
+- **Search**: Full-text email search via Microsoft Graph
+- **Mark read/unread**, **delete** actions on messages
+
+#### Email ↔ Job Register Integration
+- **Link to Job**: Button on any email opens a job picker to link correspondence to a job register entry
+- **Create Job from Email**: Creates a new job pre-filled with email subject as title, auto-matches client by sender email address, and auto-links the email
+- **JobEmailsTab.jsx** (new): "Linked Emails" section in job detail — shows all linked emails with sender, date, attachments, preview; available in both table and board view
+- **Unlink**: Remove email-job links from either the email viewer or the job detail
+
+#### OAuth2 Authentication
+- **email-auth.js** (new API): Microsoft OAuth2 flow with MSAL — login redirect, callback token exchange, connection status check, disconnect
+- Single-user design (owner's M365 account) — one token stored in `email_tokens` table
+- Automatic token refresh when expired
+
+### 📦 New Dependencies
+- `@microsoft/microsoft-graph-client` ^3.0.7
+- `@azure/msal-node` ^5.1.3
+
+### 🗃️ Database (create_email_tables.sql)
+- `email_tokens`: user_id (unique), access_token, refresh_token, token_expires_at, email_address, display_name
+- `job_emails`: job_id (FK→job_register), message_id, internet_message_id, conversation_id, subject, sender_name, sender_email, received_at, snippet, has_attachments, linked_by, notes
+
+### 📝 New Files
+- `api/email-auth.js` — OAuth2 login/callback/status/disconnect
+- `api/email-api.js` — Inbox, message, send, reply, forward, move, delete, search, folders, mark-read, link-job, unlink-job, job-emails
+- `src/services/emailService.js` — Frontend API client
+- `src/components/EmailPage.jsx` — Full email client UI
+- `src/components/JobEmailsTab.jsx` — Linked emails in job expanded detail
+- `database/NEW_SQL_SCRIPTS_GO_HERE/create_email_tables.sql` — DB migration
+- `docs/EMAIL_SETUP_INSTRUCTIONS.md` — Azure AD setup guide
+
+### 📝 Modified Files
+- `src/App.jsx` — Added `/email` route with EmailPage import
+- `src/components/Sidebar.jsx` — Added Mail icon + "Email" menu item in Core group
+- `src/components/JobRegister.jsx` — Added JobEmailsTab in table view expanded section and board view modal
+
+### ⚙️ Setup Required
+- Register Azure AD app (see `docs/EMAIL_SETUP_INSTRUCTIONS.md`)
+- Set env vars: `MS_TENANT_ID`, `MS_CLIENT_ID`, `MS_CLIENT_SECRET`, `MS_REDIRECT_URI`
+- Run `create_email_tables.sql` in Supabase
+
+---
+
 ## [2026-04-17] - Focus Mode, Sidebar Cleanup & Executive Function Features
 
 ### ✨ New Features

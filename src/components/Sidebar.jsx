@@ -19,7 +19,8 @@ import {
   ClipboardList,
   Target,
   Shield,
-  Menu
+  Menu,
+  Mail
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -84,6 +85,12 @@ export default function Sidebar() {
           icon: ClipboardList, 
           label: 'Job Register',
           permission: 'access_customers'
+        },
+        { 
+          path: '/email', 
+          icon: Mail, 
+          label: 'Email',
+          permission: null
         },
       ]
     },

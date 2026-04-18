@@ -30,6 +30,7 @@ import BillingDashboardNew from './components/BillingDashboardNew';
 import BillingSimple from './components/BillingSimple';
 import BillingReports from './components/BillingReports';
 import JobRegister from './components/JobRegister';
+import EmailPage from './components/EmailPage';
 
 // Protected Route component with Layout
 const ProtectedRoute = ({ children, requiredPermission }) => {
@@ -118,6 +119,7 @@ function AppRoutes() {
       <Route path="/settings/document-categories" element={<Navigate to="/admin?tab=doc-categories" replace />} />
       <Route path="/person-register" element={<Navigate to="/customers?tab=persons" replace />} />
       <Route path="/jobs" element={<ProtectedRoute requiredPermission="access_customers"><JobRegister /></ProtectedRoute>} />
+      <Route path="/email" element={<ProtectedRoute><EmailPage /></ProtectedRoute>} />
       <Route path="/settings/job-templates" element={<Navigate to="/admin?tab=job-templates" replace />} />
       <Route path="/settings/job-statuses" element={<Navigate to="/admin?tab=job-statuses" replace />} />
 

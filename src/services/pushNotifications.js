@@ -130,6 +130,31 @@ export async function isSubscribedToPush() {
 }
 
 /**
+ * Auto-resubscribe if permission is granted but subscription is missing
+ * (happens when PWA gets a fresh SW registration after update)
+ */
+export async function ensurePushSubscription(vapidPublicKey, userId) {
+  if (!vapidPublicKey || !userId) return null;
+  if (getPushPermissionState() !== 'granted') return null;
+
+  const alreadySubscribed = await isSubscribedToPush();
+  if (alreadySubscribed) return null;
+
+  console.log('Push permission granted but no subscription — resubscribing...');
+  try {
+    const subscription = await subscribeToPush(vapidPublicKey);
+    if (subscription) {
+      await saveSubscription(subscription, userId);
+      console.log('Push resubscription successful');
+    }
+    return subscription;
+  } catch (err) {
+    console.error('Push resubscription failed:', err);
+    return null;
+  }
+}
+
+/**
  * Send a test push notification via the API
  */
 export async function sendTestNotification(userId) {

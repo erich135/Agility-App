@@ -5,7 +5,8 @@ import {
   unsubscribeFromPush,
   isSubscribedToPush,
   sendTestNotification,
-  getPushPermissionState
+  getPushPermissionState,
+  ensurePushSubscription
 } from '../services/pushNotifications';
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
@@ -30,7 +31,13 @@ export default function NotificationBell() {
       setPermState(state);
       if (state === 'granted') {
         const isSub = await isSubscribedToPush();
-        setSubscribed(isSub);
+        if (!isSub && user?.id && VAPID_PUBLIC_KEY) {
+          // Auto-resubscribe (e.g. after SW update in installed PWA)
+          const restored = await ensurePushSubscription(VAPID_PUBLIC_KEY, user.id);
+          setSubscribed(!!restored);
+        } else {
+          setSubscribed(isSub);
+        }
       }
     } catch (err) {
       console.error('Check subscription error:', err);

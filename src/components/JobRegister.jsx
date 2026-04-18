@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import supabase from '../lib/SupabaseClient';
 import JSZip from 'jszip';
 import JobKanbanBoard from './JobKanbanBoard';
+import JobEmailsTab from './JobEmailsTab';
 import { generateProgressReportPDF } from '../services/jobProgressPDF';
 import { Target } from 'lucide-react';
 
@@ -1404,6 +1405,9 @@ export default function JobRegister() {
                           </div>
                         );
                       })()}
+
+                      {/* ============ EMAILS SECTION ============ */}
+                      <JobEmailsTab jobId={job.id} />
                     </div>
                   )}
                 </div>
@@ -1582,6 +1586,9 @@ export default function JobRegister() {
                       </select>
                     )}
                   </div>
+
+                  {/* ============ EMAILS SECTION (Board View) ============ */}
+                  <JobEmailsTab jobId={job.id} />
                 </div>
               </div>
             </div>

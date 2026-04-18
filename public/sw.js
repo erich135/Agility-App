@@ -1,13 +1,14 @@
 // Service Worker for Agility PWA
 // Handles: caching for offline support + push notification display
 
-const CACHE_NAME = 'agility-v2';
+const CACHE_NAME = 'agility-v3';
 
 // Assets to cache for offline
 const PRECACHE_URLS = [
   '/',
   '/manifest.json',
   '/agility-icon-192.png',
+  '/agility-logo.png',
   '/favicon.svg'
 ];
 

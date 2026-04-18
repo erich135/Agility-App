@@ -2,6 +2,8 @@
   "name": "Agility - Practice Management",
   "short_name": "Agility",
   "description": "SA Accounting Practice Management App",
+  "id": "/",
+  "scope": "/",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

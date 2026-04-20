@@ -42,6 +42,18 @@ const EMAIL_USER = process.env.EMAIL_USER;
 const EMAIL_PASS = process.env.EMAIL_PASSWORD;
 const FROM_NAME = process.env.EMAIL_FROM_NAME || 'LMW Financial Solutions';
 const FROM_ADDRESS = process.env.EMAIL_FROM_ADDRESS || EMAIL_USER;
+const APP_URL = process.env.VERCEL_PROJECT_PRODUCTION_URL
+  ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+  : (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://agility.lmwfinance.app');
+
+// ── Email Signature ───────────────────────────────────────
+function getSignatureHtml() {
+  return `
+<br/>
+<div style="margin-top: 20px; border-top: 1px solid #ccc; padding-top: 10px;">
+  <img src="${APP_URL}/Signature.png" alt="LMW Financial Solutions" style="max-width: 600px; height: auto;" />
+</div>`;
+}
 
 // ── IMAP Client Factory ───────────────────────────────────
 function createImapClient() {
@@ -289,7 +301,22 @@ async function handleMessage(res, { messageId, folder = 'INBOX' }) {
         contentType: att.contentType || 'application/octet-stream',
         size: att.size || 0,
         isInline: att.contentDisposition === 'inline',
+        contentId: att.contentId ? att.contentId.replace(/[<>]/g, '') : null,
       }));
+
+      // Replace CID references with inline base64 data URIs
+      let htmlContent = parsed.html || parsed.textAsHtml || parsed.text || '';
+      for (const att of (parsed.attachments || [])) {
+        if (att.contentId && att.content) {
+          const cid = att.contentId.replace(/[<>]/g, '');
+          const b64 = att.content.toString('base64');
+          const dataUri = `data:${att.contentType || 'application/octet-stream'};base64,${b64}`;
+          htmlContent = htmlContent.replace(
+            new RegExp(`cid:${cid.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'gi'),
+            dataUri
+          );
+        }
+      }
 
       const message = {
         id: String(messageId),
@@ -310,7 +337,7 @@ async function handleMessage(res, { messageId, folder = 'INBOX' }) {
         sentDateTime: parsed.date ? parsed.date.toISOString() : null,
         body: {
           contentType: parsed.html ? 'html' : 'text',
-          content: parsed.html || parsed.textAsHtml || parsed.text || '',
+          content: htmlContent,
         },
         hasAttachments: attachments.length > 0,
         internetMessageId: parsed.messageId || null,
@@ -359,7 +386,9 @@ async function handleSend(res, { to, cc, bcc, subject, body, contentType = 'HTML
     cc: ccList,
     bcc: bccList,
     subject,
-    ...(contentType === 'HTML' ? { html: body || '' } : { text: body || '' }),
+    ...(contentType === 'HTML'
+      ? { html: (body || '') + getSignatureHtml() }
+      : { text: body || '' }),
   });
 
   return res.status(200).json({ success: true });
@@ -415,6 +444,7 @@ async function handleReply(res, { messageId, folder = 'INBOX', body, replyAll = 
   const originalFrom = originalParsed.from?.text || '';
   const quotedHtml = `
     <div>${body}</div>
+    ${getSignatureHtml()}
     <br/>
     <div style="border-left: 2px solid #ccc; padding-left: 10px; margin-left: 5px; color: #666;">
       <p>On ${originalDate}, ${originalFrom} wrote:</p>
@@ -469,7 +499,8 @@ async function handleForward(res, { messageId, folder = 'INBOX', to, comment }) 
   const originalDate = originalParsed.date ? originalParsed.date.toLocaleString() : '';
 
   const forwardHtml = `
-    ${comment ? `<div>${comment}</div><br/>` : ''}
+    ${comment ? `<div>${comment}</div>` : ''}
+    ${getSignatureHtml()}
     <div style="border-top: 1px solid #ccc; padding-top: 10px;">
       <p><b>---------- Forwarded message ----------</b></p>
       <p><b>From:</b> ${originalFrom}</p>

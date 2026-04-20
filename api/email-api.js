@@ -26,8 +26,8 @@ async function loadDeps() {
   if (!supabase) {
     const { createClient } = await import('@supabase/supabase-js');
     supabase = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
+      process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY
     );
   }
 }

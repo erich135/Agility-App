@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState, useRef } from "react";
 import { Link } from 'react-router-dom';
 import supabase from '../lib/SupabaseClient';
 import { getFilingStatus } from "../lib/dueStatus";
+import { createCIPCJobs } from "../lib/cipcJobCreator";
+import { useAuth } from '../contexts/AuthContext';
 import dayjs from "dayjs";
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
@@ -62,6 +64,8 @@ const fmtDDMMYYYY = (val) => {
 /* -------------------------------------------------------------------- */
 
 const CIPCManagement = () => {
+  const { user } = useAuth();
+
   // --- state ---
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -76,6 +80,11 @@ const CIPCManagement = () => {
   // sorting
   const [sortBy, setSortBy] = useState("client_name"); // default
   const [sortAsc, setSortAsc] = useState(true);
+
+  // job creation
+  const [creatingJobs, setCreatingJobs] = useState({}); // { clientId: true } while creating
+  const [jobResults, setJobResults] = useState({}); // { clientId: { created, skipped, errors } }
+  const [bulkCreating, setBulkCreating] = useState(false);
 
   // modal
   const [showForm, setShowForm] = useState(false);
@@ -344,6 +353,55 @@ const CIPCManagement = () => {
     else await fetchClients();
   };
 
+  // --- CIPC Job Creation ---
+  const handleCreateJobs = async (client) => {
+    setCreatingJobs((prev) => ({ ...prev, [client.id]: true }));
+    try {
+      const result = await createCIPCJobs(supabase, client, {
+        createdBy: user?.id || null,
+        createdByName: user?.full_name || user?.email || null,
+      });
+      setJobResults((prev) => ({ ...prev, [client.id]: result }));
+      // Clear result after 5 seconds
+      setTimeout(() => {
+        setJobResults((prev) => {
+          const next = { ...prev };
+          delete next[client.id];
+          return next;
+        });
+      }, 5000);
+    } catch (err) {
+      setJobResults((prev) => ({
+        ...prev,
+        [client.id]: { created: [], skipped: [], errors: [err.message] },
+      }));
+    } finally {
+      setCreatingJobs((prev) => {
+        const next = { ...prev };
+        delete next[client.id];
+        return next;
+      });
+    }
+  };
+
+  const handleBulkCreateJobs = async () => {
+    // Create jobs for all currently displayed "due" clients (orange or red)
+    const dueClients = displayedClients.filter((c) => {
+      const status = getFilingStatus(c.registration_date, c.last_cipc_filed, c.last_bo_filed);
+      return status === 'orange' || status === 'red';
+    });
+    if (dueClients.length === 0) {
+      alert('No due or overdue clients in the current view.');
+      return;
+    }
+    if (!window.confirm(`Create CIPC jobs for ${dueClients.length} due/overdue client(s)?`)) return;
+    setBulkCreating(true);
+    for (const client of dueClients) {
+      await handleCreateJobs(client);
+    }
+    setBulkCreating(false);
+  };
+
   const getRowColor = (client) => {
     const status = getFilingStatus(
       client.registration_date,
@@ -499,6 +557,18 @@ const CIPCManagement = () => {
             + Add Client
           </button>
 
+          <button
+            onClick={handleBulkCreateJobs}
+            disabled={bulkCreating}
+            className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50 w-full md:w-auto flex items-center justify-center gap-2"
+            title="Create Job Register entries for all due/overdue clients"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+            {bulkCreating ? 'Creating...' : 'Create All Due Jobs'}
+          </button>
+
           {/* Export buttons */}
           <button
             onClick={exportToXlsx}
@@ -635,6 +705,37 @@ const CIPCManagement = () => {
                         </button>
                       )}
                     </div>
+                    {/* Create Jobs button */}
+                    <div>
+                      <button
+                        onClick={() => handleCreateJobs(client)}
+                        disabled={!!creatingJobs[client.id]}
+                        className="px-2 py-1 bg-indigo-500 rounded hover:bg-indigo-600 disabled:opacity-50 text-xs font-medium"
+                        title="Create Annual Return + BO Filing jobs in Job Register"
+                      >
+                        {creatingJobs[client.id] ? '...' : '📋 Create Jobs'}
+                      </button>
+                    </div>
+                    {/* Job creation result feedback */}
+                    {jobResults[client.id] && (
+                      <div className="text-xs mt-1">
+                        {jobResults[client.id].created.length > 0 && (
+                          <span className="text-green-200">
+                            ✓ Created {jobResults[client.id].created.length} job(s)
+                          </span>
+                        )}
+                        {jobResults[client.id].skipped.length > 0 && (
+                          <span className="text-yellow-200 ml-1">
+                            ({jobResults[client.id].skipped.length} already exist)
+                          </span>
+                        )}
+                        {jobResults[client.id].errors.length > 0 && (
+                          <span className="text-red-200 ml-1">
+                            ✗ {jobResults[client.id].errors.join(', ')}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

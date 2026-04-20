@@ -83,7 +83,12 @@ export default async function handler(req, res) {
   }
 
   // Load dependencies on first invocation
-  await loadDeps();
+  try {
+    await loadDeps();
+  } catch (depErr) {
+    console.error('Dependency load error:', depErr);
+    return res.status(500).json({ error: 'Failed to load deps', detail: depErr.message, stack: depErr.stack });
+  }
 
   const { action, user_id, ...params } = req.body;
 

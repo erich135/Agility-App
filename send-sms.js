@@ -58,11 +58,11 @@ export default async function handler(req, res) {
     console.log('📱 Sending SMS:', {
       from: fromNumber,
       to: phoneNumber,
-      bodyLength: `Your Agility login code: ${otp}. Valid for 10 minutes.`.length
+      bodyLength: `Your LMW login code: ${otp}. Valid for 10 minutes.`.length
     });
 
     const message = await client.messages.create({
-      body: `Your Agility login code: ${otp}. Valid for 10 minutes.`,
+      body: `Your LMW login code: ${otp}. Valid for 10 minutes.`,
       from: fromNumber,
       to: phoneNumber,
     });

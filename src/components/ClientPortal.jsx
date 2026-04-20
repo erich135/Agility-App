@@ -214,8 +214,8 @@ const ClientPortal = () => {
           <div className="bg-white rounded-2xl shadow-xl p-8">
             <div className="text-center mb-8">
               <img 
-                src="/agility-logo.png" 
-                alt="Agility Logo" 
+                src="/lmw-logo.png" 
+                alt="LMW Logo" 
                 className="h-16 w-auto mx-auto mb-4"
               />
               <h2 className="text-3xl font-bold text-gray-900 mb-2">Client Portal</h2>
@@ -301,8 +301,8 @@ const ClientPortal = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <img 
-                src="/agility-logo.png" 
-                alt="Agility Logo" 
+                src="/lmw-logo.png" 
+                alt="LMW Logo" 
                 className="h-12 w-auto"
               />
               <div>

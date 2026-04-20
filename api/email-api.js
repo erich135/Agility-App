@@ -1,109 +1,68 @@
 // ============================================================
-// Email API - Microsoft Graph Mail Operations
+// Email API - IMAP/SMTP Mail Operations (cPanel compatible)
 // ============================================================
 // POST /api/email-api  (body: { action, ...params })
 //   action: inbox, message, send, reply, forward, move,
-//           delete, search, folders, link-job, unlink-job,
-//           job-emails
+//           delete, search, folders, mark-read, link-job,
+//           unlink-job, job-emails, status
 // ============================================================
 
 import { createClient } from '@supabase/supabase-js';
-import { ConfidentialClientApplication } from '@azure/msal-node';
+import { ImapFlow } from 'imapflow';
+import { simpleParser } from 'mailparser';
+import nodemailer from 'nodemailer';
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-const TENANT_ID = process.env.MS_TENANT_ID || 'common';
-const CLIENT_ID = process.env.MS_CLIENT_ID;
-const CLIENT_SECRET = process.env.MS_CLIENT_SECRET;
-const GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
+// ── IMAP/SMTP Config from env ─────────────────────────────
+const IMAP_HOST = process.env.EMAIL_HOST;
+const IMAP_PORT = Number(process.env.IMAP_PORT || 993);
+const SMTP_HOST = process.env.EMAIL_HOST;
+const SMTP_PORT = Number(process.env.EMAIL_PORT || 465);
+const SMTP_SECURE = String(process.env.EMAIL_SECURE || 'true').toLowerCase() === 'true';
+const EMAIL_USER = process.env.EMAIL_USER;
+const EMAIL_PASS = process.env.EMAIL_PASSWORD;
+const FROM_NAME = process.env.EMAIL_FROM_NAME || 'LMW Financial Solutions';
+const FROM_ADDRESS = process.env.EMAIL_FROM_ADDRESS || EMAIL_USER;
 
-// ── Token Management ──────────────────────────────────────
-async function getAccessToken(userId) {
-  const { data: tokenRow, error } = await supabase
-    .from('email_tokens')
-    .select('*')
-    .eq('user_id', userId)
-    .single();
-
-  if (error || !tokenRow) {
-    throw new Error('Email not connected. Please connect your Microsoft account first.');
-  }
-
-  // Check if token is still valid (with 5-min buffer)
-  const expiresAt = new Date(tokenRow.token_expires_at);
-  if (expiresAt > new Date(Date.now() + 5 * 60 * 1000)) {
-    return tokenRow.access_token;
-  }
-
-  // Token expired - refresh it
-  if (!tokenRow.refresh_token) {
-    throw new Error('No refresh token available. Please reconnect your Microsoft account.');
-  }
-
-  const msalClient = new ConfidentialClientApplication({
+// ── IMAP Client Factory ───────────────────────────────────
+function createImapClient() {
+  return new ImapFlow({
+    host: IMAP_HOST,
+    port: IMAP_PORT,
+    secure: true,
     auth: {
-      clientId: CLIENT_ID,
-      clientSecret: CLIENT_SECRET,
-      authority: `https://login.microsoftonline.com/${TENANT_ID}`,
+      user: EMAIL_USER,
+      pass: EMAIL_PASS,
     },
+    logger: false,
   });
-
-  const refreshResult = await msalClient.acquireTokenByRefreshToken({
-    refreshToken: tokenRow.refresh_token,
-    scopes: ['Mail.Read', 'Mail.ReadWrite', 'Mail.Send', 'User.Read'],
-  });
-
-  // Extract new refresh token from MSAL cache
-  const cache = msalClient.getTokenCache().serialize();
-  const cacheData = JSON.parse(cache);
-  const refreshTokens = cacheData.RefreshToken || {};
-  const newRefreshToken = Object.values(refreshTokens)[0]?.secret || tokenRow.refresh_token;
-
-  // Update stored tokens
-  await supabase
-    .from('email_tokens')
-    .update({
-      access_token: refreshResult.accessToken,
-      refresh_token: newRefreshToken,
-      token_expires_at: refreshResult.expiresOn?.toISOString() || new Date(Date.now() + 3600000).toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq('user_id', userId);
-
-  return refreshResult.accessToken;
 }
 
-// ── Graph API Helper ──────────────────────────────────────
-async function graphRequest(accessToken, path, options = {}) {
-  const { method = 'GET', body, headers = {} } = options;
-  const url = path.startsWith('http') ? path : `${GRAPH_BASE}${path}`;
-
-  const res = await fetch(url, {
-    method,
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-      ...headers,
+// ── SMTP Transporter ──────────────────────────────────────
+function createTransporter() {
+  return nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: SMTP_SECURE,
+    auth: {
+      user: EMAIL_USER,
+      pass: EMAIL_PASS,
     },
-    body: body ? JSON.stringify(body) : undefined,
   });
-
-  if (!res.ok) {
-    const errorBody = await res.text();
-    console.error(`Graph API error [${res.status}]:`, errorBody);
-    throw new Error(`Graph API error: ${res.status} - ${res.statusText}`);
-  }
-
-  if (res.status === 204) return null; // No content (delete, move)
-
-  return res.json();
 }
 
 // ── Main Handler ──────────────────────────────────────────
 export default async function handler(req, res) {
+  // CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.status(200).end();
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'POST required' });
   }
@@ -115,35 +74,31 @@ export default async function handler(req, res) {
   }
 
   try {
-    let accessToken;
-    // Some actions don't need Graph API
-    if (!['job-emails', 'unlink-job'].includes(action)) {
-      accessToken = await getAccessToken(user_id);
-    }
-
     switch (action) {
+      case 'status':
+        return handleStatus(res);
       case 'inbox':
-        return await handleInbox(res, accessToken, params);
+        return await handleInbox(res, params);
       case 'message':
-        return await handleMessage(res, accessToken, params);
+        return await handleMessage(res, params);
       case 'send':
-        return await handleSend(res, accessToken, params);
+        return await handleSend(res, params);
       case 'reply':
-        return await handleReply(res, accessToken, params);
+        return await handleReply(res, params);
       case 'forward':
-        return await handleForward(res, accessToken, params);
+        return await handleForward(res, params);
       case 'move':
-        return await handleMove(res, accessToken, params);
+        return await handleMove(res, params);
       case 'delete':
-        return await handleDelete(res, accessToken, params);
+        return await handleDelete(res, params);
       case 'search':
-        return await handleSearch(res, accessToken, params);
+        return await handleSearch(res, params);
       case 'folders':
-        return await handleFolders(res, accessToken);
+        return await handleFolders(res);
       case 'mark-read':
-        return await handleMarkRead(res, accessToken, params);
+        return await handleMarkRead(res, params);
       case 'link-job':
-        return await handleLinkJob(res, accessToken, params, user_id);
+        return await handleLinkJob(res, params, user_id);
       case 'unlink-job':
         return await handleUnlinkJob(res, params);
       case 'job-emails':
@@ -157,207 +112,570 @@ export default async function handler(req, res) {
   }
 }
 
-// ── Inbox: list messages ──────────────────────────────────
-async function handleInbox(res, token, { folder = 'inbox', page = 1, pageSize = 25, filter }) {
-  const skip = (page - 1) * pageSize;
-  const select = 'id,subject,from,toRecipients,receivedDateTime,isRead,hasAttachments,bodyPreview,conversationId,importance,flag';
-
-  let path = `/me/mailFolders/${folder}/messages?$select=${select}&$orderby=receivedDateTime desc&$top=${pageSize}&$skip=${skip}&$count=true`;
-
-  if (filter) {
-    path += `&$filter=${encodeURIComponent(filter)}`;
-  }
-
-  const data = await graphRequest(token, path);
-
+// ── Status: check if IMAP is configured ───────────────────
+function handleStatus(res) {
+  const configured = !!(IMAP_HOST && EMAIL_USER && EMAIL_PASS);
   return res.status(200).json({
-    messages: data.value || [],
-    total: data['@odata.count'] || 0,
-    page,
-    pageSize,
-    hasMore: (data['@odata.nextLink'] || null) !== null,
+    connected: configured,
+    email: configured ? EMAIL_USER : null,
   });
 }
 
-// ── Message: get full message ─────────────────────────────
-async function handleMessage(res, token, { messageId }) {
+// ── Folders: list all mail folders (recursive) ────────────
+async function handleFolders(res) {
+  const client = createImapClient();
+  try {
+    await client.connect();
+    const tree = await client.listTree();
+
+    const folders = [];
+    function walkTree(nodes, parentPath) {
+      for (const node of nodes) {
+        const path = node.path;
+        const name = node.name;
+        // Still walk children even for Noselect folders
+        if (node.flags && node.flags.has('\\Noselect')) {
+          if (node.folders?.length) walkTree(node.folders, path);
+          continue;
+        }
+        folders.push({
+          id: path,
+          path: path,
+          displayName: name,
+          delimiter: node.delimiter || '.',
+          parentPath: parentPath || null,
+          specialUse: node.specialUse || null,
+        });
+        if (node.folders?.length) {
+          walkTree(node.folders, path);
+        }
+      }
+    }
+    if (tree.folders) walkTree(tree.folders, null);
+
+    // Get status counts per folder
+    const foldersWithCounts = [];
+    for (const folder of folders) {
+      try {
+        const status = await client.status(folder.path, { messages: true, unseen: true });
+        foldersWithCounts.push({
+          ...folder,
+          totalItemCount: status.messages || 0,
+          unreadItemCount: status.unseen || 0,
+        });
+      } catch {
+        foldersWithCounts.push({ ...folder, totalItemCount: 0, unreadItemCount: 0 });
+      }
+    }
+
+    await client.logout();
+    return res.status(200).json({ folders: foldersWithCounts });
+  } catch (err) {
+    try { await client.logout(); } catch {}
+    throw err;
+  }
+}
+
+// ── Inbox: list messages in a folder ──────────────────────
+async function handleInbox(res, { folder = 'INBOX', page = 1, pageSize = 25 }) {
+  const client = createImapClient();
+  try {
+    await client.connect();
+    const lock = await client.getMailboxLock(folder);
+
+    try {
+      const mailbox = client.mailbox;
+      const total = mailbox.exists || 0;
+
+      if (total === 0) {
+        lock.release();
+        await client.logout();
+        return res.status(200).json({ messages: [], total: 0, page, pageSize, hasMore: false });
+      }
+
+      // Calculate sequence range (newest first)
+      const end = total - (page - 1) * pageSize;
+      const start = Math.max(1, end - pageSize + 1);
+
+      if (end < 1) {
+        lock.release();
+        await client.logout();
+        return res.status(200).json({ messages: [], total, page, pageSize, hasMore: false });
+      }
+
+      const messages = [];
+      for await (const msg of client.fetch(`${start}:${end}`, {
+        uid: true,
+        envelope: true,
+        flags: true,
+        bodyStructure: true,
+      })) {
+        const env = msg.envelope || {};
+        messages.push({
+          id: String(msg.uid),
+          uid: msg.uid,
+          seq: msg.seq,
+          subject: env.subject || '(no subject)',
+          from: formatAddress(env.from?.[0]),
+          toRecipients: (env.to || []).map(formatAddress),
+          receivedDateTime: env.date ? new Date(env.date).toISOString() : null,
+          isRead: msg.flags?.has('\\Seen') || false,
+          hasAttachments: hasAttachmentParts(msg.bodyStructure),
+          bodyPreview: '',
+          importance: msg.flags?.has('\\Flagged') ? 'high' : 'normal',
+          folder: folder,
+        });
+      }
+
+      // Reverse so newest is first
+      messages.reverse();
+
+      lock.release();
+      await client.logout();
+
+      return res.status(200).json({
+        messages,
+        total,
+        page,
+        pageSize,
+        hasMore: start > 1,
+      });
+    } catch (err) {
+      lock.release();
+      throw err;
+    }
+  } catch (err) {
+    try { await client.logout(); } catch {}
+    throw err;
+  }
+}
+
+// ── Message: get full message by UID ──────────────────────
+async function handleMessage(res, { messageId, folder = 'INBOX' }) {
   if (!messageId) return res.status(400).json({ error: 'messageId required' });
 
-  const data = await graphRequest(token,
-    `/me/messages/${messageId}?$select=id,subject,from,toRecipients,ccRecipients,bccRecipients,receivedDateTime,sentDateTime,body,hasAttachments,conversationId,importance,internetMessageId,replyTo,flag`
-  );
+  const client = createImapClient();
+  try {
+    await client.connect();
+    const lock = await client.getMailboxLock(folder);
 
-  // Fetch attachments list if present
-  let attachments = [];
-  if (data.hasAttachments) {
-    const attData = await graphRequest(token,
-      `/me/messages/${messageId}/attachments?$select=id,name,contentType,size,isInline`
-    );
-    attachments = attData.value || [];
+    try {
+      // Fetch full raw message by UID
+      const raw = await client.fetchOne(messageId, { source: true }, { uid: true });
+      const parsed = await simpleParser(raw.source);
+
+      // Build attachment list
+      const attachments = (parsed.attachments || []).map((att, idx) => ({
+        id: String(idx),
+        name: att.filename || `attachment-${idx}`,
+        contentType: att.contentType || 'application/octet-stream',
+        size: att.size || 0,
+        isInline: att.contentDisposition === 'inline',
+      }));
+
+      const message = {
+        id: String(messageId),
+        subject: parsed.subject || '(no subject)',
+        from: {
+          emailAddress: {
+            name: parsed.from?.value?.[0]?.name || '',
+            address: parsed.from?.value?.[0]?.address || '',
+          },
+        },
+        toRecipients: (parsed.to?.value || []).map(a => ({
+          emailAddress: { name: a.name || '', address: a.address || '' },
+        })),
+        ccRecipients: (parsed.cc?.value || []).map(a => ({
+          emailAddress: { name: a.name || '', address: a.address || '' },
+        })),
+        receivedDateTime: parsed.date ? parsed.date.toISOString() : null,
+        sentDateTime: parsed.date ? parsed.date.toISOString() : null,
+        body: {
+          contentType: parsed.html ? 'html' : 'text',
+          content: parsed.html || parsed.textAsHtml || parsed.text || '',
+        },
+        hasAttachments: attachments.length > 0,
+        internetMessageId: parsed.messageId || null,
+        conversationId: null,
+        importance: 'normal',
+      };
+
+      // Check if email linked to any jobs
+      const { data: jobLinks } = await supabase
+        .from('job_emails')
+        .select('job_id, notes')
+        .eq('message_id', String(messageId));
+
+      lock.release();
+      await client.logout();
+
+      return res.status(200).json({
+        message,
+        attachments,
+        linkedJobs: jobLinks || [],
+      });
+    } catch (err) {
+      lock.release();
+      throw err;
+    }
+  } catch (err) {
+    try { await client.logout(); } catch {}
+    throw err;
   }
-
-  // Check if this email is linked to any jobs
-  const { data: jobLinks } = await supabase
-    .from('job_emails')
-    .select('job_id, notes')
-    .eq('message_id', messageId);
-
-  return res.status(200).json({
-    message: data,
-    attachments,
-    linkedJobs: jobLinks || [],
-  });
 }
 
 // ── Send: compose new email ──────────────────────────────
-async function handleSend(res, token, { to, cc, bcc, subject, body, contentType = 'HTML', attachments }) {
+async function handleSend(res, { to, cc, bcc, subject, body, contentType = 'HTML' }) {
   if (!to || !subject) {
     return res.status(400).json({ error: 'to and subject required' });
   }
 
-  const toRecipients = (Array.isArray(to) ? to : [to]).map(email => ({
-    emailAddress: { address: email },
-  }));
+  const transporter = createTransporter();
+  const toList = Array.isArray(to) ? to.join(', ') : to;
+  const ccList = cc ? (Array.isArray(cc) ? cc.join(', ') : cc) : undefined;
+  const bccList = bcc ? (Array.isArray(bcc) ? bcc.join(', ') : bcc) : undefined;
 
-  const message = {
-    message: {
-      subject,
-      body: { contentType, content: body || '' },
-      toRecipients,
-    },
-  };
-
-  if (cc) {
-    message.message.ccRecipients = (Array.isArray(cc) ? cc : [cc]).map(email => ({
-      emailAddress: { address: email },
-    }));
-  }
-
-  if (bcc) {
-    message.message.bccRecipients = (Array.isArray(bcc) ? bcc : [bcc]).map(email => ({
-      emailAddress: { address: email },
-    }));
-  }
-
-  await graphRequest(token, '/me/sendMail', { method: 'POST', body: message });
+  await transporter.sendMail({
+    from: { name: FROM_NAME, address: FROM_ADDRESS },
+    to: toList,
+    cc: ccList,
+    bcc: bccList,
+    subject,
+    ...(contentType === 'HTML' ? { html: body || '' } : { text: body || '' }),
+  });
 
   return res.status(200).json({ success: true });
 }
 
-// ── Reply: reply to message ──────────────────────────────
-async function handleReply(res, token, { messageId, body, replyAll = false }) {
+// ── Reply: reply to a message ─────────────────────────────
+async function handleReply(res, { messageId, folder = 'INBOX', body, replyAll = false }) {
   if (!messageId || !body) {
     return res.status(400).json({ error: 'messageId and body required' });
   }
 
-  const endpoint = replyAll ? 'replyAll' : 'reply';
-  await graphRequest(token, `/me/messages/${messageId}/${endpoint}`, {
-    method: 'POST',
-    body: { comment: body },
+  // Fetch original message to get headers
+  const client = createImapClient();
+  let originalParsed;
+  try {
+    await client.connect();
+    const lock = await client.getMailboxLock(folder);
+    try {
+      const raw = await client.fetchOne(messageId, { source: true }, { uid: true });
+      originalParsed = await simpleParser(raw.source);
+    } finally {
+      lock.release();
+    }
+    await client.logout();
+  } catch (err) {
+    try { await client.logout(); } catch {}
+    throw err;
+  }
+
+  // Build reply recipients
+  const fromAddr = originalParsed.from?.value?.[0]?.address || '';
+  let toAddrs = fromAddr;
+
+  if (replyAll) {
+    const allTo = [
+      ...(originalParsed.to?.value || []),
+      ...(originalParsed.cc?.value || []),
+    ]
+      .map(a => a.address)
+      .filter(a => a && a.toLowerCase() !== EMAIL_USER.toLowerCase() && a.toLowerCase() !== fromAddr.toLowerCase());
+
+    if (allTo.length > 0) {
+      toAddrs = [fromAddr, ...allTo].join(', ');
+    }
+  }
+
+  const replySubject = originalParsed.subject?.startsWith('Re:')
+    ? originalParsed.subject
+    : `Re: ${originalParsed.subject || ''}`;
+
+  // Build quoted body
+  const originalDate = originalParsed.date ? originalParsed.date.toLocaleString() : '';
+  const originalFrom = originalParsed.from?.text || '';
+  const quotedHtml = `
+    <div>${body}</div>
+    <br/>
+    <div style="border-left: 2px solid #ccc; padding-left: 10px; margin-left: 5px; color: #666;">
+      <p>On ${originalDate}, ${originalFrom} wrote:</p>
+      ${originalParsed.html || `<pre>${originalParsed.text || ''}</pre>`}
+    </div>
+  `;
+
+  const transporter = createTransporter();
+  await transporter.sendMail({
+    from: { name: FROM_NAME, address: FROM_ADDRESS },
+    to: toAddrs,
+    subject: replySubject,
+    html: quotedHtml,
+    inReplyTo: originalParsed.messageId || undefined,
+    references: originalParsed.messageId || undefined,
   });
 
   return res.status(200).json({ success: true });
 }
 
-// ── Forward: forward message ─────────────────────────────
-async function handleForward(res, token, { messageId, to, comment }) {
+// ── Forward: forward a message ────────────────────────────
+async function handleForward(res, { messageId, folder = 'INBOX', to, comment }) {
   if (!messageId || !to) {
     return res.status(400).json({ error: 'messageId and to required' });
   }
 
-  const toRecipients = (Array.isArray(to) ? to : [to]).map(email => ({
-    emailAddress: { address: email },
+  // Fetch original message
+  const client = createImapClient();
+  let originalParsed;
+  try {
+    await client.connect();
+    const lock = await client.getMailboxLock(folder);
+    try {
+      const raw = await client.fetchOne(messageId, { source: true }, { uid: true });
+      originalParsed = await simpleParser(raw.source);
+    } finally {
+      lock.release();
+    }
+    await client.logout();
+  } catch (err) {
+    try { await client.logout(); } catch {}
+    throw err;
+  }
+
+  const toList = Array.isArray(to) ? to.join(', ') : to;
+  const fwdSubject = originalParsed.subject?.startsWith('Fwd:')
+    ? originalParsed.subject
+    : `Fwd: ${originalParsed.subject || ''}`;
+
+  const originalFrom = originalParsed.from?.text || '';
+  const originalTo = originalParsed.to?.text || '';
+  const originalDate = originalParsed.date ? originalParsed.date.toLocaleString() : '';
+
+  const forwardHtml = `
+    ${comment ? `<div>${comment}</div><br/>` : ''}
+    <div style="border-top: 1px solid #ccc; padding-top: 10px;">
+      <p><b>---------- Forwarded message ----------</b></p>
+      <p><b>From:</b> ${originalFrom}</p>
+      <p><b>Date:</b> ${originalDate}</p>
+      <p><b>Subject:</b> ${originalParsed.subject || ''}</p>
+      <p><b>To:</b> ${originalTo}</p>
+      <br/>
+      ${originalParsed.html || `<pre>${originalParsed.text || ''}</pre>`}
+    </div>
+  `;
+
+  // Include original attachments
+  const attachments = (originalParsed.attachments || []).map(att => ({
+    filename: att.filename,
+    content: att.content,
+    contentType: att.contentType,
   }));
 
-  await graphRequest(token, `/me/messages/${messageId}/forward`, {
-    method: 'POST',
-    body: { comment: comment || '', toRecipients },
+  const transporter = createTransporter();
+  await transporter.sendMail({
+    from: { name: FROM_NAME, address: FROM_ADDRESS },
+    to: toList,
+    subject: fwdSubject,
+    html: forwardHtml,
+    attachments,
   });
 
   return res.status(200).json({ success: true });
 }
 
-// ── Move: move to folder ─────────────────────────────────
-async function handleMove(res, token, { messageId, destinationFolder }) {
+// ── Move: move message to another folder ──────────────────
+async function handleMove(res, { messageId, folder = 'INBOX', destinationFolder }) {
   if (!messageId || !destinationFolder) {
     return res.status(400).json({ error: 'messageId and destinationFolder required' });
   }
 
-  await graphRequest(token, `/me/messages/${messageId}/move`, {
-    method: 'POST',
-    body: { destinationId: destinationFolder },
-  });
-
-  return res.status(200).json({ success: true });
+  const client = createImapClient();
+  try {
+    await client.connect();
+    const lock = await client.getMailboxLock(folder);
+    try {
+      await client.messageMove(messageId, destinationFolder, { uid: true });
+    } finally {
+      lock.release();
+    }
+    await client.logout();
+    return res.status(200).json({ success: true });
+  } catch (err) {
+    try { await client.logout(); } catch {}
+    throw err;
+  }
 }
 
-// ── Delete: delete message ───────────────────────────────
-async function handleDelete(res, token, { messageId }) {
+// ── Delete: move to Trash or flag deleted ─────────────────
+async function handleDelete(res, { messageId, folder = 'INBOX' }) {
   if (!messageId) return res.status(400).json({ error: 'messageId required' });
 
-  await graphRequest(token, `/me/messages/${messageId}`, { method: 'DELETE' });
-
-  return res.status(200).json({ success: true });
+  const client = createImapClient();
+  try {
+    await client.connect();
+    const lock = await client.getMailboxLock(folder);
+    try {
+      // Try to move to Trash first
+      try {
+        await client.messageMove(messageId, 'Trash', { uid: true });
+      } catch {
+        // If Trash doesn't exist, flag as deleted
+        await client.messageFlagsAdd(messageId, ['\\Deleted'], { uid: true });
+      }
+    } finally {
+      lock.release();
+    }
+    await client.logout();
+    return res.status(200).json({ success: true });
+  } catch (err) {
+    try { await client.logout(); } catch {}
+    throw err;
+  }
 }
 
-// ── Search: search messages ──────────────────────────────
-async function handleSearch(res, token, { query, pageSize = 25 }) {
+// ── Search: search messages ───────────────────────────────
+async function handleSearch(res, { query, folder = 'INBOX', pageSize = 25 }) {
   if (!query) return res.status(400).json({ error: 'query required' });
 
-  const select = 'id,subject,from,toRecipients,receivedDateTime,isRead,hasAttachments,bodyPreview,conversationId';
-  const path = `/me/messages?$search="${encodeURIComponent(query)}"&$select=${select}&$top=${pageSize}`;
+  const client = createImapClient();
+  try {
+    await client.connect();
+    const lock = await client.getMailboxLock(folder);
 
-  const data = await graphRequest(token, path);
+    try {
+      // IMAP search across subject, from, to, body
+      const results = await client.search({
+        or: [
+          { subject: query },
+          { from: query },
+          { to: query },
+          { body: query },
+        ],
+      });
 
-  return res.status(200).json({
-    messages: data.value || [],
-    total: data['@odata.count'] || 0,
-  });
-}
+      if (!results?.length) {
+        lock.release();
+        await client.logout();
+        return res.status(200).json({ messages: [], total: 0 });
+      }
 
-// ── Folders: list mail folders ───────────────────────────
-async function handleFolders(res, token) {
-  const data = await graphRequest(token,
-    '/me/mailFolders?$select=id,displayName,totalItemCount,unreadItemCount&$top=50'
-  );
+      // Take only the latest pageSize results
+      const uids = results.slice(-pageSize).reverse();
+      const uidRange = uids.join(',');
 
-  return res.status(200).json({ folders: data.value || [] });
+      const messages = [];
+      for await (const msg of client.fetch(uidRange, {
+        uid: true,
+        envelope: true,
+        flags: true,
+        bodyStructure: true,
+      }, { uid: true })) {
+        const env = msg.envelope || {};
+        messages.push({
+          id: String(msg.uid),
+          uid: msg.uid,
+          subject: env.subject || '(no subject)',
+          from: formatAddress(env.from?.[0]),
+          toRecipients: (env.to || []).map(formatAddress),
+          receivedDateTime: env.date ? new Date(env.date).toISOString() : null,
+          isRead: msg.flags?.has('\\Seen') || false,
+          hasAttachments: hasAttachmentParts(msg.bodyStructure),
+          bodyPreview: '',
+          importance: msg.flags?.has('\\Flagged') ? 'high' : 'normal',
+          folder: folder,
+        });
+      }
+
+      // Sort newest first
+      messages.sort((a, b) => new Date(b.receivedDateTime) - new Date(a.receivedDateTime));
+
+      lock.release();
+      await client.logout();
+
+      return res.status(200).json({
+        messages,
+        total: results.length,
+      });
+    } catch (err) {
+      lock.release();
+      throw err;
+    }
+  } catch (err) {
+    try { await client.logout(); } catch {}
+    throw err;
+  }
 }
 
 // ── Mark Read/Unread ─────────────────────────────────────
-async function handleMarkRead(res, token, { messageId, isRead = true }) {
+async function handleMarkRead(res, { messageId, folder = 'INBOX', isRead = true }) {
   if (!messageId) return res.status(400).json({ error: 'messageId required' });
 
-  await graphRequest(token, `/me/messages/${messageId}`, {
-    method: 'PATCH',
-    body: { isRead },
-  });
-
-  return res.status(200).json({ success: true });
+  const client = createImapClient();
+  try {
+    await client.connect();
+    const lock = await client.getMailboxLock(folder);
+    try {
+      if (isRead) {
+        await client.messageFlagsAdd(messageId, ['\\Seen'], { uid: true });
+      } else {
+        await client.messageFlagsRemove(messageId, ['\\Seen'], { uid: true });
+      }
+    } finally {
+      lock.release();
+    }
+    await client.logout();
+    return res.status(200).json({ success: true });
+  } catch (err) {
+    try { await client.logout(); } catch {}
+    throw err;
+  }
 }
 
 // ── Link email to job ────────────────────────────────────
-async function handleLinkJob(res, token, { messageId, jobId, notes }, userId) {
+async function handleLinkJob(res, { messageId, jobId, folder = 'INBOX', notes }, userId) {
   if (!messageId || !jobId) {
     return res.status(400).json({ error: 'messageId and jobId required' });
   }
 
-  // Fetch message details from Graph to store metadata
-  const msg = await graphRequest(token,
-    `/me/messages/${messageId}?$select=id,subject,from,receivedDateTime,bodyPreview,hasAttachments,conversationId,internetMessageId`
-  );
+  // Fetch message envelope for metadata
+  const client = createImapClient();
+  let msgData;
+  try {
+    await client.connect();
+    const lock = await client.getMailboxLock(folder);
+    try {
+      for await (const msg of client.fetch(messageId, {
+        uid: true,
+        envelope: true,
+        bodyStructure: true,
+      }, { uid: true })) {
+        msgData = msg;
+      }
+    } finally {
+      lock.release();
+    }
+    await client.logout();
+  } catch (err) {
+    try { await client.logout(); } catch {}
+    throw err;
+  }
+
+  if (!msgData) {
+    return res.status(404).json({ error: 'Message not found' });
+  }
+
+  const env = msgData.envelope || {};
 
   const linkData = {
     job_id: jobId,
-    message_id: messageId,
-    internet_message_id: msg.internetMessageId || null,
-    conversation_id: msg.conversationId || null,
-    subject: msg.subject,
-    sender_name: msg.from?.emailAddress?.name || null,
-    sender_email: msg.from?.emailAddress?.address || null,
-    received_at: msg.receivedDateTime,
-    snippet: (msg.bodyPreview || '').substring(0, 200),
-    has_attachments: msg.hasAttachments || false,
+    message_id: String(messageId),
+    internet_message_id: env.messageId || null,
+    conversation_id: null,
+    subject: env.subject || null,
+    sender_name: env.from?.[0]?.name || null,
+    sender_email: env.from?.[0]?.address || null,
+    received_at: env.date ? new Date(env.date).toISOString() : null,
+    snippet: '',
+    has_attachments: hasAttachmentParts(msgData.bodyStructure),
     linked_by: userId,
     notes: notes || null,
   };
@@ -385,7 +703,7 @@ async function handleUnlinkJob(res, { messageId, jobId }) {
   const { error } = await supabase
     .from('job_emails')
     .delete()
-    .eq('message_id', messageId)
+    .eq('message_id', String(messageId))
     .eq('job_id', jobId);
 
   if (error) {
@@ -410,4 +728,24 @@ async function handleJobEmails(res, { jobId }) {
   }
 
   return res.status(200).json({ emails: data || [] });
+}
+
+// ── Helpers ──────────────────────────────────────────────
+function formatAddress(addr) {
+  if (!addr) return { emailAddress: { name: '', address: '' } };
+  return {
+    emailAddress: {
+      name: addr.name || '',
+      address: addr.address || '',
+    },
+  };
+}
+
+function hasAttachmentParts(structure) {
+  if (!structure) return false;
+  if (structure.disposition === 'attachment') return true;
+  if (structure.childNodes) {
+    return structure.childNodes.some(hasAttachmentParts);
+  }
+  return false;
 }

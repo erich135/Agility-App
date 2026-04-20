@@ -55,8 +55,8 @@ export const AuthProvider = ({ children }) => {
           return;
         }
 
-        const storedUser = localStorage.getItem('agility_user');
-        const loginTime = localStorage.getItem('agility_login_time');
+        const storedUser = localStorage.getItem('lmw_user');
+        const loginTime = localStorage.getItem('lmw_login_time');
         
         if (storedUser && loginTime) {
           const userData = JSON.parse(storedUser);
@@ -85,8 +85,8 @@ export const AuthProvider = ({ children }) => {
 
   const login = (userData) => {
     setUser(userData);
-    localStorage.setItem('agility_user', JSON.stringify(userData));
-    localStorage.setItem('agility_login_time', Date.now().toString());
+    localStorage.setItem('lmw_user', JSON.stringify(userData));
+    localStorage.setItem('lmw_login_time', Date.now().toString());
   };
 
   const logout = async () => {
@@ -104,8 +104,8 @@ export const AuthProvider = ({ children }) => {
     }
     
     setUser(null);
-    localStorage.removeItem('agility_user');
-    localStorage.removeItem('agility_login_time');
+    localStorage.removeItem('lmw_user');
+    localStorage.removeItem('lmw_login_time');
   };
 
   const isAdmin = () => {

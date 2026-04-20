@@ -93,15 +93,15 @@ export default function LoginPage() {
         {/* Logo/Header */}
         <div className="text-center mb-8">
           <img 
-            src="/agility-logo.png" 
-            alt="Agility Logo" 
+            src="/lmw-logo.png" 
+            alt="LMW Logo" 
             className="h-20 w-auto mx-auto mb-4"
             onError={(e) => {
               e.target.style.display = 'none';
             }}
           />
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
-          <p className="text-gray-600">Sign in to your Agility account</p>
+          <p className="text-gray-600">Sign in to your LMW account</p>
         </div>
 
         {/* Error Message */}

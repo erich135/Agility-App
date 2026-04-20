@@ -140,14 +140,14 @@ export default function Sidebar() {
         {!isCollapsed && (
           <div className="flex items-center gap-2">
             <img 
-              src="/agility-logo.png" 
-              alt="Agility" 
+              src="/lmw-logo.png" 
+              alt="LMW" 
               className="h-8 w-auto brightness-0 invert"
               onError={(e) => {
                 e.target.style.display = 'none';
               }}
             />
-            <span className="font-bold text-lg">Agility</span>
+            <span className="font-bold text-lg">LMW</span>
           </div>
         )}
         <button

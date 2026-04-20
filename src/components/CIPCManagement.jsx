@@ -428,7 +428,7 @@ const CIPCManagement = () => {
                 Back to Home
               </Link>
               <div className="h-6 border-l border-gray-300"></div>
-              <img src="/agility-logo.png" alt="Agility" className="h-8"/>
+              <img src="/lmw-logo.png" alt="LMW" className="h-8"/>
               <h1 className="text-2xl font-bold text-gray-900">CIPC Annual Returns Tracker</h1>
             </div>
             <button onClick={() => window.scrollTo({top:0, behavior:'smooth'})} aria-label="Scroll to top" className="px-3 py-1 bg-gray-100 rounded hover:bg-gray-200 transition-colors">Top</button>

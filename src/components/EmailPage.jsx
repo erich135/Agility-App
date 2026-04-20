@@ -23,7 +23,7 @@ export default function EmailPage() {
 
   // Email state
   const [folders, setFolders] = useState([]);
-  const [currentFolder, setCurrentFolder] = useState('inbox');
+  const [currentFolder, setCurrentFolder] = useState('INBOX');
   const [messages, setMessages] = useState([]);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [messageDetail, setMessageDetail] = useState(null);
@@ -70,19 +70,7 @@ export default function EmailPage() {
     }
   }, [user?.id]);
 
-  // Check URL params for auth callback
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const emailAuth = params.get('emailAuth');
-    if (emailAuth === 'success') {
-      showToast('Email connected successfully!');
-      window.history.replaceState({}, '', window.location.pathname);
-      checkConnection();
-    } else if (emailAuth === 'error') {
-      showToast(params.get('message') || 'Failed to connect email', 'error');
-      window.history.replaceState({}, '', window.location.pathname);
-    }
-  }, []);
+
 
   const checkConnection = async () => {
     setCheckingConnection(true);
@@ -92,7 +80,7 @@ export default function EmailPage() {
       setConnectionInfo(status);
       if (status.connected) {
         loadFolders();
-        loadInbox();
+        loadInbox('INBOX', 1);
       }
     } catch (err) {
       console.error('Connection check failed:', err);
@@ -143,12 +131,12 @@ export default function EmailPage() {
     setSelectedMessage(msg);
     setLoadingMessage(true);
     try {
-      const data = await emailService.getMessage(msg.id);
+      const data = await emailService.getMessage(msg.id, currentFolder);
       setMessageDetail(data);
 
       // Mark as read if unread
       if (!msg.isRead) {
-        await emailService.markRead(msg.id, true);
+        await emailService.markRead(msg.id, true, currentFolder);
         setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, isRead: true } : m));
       }
     } catch (err) {
@@ -166,7 +154,7 @@ export default function EmailPage() {
     }
     setIsSearching(true);
     try {
-      const data = await emailService.search(searchQuery.trim());
+      const data = await emailService.search(searchQuery.trim(), currentFolder);
       setSearchResults(data.messages || []);
     } catch (err) {
       showToast('Search failed', 'error');
@@ -223,12 +211,13 @@ export default function EmailPage() {
           body: composeData.body,
         });
       } else if (composeMode === 'reply' || composeMode === 'replyAll') {
-        await emailService.reply(replyToMessageId, composeData.body, composeMode === 'replyAll');
+        await emailService.reply(replyToMessageId, composeData.body, composeMode === 'replyAll', currentFolder);
       } else if (composeMode === 'forward') {
         await emailService.forward(
           replyToMessageId,
           composeData.to.split(',').map(e => e.trim()),
-          composeData.body
+          composeData.body,
+          currentFolder
         );
       }
       showToast('Email sent!');
@@ -243,7 +232,7 @@ export default function EmailPage() {
   // ── Delete ──────────────────────────────────────────────
   const handleDelete = async (messageId) => {
     try {
-      await emailService.deleteMessage(messageId);
+      await emailService.deleteMessage(messageId, currentFolder);
       setMessages(prev => prev.filter(m => m.id !== messageId));
       if (selectedMessage?.id === messageId) {
         setSelectedMessage(null);
@@ -275,11 +264,11 @@ export default function EmailPage() {
     if (!selectedMessage) return;
     setLinkingJob(true);
     try {
-      await emailService.linkToJob(selectedMessage.id, jobId);
+      await emailService.linkToJob(selectedMessage.id, jobId, currentFolder);
       showToast('Email linked to job!');
       setShowJobPicker(false);
       // Refresh message detail to show updated links
-      const data = await emailService.getMessage(selectedMessage.id);
+      const data = await emailService.getMessage(selectedMessage.id, currentFolder);
       setMessageDetail(data);
     } catch (err) {
       showToast('Failed to link email', 'error');
@@ -292,7 +281,7 @@ export default function EmailPage() {
     try {
       await emailService.unlinkFromJob(selectedMessage.id, jobId);
       showToast('Email unlinked from job');
-      const data = await emailService.getMessage(selectedMessage.id);
+      const data = await emailService.getMessage(selectedMessage.id, currentFolder);
       setMessageDetail(data);
     } catch (err) {
       showToast('Failed to unlink', 'error');
@@ -325,6 +314,21 @@ export default function EmailPage() {
     return msg?.from?.emailAddress?.address || '';
   };
 
+  // Build folder tree structure for nested display
+  const buildFolderTree = (flatFolders) => {
+    const tree = [];
+    const map = {};
+    flatFolders.forEach(f => { map[f.path] = { ...f, children: [] }; });
+    flatFolders.forEach(f => {
+      if (f.parentPath && map[f.parentPath]) {
+        map[f.parentPath].children.push(map[f.path]);
+      } else {
+        tree.push(map[f.path]);
+      }
+    });
+    return tree;
+  };
+  const folderTree = buildFolderTree(folders);
   const currentFolderName = folders.find(f => f.id === currentFolder)?.displayName || currentFolder;
   const displayMessages = searchResults || messages;
 
@@ -346,17 +350,11 @@ export default function EmailPage() {
       <div className="flex items-center justify-center h-96">
         <div className="text-center max-w-md">
           <Mail className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-700 mb-2">Connect Your Email</h2>
+          <h2 className="text-xl font-semibold text-gray-700 mb-2">Email Not Configured</h2>
           <p className="text-gray-500 mb-6">
-            Link your Microsoft 365 account to view, send, and manage emails directly from Agility.
+            Email requires server-side IMAP/SMTP configuration. Please set the EMAIL_HOST,
+            EMAIL_USER, and EMAIL_PASSWORD environment variables in Vercel.
           </p>
-          <a
-            href={emailService.getLoginUrl()}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <ExternalLink className="w-4 h-4" />
-            Connect Microsoft 365
-          </a>
         </div>
       </div>
     );
@@ -379,23 +377,14 @@ export default function EmailPage() {
         </div>
 
         <div className="flex-1 overflow-y-auto px-2">
-          {folders.map(folder => (
-            <button
+          {folderTree.map(folder => (
+            <FolderTreeItem
               key={folder.id}
-              onClick={() => handleFolderChange(folder.id)}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm mb-0.5 transition-colors ${
-                currentFolder === folder.id
-                  ? 'bg-blue-100 text-blue-700 font-medium'
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              <span className="truncate">{folder.displayName}</span>
-              {folder.unreadItemCount > 0 && (
-                <span className="text-xs bg-blue-600 text-white rounded-full px-1.5 py-0.5 min-w-[20px] text-center">
-                  {folder.unreadItemCount}
-                </span>
-              )}
-            </button>
+              folder={folder}
+              currentFolder={currentFolder}
+              onSelect={handleFolderChange}
+              depth={0}
+            />
           ))}
         </div>
 
@@ -1002,6 +991,59 @@ function LinkedJobBadge({ jobId, onUnlink }) {
         <X className="w-3 h-3" />
       </button>
     </span>
+  );
+}
+
+// ============================================================
+// Folder Tree Item (recursive, collapsible)
+// ============================================================
+function FolderTreeItem({ folder, currentFolder, onSelect, depth }) {
+  const [expanded, setExpanded] = useState(depth === 0);
+  const hasChildren = folder.children && folder.children.length > 0;
+  const isSelected = currentFolder === folder.id;
+
+  return (
+    <div>
+      <button
+        onClick={() => {
+          onSelect(folder.id);
+          if (hasChildren) setExpanded(prev => !prev);
+        }}
+        className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-sm mb-0.5 transition-colors ${
+          isSelected
+            ? 'bg-blue-100 text-blue-700 font-medium'
+            : 'text-gray-600 hover:bg-gray-100'
+        }`}
+        style={{ paddingLeft: `${8 + depth * 12}px` }}
+      >
+        <div className="flex items-center gap-1.5 min-w-0">
+          {hasChildren && (
+            <ChevronDown className={`w-3 h-3 flex-shrink-0 transition-transform ${expanded ? '' : '-rotate-90'}`} />
+          )}
+          {!hasChildren && <span className="w-3" />}
+          <FolderOpen className="w-3.5 h-3.5 flex-shrink-0" />
+          <span className="truncate">{folder.displayName}</span>
+        </div>
+        {folder.unreadItemCount > 0 && (
+          <span className="text-xs bg-blue-600 text-white rounded-full px-1.5 py-0.5 min-w-[20px] text-center flex-shrink-0 ml-1">
+            {folder.unreadItemCount}
+          </span>
+        )}
+      </button>
+      {hasChildren && expanded && (
+        <div>
+          {folder.children.map(child => (
+            <FolderTreeItem
+              key={child.id}
+              folder={child}
+              currentFolder={currentFolder}
+              onSelect={onSelect}
+              depth={depth + 1}
+            />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

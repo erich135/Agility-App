@@ -1,7 +1,7 @@
 // Push Notification Service
 // Handles: SW registration, push subscription, and sending to backend
 
-const VAPID_PUBLIC_KEY_STORAGE = 'agility_vapid_public_key';
+const VAPID_PUBLIC_KEY_STORAGE = 'lmw_vapid_public_key';
 
 /**
  * Register the service worker and return the registration
@@ -165,7 +165,7 @@ export async function sendTestNotification(userId) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       userId,
-      title: '🔔 Agility Test',
+      title: '🔔 LMW Test',
       body: 'Push notifications are working! You\'ll receive deadline reminders here.',
       url: '/',
       tag: 'test-notification'

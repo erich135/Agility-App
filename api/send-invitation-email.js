@@ -17,7 +17,7 @@ export default async function handler(req, res) {
     const secure = String(process.env.EMAIL_SECURE || 'true').toLowerCase() === 'true';
     const user = process.env.EMAIL_USER;
     const pass = process.env.EMAIL_PASSWORD;
-    const fromName = process.env.EMAIL_FROM_NAME || 'Agility';
+    const fromName = process.env.EMAIL_FROM_NAME || 'LMW Financial Solutions';
     const fromAddress = process.env.EMAIL_FROM_ADDRESS || user;
 
     if (!host || !user || !pass) {
@@ -42,7 +42,7 @@ export default async function handler(req, res) {
 
     const html = `
       <div style="font-family: Arial, sans-serif; line-height: 1.5; color: #111827;">
-        <h2>You’ve been invited to Agility</h2>
+        <h2>You've been invited to LMW Financial Solutions</h2>
         <p>Hi ${safeName},</p>
         <p>Click the button below to set your password and activate your account:</p>
         <p style="margin: 24px 0;">
@@ -58,9 +58,9 @@ export default async function handler(req, res) {
     const info = await transporter.sendMail({
       from: { name: fromName, address: fromAddress },
       to: safeEmail,
-      subject: 'You’re invited to Agility',
+      subject: 'You\'re invited to LMW Financial Solutions',
       html,
-      text: `You’ve been invited to Agility.\n\nSet up your account: ${safeInviteLink}`
+      text: `You've been invited to LMW Financial Solutions.\n\nSet up your account: ${safeInviteLink}`
     });
 
     return res.status(200).json({

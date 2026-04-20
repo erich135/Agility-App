@@ -56,7 +56,7 @@ export default async function handler(req, res) {
     const secure = String(process.env.EMAIL_SECURE || 'true').toLowerCase() === 'true';
     const user = process.env.EMAIL_USER;
     const pass = process.env.EMAIL_PASSWORD;
-    const fromName = process.env.EMAIL_FROM_NAME || 'Agility';
+    const fromName = process.env.EMAIL_FROM_NAME || 'LMW Financial Solutions';
     const fromAddress = process.env.EMAIL_FROM_ADDRESS || user;
 
     if (!host || !user || !pass) {

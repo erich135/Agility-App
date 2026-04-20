@@ -408,7 +408,7 @@ class DocumentGenerationService {
     </div>
     
     <div class="footer">
-      <p><strong>Agility Management System</strong></p>
+      <p><strong>LMW Financial Solutions</strong></p>
       <p>Generated: ${data.generated_date}</p>
     </div>
   </div>

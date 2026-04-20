@@ -11,7 +11,7 @@ const supabase = createClient(
 
 // Configure VAPID
 webpush.setVapidDetails(
-  `mailto:${process.env.VAPID_EMAIL || 'admin@agility.app'}`,
+  `mailto:${process.env.VAPID_EMAIL || 'erich@lmwfinance.co.za'}`,
   process.env.VAPID_PUBLIC_KEY,
   process.env.VAPID_PRIVATE_KEY
 );
@@ -42,10 +42,10 @@ export default async function handler(req, res) {
     }
 
     const payload = JSON.stringify({
-      title: title || 'Agility Reminder',
+      title: title || 'LMW Reminder',
       body: body || 'You have a notification',
       url: url || '/',
-      tag: tag || 'agility-notification',
+      tag: tag || 'lmw-notification',
       actions: actions || [],
       requireInteraction: requireInteraction || false
     });

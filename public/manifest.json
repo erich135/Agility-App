@@ -1,6 +1,6 @@
 {
-  "name": "Agility - Practice Management",
-  "short_name": "Agility",
+  "name": "LMW Financial Solutions",
+  "short_name": "LMW",
   "description": "SA Accounting Practice Management App",
   "id": "/",
   "scope": "/",
@@ -11,25 +11,25 @@
   "orientation": "any",
   "icons": [
     {
-      "src": "/agility-icon-192.png",
+      "src": "/lmw-icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/agility-icon-192.png",
+      "src": "/lmw-icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/agility-icon-512.png",
+      "src": "/lmw-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/agility-icon-512.png",
+      "src": "/lmw-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

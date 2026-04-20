@@ -46,7 +46,7 @@ export default async function handler(req, res) {
     const auth = Buffer.from(`${accountSid}:${authToken}`).toString('base64');
     
     // Prepare SMS data
-    const message = `Your Agility login code: ${otp}. Valid for 10 minutes.`;
+    const message = `Your LMW login code: ${otp}. Valid for 10 minutes.`;
     const smsData = new URLSearchParams({
       'From': fromNumber,
       'To': phoneNumber,

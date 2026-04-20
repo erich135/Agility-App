@@ -11,7 +11,7 @@ const supabase = createClient(
 );
 
 webpush.setVapidDetails(
-  `mailto:${process.env.VAPID_EMAIL || 'admin@agility.app'}`,
+  `mailto:${process.env.VAPID_EMAIL || 'erich@lmwfinance.co.za'}`,
   process.env.VAPID_PUBLIC_KEY,
   process.env.VAPID_PRIVATE_KEY
 );
@@ -128,7 +128,7 @@ export default async function handler(req, res) {
             (urgentItems.length > 5 ? `\n...and ${urgentItems.length - 5} more` : '');
 
         const payload = JSON.stringify({
-          title: '🚨 Agility — Urgent Deadlines',
+          title: '🚨 LMW — Urgent Deadlines',
           body,
           url: '/jobs',
           tag: 'deadline-urgent',
@@ -157,7 +157,7 @@ export default async function handler(req, res) {
           : `${dueSoon.length} jobs due in the next 3 days`;
 
         const payload = JSON.stringify({
-          title: '📋 Agility — Upcoming Deadlines',
+          title: '📋 LMW — Upcoming Deadlines',
           body,
           url: '/jobs',
           tag: 'deadline-upcoming'

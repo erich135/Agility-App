@@ -1,14 +1,14 @@
-// Service Worker for Agility PWA
+// Service Worker for LMW PWA
 // Handles: caching for offline support + push notification display
 
-const CACHE_NAME = 'agility-v3';
+const CACHE_NAME = 'lmw-v1';
 
 // Assets to cache for offline
 const PRECACHE_URLS = [
   '/',
   '/manifest.json',
-  '/agility-icon-192.png',
-  '/agility-logo.png',
+  '/lmw-icon-192.png',
+  '/lmw-logo.png',
   '/favicon.svg'
 ];
 
@@ -60,7 +60,7 @@ self.addEventListener('fetch', (event) => {
 
 // Push: display notification when received
 self.addEventListener('push', (event) => {
-  let data = { title: 'Agility Reminder', body: 'You have a notification' };
+  let data = { title: 'LMW Reminder', body: 'You have a notification' };
 
   if (event.data) {
     try {
@@ -72,9 +72,9 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.body,
-    icon: '/agility-logo.png',
-    badge: '/agility-logo.png',
-    tag: data.tag || 'agility-notification',
+    icon: '/lmw-logo.png',
+    badge: '/lmw-logo.png',
+    tag: data.tag || 'lmw-notification',
     data: { url: data.url || '/' },
     actions: data.actions || [],
     vibrate: [200, 100, 200],

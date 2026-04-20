@@ -144,12 +144,12 @@ export default function Billing() {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(24);
     doc.setFont('helvetica', 'bold');
-    doc.text('AGILITY CONSULTANTS', pageWidth / 2, 18, { align: 'center' });
+    doc.text('LMW FINANCIAL SOLUTIONS', pageWidth / 2, 18, { align: 'center' });
     
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.text('Professional Accounting & Tax Services', pageWidth / 2, 26, { align: 'center' });
-    doc.text('Email: info@agilityconsultants.co.za | Phone: +27 (0)11 123 4567', pageWidth / 2, 32, { align: 'center' });
+    doc.text('Email: erich@lmwfinance.co.za | Phone: 087 255 3270 | Reg: 2022/675452/07', pageWidth / 2, 32, { align: 'center' });
     
     doc.setTextColor(0, 0, 0);
     

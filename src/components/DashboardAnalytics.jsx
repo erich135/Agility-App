@@ -318,8 +318,8 @@ const DashboardAnalytics = () => {
             <div className="flex items-center space-x-4">
               <Link to="/">
                 <img 
-                  src="/agility-logo.png" 
-                  alt="Agility Logo" 
+                  src="/lmw-logo.png" 
+                  alt="LMW Logo" 
                   className="h-16 w-auto"
                 />
               </Link>

@@ -37,32 +37,19 @@ class EmailService {
     return data;
   }
 
-  // ── Auth ──────────────────────────────────────────────────
-  getLoginUrl() {
-    return `${API_BASE}/email-auth?action=login&user_id=${this.userId}`;
-  }
-
+  // ── Auth / Status ─────────────────────────────────────────
   async getStatus() {
-    return this._get(`email-auth?action=status&user_id=${this.userId}`);
-  }
-
-  async disconnect() {
-    const res = await fetch(`${API_BASE}/email-auth?action=disconnect`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_id: this.userId }),
-    });
-    return res.json();
+    return this._get(`email-auth?action=status`);
   }
 
   // ── Inbox ─────────────────────────────────────────────────
-  async getInbox({ folder = 'inbox', page = 1, pageSize = 25, filter } = {}) {
-    return this._post('inbox', { folder, page, pageSize, filter });
+  async getInbox({ folder = 'INBOX', page = 1, pageSize = 25 } = {}) {
+    return this._post('inbox', { folder, page, pageSize });
   }
 
   // ── Message ───────────────────────────────────────────────
-  async getMessage(messageId) {
-    return this._post('message', { messageId });
+  async getMessage(messageId, folder = 'INBOX') {
+    return this._post('message', { messageId, folder });
   }
 
   // ── Send ──────────────────────────────────────────────────
@@ -71,28 +58,28 @@ class EmailService {
   }
 
   // ── Reply ─────────────────────────────────────────────────
-  async reply(messageId, body, replyAll = false) {
-    return this._post('reply', { messageId, body, replyAll });
+  async reply(messageId, body, replyAll = false, folder = 'INBOX') {
+    return this._post('reply', { messageId, body, replyAll, folder });
   }
 
   // ── Forward ───────────────────────────────────────────────
-  async forward(messageId, to, comment = '') {
-    return this._post('forward', { messageId, to, comment });
+  async forward(messageId, to, comment = '', folder = 'INBOX') {
+    return this._post('forward', { messageId, to, comment, folder });
   }
 
   // ── Move ──────────────────────────────────────────────────
-  async move(messageId, destinationFolder) {
-    return this._post('move', { messageId, destinationFolder });
+  async move(messageId, destinationFolder, folder = 'INBOX') {
+    return this._post('move', { messageId, destinationFolder, folder });
   }
 
   // ── Delete ────────────────────────────────────────────────
-  async deleteMessage(messageId) {
-    return this._post('delete', { messageId });
+  async deleteMessage(messageId, folder = 'INBOX') {
+    return this._post('delete', { messageId, folder });
   }
 
   // ── Search ────────────────────────────────────────────────
-  async search(query, pageSize = 25) {
-    return this._post('search', { query, pageSize });
+  async search(query, folder = 'INBOX', pageSize = 25) {
+    return this._post('search', { query, folder, pageSize });
   }
 
   // ── Folders ───────────────────────────────────────────────
@@ -101,13 +88,13 @@ class EmailService {
   }
 
   // ── Mark Read/Unread ──────────────────────────────────────
-  async markRead(messageId, isRead = true) {
-    return this._post('mark-read', { messageId, isRead });
+  async markRead(messageId, isRead = true, folder = 'INBOX') {
+    return this._post('mark-read', { messageId, isRead, folder });
   }
 
   // ── Job Linking ───────────────────────────────────────────
-  async linkToJob(messageId, jobId, notes = '') {
-    return this._post('link-job', { messageId, jobId, notes });
+  async linkToJob(messageId, jobId, folder = 'INBOX', notes = '') {
+    return this._post('link-job', { messageId, jobId, folder, notes });
   }
 
   async unlinkFromJob(messageId, jobId) {

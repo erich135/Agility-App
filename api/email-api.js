@@ -304,16 +304,15 @@ async function handleMessage(res, { messageId, folder = 'INBOX' }) {
         contentId: att.contentId ? att.contentId.replace(/[<>]/g, '') : null,
       }));
 
-      // Replace CID references with inline base64 data URIs
+      // Replace CID references with proxy URLs to /api/email-inline
       let htmlContent = parsed.html || parsed.textAsHtml || parsed.text || '';
       for (const att of (parsed.attachments || [])) {
-        if (att.contentId && att.content) {
+        if (att.contentId) {
           const cid = att.contentId.replace(/[<>]/g, '');
-          const b64 = att.content.toString('base64');
-          const dataUri = `data:${att.contentType || 'application/octet-stream'};base64,${b64}`;
+          const proxyUrl = `/api/email-inline?uid=${messageId}&cid=${encodeURIComponent(cid)}&folder=${encodeURIComponent(folder)}`;
           htmlContent = htmlContent.replace(
             new RegExp(`cid:${cid.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'gi'),
-            dataUri
+            proxyUrl
           );
         }
       }

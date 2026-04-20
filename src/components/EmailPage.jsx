@@ -7,7 +7,7 @@ import {
   Star, Reply, ReplyAll, Forward, Paperclip, ChevronLeft,
   ChevronRight, Plus, Link2, Unlink, Briefcase, ExternalLink,
   FolderOpen, MoreVertical, X, Check, AlertCircle, Clock,
-  ChevronDown, Eye, EyeOff, Settings, Loader2
+  ChevronDown, Eye, EyeOff, Settings, Loader2, FolderInput, Download
 } from 'lucide-react';
 
 // ============================================================
@@ -49,6 +49,7 @@ export default function EmailPage() {
   // Job linking
   const [showJobPicker, setShowJobPicker] = useState(false);
   const [showCreateJob, setShowCreateJob] = useState(false);
+  const [showMoveFolder, setShowMoveFolder] = useState(false);
   const [jobs, setJobs] = useState([]);
   const [clients, setClients] = useState([]);
   const [jobSearchQuery, setJobSearchQuery] = useState('');
@@ -241,6 +242,21 @@ export default function EmailPage() {
       showToast('Email deleted');
     } catch (err) {
       showToast('Failed to delete', 'error');
+    }
+  };
+
+  const handleMoveToFolder = async (destinationFolder) => {
+    if (!selectedMessage) return;
+    try {
+      await emailService.move(selectedMessage.id, destinationFolder, currentFolder);
+      setMessages(prev => prev.filter(m => m.id !== selectedMessage.id));
+      setSelectedMessage(null);
+      setMessageDetail(null);
+      setShowMoveFolder(false);
+      const destName = folders.find(f => f.path === destinationFolder)?.displayName || destinationFolder;
+      showToast(`Moved to ${destName}`);
+    } catch (err) {
+      showToast('Failed to move email', 'error');
     }
   };
 
@@ -525,12 +541,20 @@ export default function EmailPage() {
                 {/* Attachments */}
                 {messageDetail.attachments?.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-3">
-                    {messageDetail.attachments.filter(a => !a.isInline).map(att => (
-                      <span key={att.id} className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded text-xs text-gray-600">
+                    {messageDetail.attachments.filter(a => !a.isInline).map((att, idx) => (
+                      <a
+                        key={att.id}
+                        href={emailService.getAttachmentUrl(selectedMessage.id, att.id, currentFolder)}
+                        download={att.name}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-gray-100 hover:bg-blue-50 hover:text-blue-700 rounded-lg text-xs text-gray-600 transition-colors cursor-pointer group"
+                      >
                         <Paperclip className="w-3 h-3" />
-                        {att.name}
-                        <span className="text-gray-400">({(att.size / 1024).toFixed(0)}KB)</span>
-                      </span>
+                        <span className="max-w-[200px] truncate">{att.name}</span>
+                        <span className="text-gray-400 group-hover:text-blue-400">({(att.size / 1024).toFixed(0)}KB)</span>
+                        <Download className="w-3 h-3 text-gray-400 group-hover:text-blue-600 ml-0.5" />
+                      </a>
                     ))}
                   </div>
                 )}
@@ -565,6 +589,10 @@ export default function EmailPage() {
                   </button>
                   <button onClick={openCreateJobFromEmail} className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-green-600 hover:bg-green-50 rounded-lg">
                     <Briefcase className="w-4 h-4" /> Create Job
+                  </button>
+                  <div className="w-px h-5 bg-gray-200 mx-1" />
+                  <button onClick={() => setShowMoveFolder(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-purple-600 hover:bg-purple-50 rounded-lg">
+                    <FolderInput className="w-4 h-4" /> Move
                   </button>
                   <div className="flex-1" />
                   <button onClick={() => handleDelete(selectedMessage.id)} className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50">
@@ -627,6 +655,16 @@ export default function EmailPage() {
           }}
           onClose={() => setShowCreateJob(false)}
           showToast={showToast}
+        />
+      )}
+
+      {/* ── Move to Folder Modal ─────────────────── */}
+      {showMoveFolder && (
+        <MoveToFolderModal
+          folders={folders}
+          currentFolder={currentFolder}
+          onSelect={handleMoveToFolder}
+          onClose={() => setShowMoveFolder(false)}
         />
       )}
 
@@ -1043,6 +1081,110 @@ function FolderTreeItem({ folder, currentFolder, onSelect, depth }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// ============================================================
+// Move to Folder Modal (searchable, like Outlook)
+// ============================================================
+function MoveToFolderModal({ folders, currentFolder, onSelect, onClose }) {
+  const [search, setSearch] = useState('');
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    // Auto-focus the search input
+    setTimeout(() => inputRef.current?.focus(), 50);
+  }, []);
+
+  // Flatten folder tree into a flat list with full path for display
+  const flattenFolders = (folderList, parentDisplay = '') => {
+    const result = [];
+    for (const f of folderList) {
+      const fullDisplay = parentDisplay ? `${parentDisplay} / ${f.displayName}` : f.displayName;
+      result.push({ ...f, fullDisplay });
+    }
+    return result;
+  };
+
+  const allFolders = flattenFolders(folders);
+
+  // Filter: exclude current folder, match search
+  const filtered = allFolders.filter(f => {
+    if (f.path === currentFolder || f.id === currentFolder) return false;
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return f.displayName.toLowerCase().includes(q) || f.path.toLowerCase().includes(q);
+  });
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape') onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-40 flex items-center justify-center" onClick={onClose}>
+      <div
+        className="bg-white rounded-xl w-full max-w-md max-h-[70vh] flex flex-col shadow-xl"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+          <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+            <FolderInput className="w-5 h-5 text-purple-600" />
+            Move to Folder
+          </h3>
+          <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600 rounded">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Search */}
+        <div className="px-4 py-3 border-b border-gray-100">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder="Search folders..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Folder list */}
+        <div className="flex-1 overflow-y-auto py-1">
+          {filtered.length === 0 ? (
+            <div className="px-4 py-8 text-center text-gray-400 text-sm">
+              No matching folders found
+            </div>
+          ) : (
+            filtered.map(folder => (
+              <button
+                key={folder.id || folder.path}
+                onClick={() => onSelect(folder.path)}
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors text-left"
+              >
+                <FolderOpen className="w-4 h-4 flex-shrink-0 text-gray-400" />
+                <span className="truncate">{folder.displayName}</span>
+                {folder.path !== folder.displayName && (
+                  <span className="text-xs text-gray-400 truncate ml-auto">{folder.path}</span>
+                )}
+              </button>
+            ))
+          )}
+        </div>
+      </div>
     </div>
   );
 }

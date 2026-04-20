@@ -77,6 +77,11 @@ class EmailService {
     return this._post('delete', { messageId, folder });
   }
 
+  // ── Attachment Download ───────────────────────────────────
+  getAttachmentUrl(messageId, attachmentIndex, folder = 'INBOX') {
+    return `${API_BASE}/email-attachment?uid=${encodeURIComponent(messageId)}&index=${encodeURIComponent(attachmentIndex)}&folder=${encodeURIComponent(folder)}`;
+  }
+
   // ── Search ────────────────────────────────────────────────
   async search(query, folder = 'INBOX', pageSize = 25) {
     return this._post('search', { query, folder, pageSize });

@@ -7,15 +7,30 @@
 //           unlink-job, job-emails, status
 // ============================================================
 
-import { createClient } from '@supabase/supabase-js';
-import { ImapFlow } from 'imapflow';
-import { simpleParser } from 'mailparser';
-import nodemailer from 'nodemailer';
+// Lazy-loaded modules (resolved on first call)
+let ImapFlow, simpleParser, nodemailer, supabase;
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+async function loadDeps() {
+  if (!ImapFlow) {
+    const imap = await import('imapflow');
+    ImapFlow = imap.ImapFlow;
+  }
+  if (!simpleParser) {
+    const mp = await import('mailparser');
+    simpleParser = mp.simpleParser;
+  }
+  if (!nodemailer) {
+    const nm = await import('nodemailer');
+    nodemailer = nm.default;
+  }
+  if (!supabase) {
+    const { createClient } = await import('@supabase/supabase-js');
+    supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+  }
+}
 
 // ── IMAP/SMTP Config from env ─────────────────────────────
 const IMAP_HOST = process.env.EMAIL_HOST;
@@ -66,6 +81,9 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'POST required' });
   }
+
+  // Load dependencies on first invocation
+  await loadDeps();
 
   const { action, user_id, ...params } = req.body;
 

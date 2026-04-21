@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useFocus } from '../contexts/FocusContext';
 import { useToast } from './Toast';
 import {
   Inbox,
   CheckCircle,
   Clock,
-  Trash2,
+  AlarmClock,
   X,
   Mail,
   Phone,
@@ -13,8 +13,8 @@ import {
   User,
   MoreHorizontal,
   ArrowRight,
-  Filter,
-  Briefcase
+  Briefcase,
+  ChevronDown
 } from 'lucide-react';
 
 const SOURCE_ICONS = {
@@ -32,10 +32,81 @@ const URGENCY_BADGES = {
   someday: { label: 'Someday', className: 'bg-gray-100 text-gray-600 border-gray-200' }
 };
 
+// Snooze options — label, how to compute the target date
+const SNOOZE_OPTIONS = [
+  { label: '15 minutes',      minutes: 15 },
+  { label: '30 minutes',      minutes: 30 },
+  { label: '1 hour',          minutes: 60 },
+  { label: '2 hours',         minutes: 120 },
+  { label: 'Tomorrow 09:00',  tomorrow: true },
+  { label: 'Next Monday 09:00', nextMonday: true }
+];
+
+function snoozeUntil(option) {
+  const d = new Date();
+  if (option.minutes) {
+    return new Date(d.getTime() + option.minutes * 60 * 1000);
+  }
+  if (option.tomorrow) {
+    d.setDate(d.getDate() + 1);
+    d.setHours(9, 0, 0, 0);
+    return d;
+  }
+  if (option.nextMonday) {
+    const day = d.getDay(); // 0=Sun, 1=Mon...
+    const daysUntilMonday = day === 0 ? 1 : 8 - day;
+    d.setDate(d.getDate() + daysUntilMonday);
+    d.setHours(9, 0, 0, 0);
+    return d;
+  }
+  return d;
+}
+
+function SnoozeDropdown({ itemId, onSnooze, onClose }) {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    function handle(e) {
+      if (ref.current && !ref.current.contains(e.target)) onClose();
+    }
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, [onClose]);
+
+  return (
+    <div
+      ref={ref}
+      className="absolute right-0 mt-1 w-44 bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1 overflow-hidden"
+    >
+      <p className="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Snooze for…</p>
+      {SNOOZE_OPTIONS.map(opt => (
+        <button
+          key={opt.label}
+          onClick={() => onSnooze(itemId, opt)}
+          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// Age indicator: colour based on how long item has been sitting
+function ageIndicator(capturedAt, status) {
+  if (status === 'deferred') return null; // snoozed items show the alarm time instead
+  if (!capturedAt) return null;
+  const ageMinutes = (Date.now() - new Date(capturedAt).getTime()) / 60000;
+  if (ageMinutes < 60)   return { color: 'bg-green-400',  title: 'Less than 1 hour old' };
+  if (ageMinutes < 240)  return { color: 'bg-orange-400', title: `${Math.floor(ageMinutes / 60)}h old` };
+  return                        { color: 'bg-red-500',    title: `${Math.floor(ageMinutes / 60)}h old — needs action!` };
+}
+
 export default function InterruptInbox({ onClose }) {
   const { interrupts, resolveInterrupt, deferInterrupt, convertInterruptToJob, loadPendingInterrupts } = useFocus();
   const toast = useToast();
   const [filter, setFilter] = useState('pending'); // pending | all | resolved
+  const [snoozeOpenId, setSnoozeOpenId] = useState(null);
 
   const filtered = interrupts.filter(i => {
     if (filter === 'pending') return i.status === 'pending' || i.status === 'deferred';
@@ -52,16 +123,14 @@ export default function InterruptInbox({ onClose }) {
     }
   };
 
-  const handleDefer = async (id) => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(9, 0, 0, 0);
-
+  const handleSnooze = async (id, option) => {
+    setSnoozeOpenId(null);
+    const until = snoozeUntil(option);
     try {
-      await deferInterrupt(id, tomorrow.toISOString());
-      toast.info('Deferred to tomorrow 09:00');
+      await deferInterrupt(id, until.toISOString());
+      toast.info(`Snoozed — reminds you at ${until.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })} (${option.label})`);
     } catch (e) {
-      toast.error('Failed to defer');
+      toast.error('Failed to snooze');
     }
   };
 
@@ -148,7 +217,7 @@ export default function InterruptInbox({ onClose }) {
                   }`}
                 >
                   <div className="flex items-start gap-3">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 relative ${
                       isResolved ? 'bg-green-100' : 'bg-gray-100'
                     }`}>
                       {isResolved ? (
@@ -156,6 +225,16 @@ export default function InterruptInbox({ onClose }) {
                       ) : (
                         <SourceIcon className="w-4 h-4 text-gray-500" />
                       )}
+                      {/* Age indicator dot */}
+                      {(() => {
+                        const dot = !isResolved ? ageIndicator(item.captured_at, item.status) : null;
+                        return dot ? (
+                          <span
+                            className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-white ${dot.color}`}
+                            title={dot.title}
+                          />
+                        ) : null;
+                      })()}
                     </div>
 
                     <div className="flex-1 min-w-0">
@@ -182,11 +261,17 @@ export default function InterruptInbox({ onClose }) {
                           {item.next_action}
                         </div>
                       )}
+                      {item.status === 'deferred' && item.defer_until && (
+                        <div className="flex items-center gap-1 mt-1.5 text-xs text-blue-500">
+                          <AlarmClock className="w-3 h-3" />
+                          Reminds at {formatTime(item.defer_until)}
+                        </div>
+                      )}
                     </div>
 
                     {/* Actions */}
                     {!isResolved && (
-                      <div className="flex items-center gap-1 flex-shrink-0">
+                      <div className="relative flex items-center gap-1 flex-shrink-0">
                         <button
                           onClick={async () => {
                             try {
@@ -208,13 +293,28 @@ export default function InterruptInbox({ onClose }) {
                         >
                           <CheckCircle className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => handleDefer(item.id)}
-                          className="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                          title="Defer to tomorrow"
-                        >
-                          <Clock className="w-4 h-4" />
-                        </button>
+                        {/* Snooze button + dropdown */}
+                        <div className="relative">
+                          <button
+                            onClick={() => setSnoozeOpenId(snoozeOpenId === item.id ? null : item.id)}
+                            className={`flex items-center gap-0.5 p-2 rounded-lg transition-colors ${
+                              snoozeOpenId === item.id
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
+                            }`}
+                            title="Snooze"
+                          >
+                            <AlarmClock className="w-4 h-4" />
+                            <ChevronDown className="w-3 h-3" />
+                          </button>
+                          {snoozeOpenId === item.id && (
+                            <SnoozeDropdown
+                              itemId={item.id}
+                              onSnooze={handleSnooze}
+                              onClose={() => setSnoozeOpenId(null)}
+                            />
+                          )}
+                        </div>
                       </div>
                     )}
                     {item.status === 'converted' && (

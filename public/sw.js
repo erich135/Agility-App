@@ -70,13 +70,24 @@ self.addEventListener('push', (event) => {
     }
   }
 
+  // Automatically inject snooze + resolve actions on interrupt-related pushes
+  const isInterruptPush = data.interruptId ||
+    ['interrupt-reminder', 'snooze-expired', 'urgent-stale', 'eod-reminder'].includes(data.tag);
+
+  const defaultActions = isInterruptPush
+    ? [
+        { action: 'snooze30', title: '⏰ Snooze 30 min' },
+        { action: 'resolve',  title: '✅ Done' }
+      ]
+    : [];
+
   const options = {
     body: data.body,
     icon: '/lmw-logo.png',
     badge: '/lmw-logo.png',
     tag: data.tag || 'lmw-notification',
-    data: { url: data.url || '/' },
-    actions: data.actions || [],
+    data: { url: data.url || '/', interruptId: data.interruptId || null },
+    actions: data.actions?.length ? data.actions : defaultActions,
     vibrate: [200, 100, 200],
     requireInteraction: data.requireInteraction || false
   };
@@ -84,23 +95,53 @@ self.addEventListener('push', (event) => {
   event.waitUntil(self.registration.showNotification(data.title, options));
 });
 
-// Notification click: open the app at the relevant page
+// Notification click: handle action buttons or open the app
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const url = event.notification.data?.url || '/';
+  const { url, interruptId } = event.notification.data || {};
+  const action = event.action;
 
+  // Snooze 30 min — call the API silently, no window needed
+  if (action === 'snooze30' && interruptId) {
+    event.waitUntil(
+      fetch('/api/push-snooze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ interruptId, minutes: 30 })
+      }).catch(() => {}) // best-effort, non-fatal
+    );
+    return;
+  }
+
+  // Resolve — mark done via the in-app route
+  if (action === 'resolve' && interruptId) {
+    event.waitUntil(
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+        const target = `/focus?resolveInterrupt=${interruptId}`;
+        for (const client of clients) {
+          if (client.url.includes(self.location.origin) && 'focus' in client) {
+            client.navigate(target);
+            return client.focus();
+          }
+        }
+        return self.clients.openWindow(target);
+      })
+    );
+    return;
+  }
+
+  // Default: open the app at the relevant page
+  const target = url || '/';
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
-      // Focus existing window if open
       for (const client of clients) {
         if (client.url.includes(self.location.origin) && 'focus' in client) {
-          client.navigate(url);
+          client.navigate(target);
           return client.focus();
         }
       }
-      // Otherwise open a new window
-      return self.clients.openWindow(url);
+      return self.clients.openWindow(target);
     })
   );
 });

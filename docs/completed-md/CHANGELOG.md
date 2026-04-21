@@ -4,6 +4,78 @@ All notable changes to the LMW Financial Solutions app will be documented in thi
 
 ---
 
+## [2026-04-21] - Notification System Overhaul
+
+### 🔔 Interrupt Inbox — Snooze & Reminders
+
+#### New: Snooze Button (`src/components/InterruptInbox.jsx`)
+- Replaced the hardcoded "defer to tomorrow" clock button with a **Snooze dropdown** (6 options: 15 min / 30 min / 1 h / 2 h / Tomorrow 09:00 / Next Monday 09:00)
+- Deferred items now show a blue "Reminds at HH:MM" line so snooze time is always visible
+- **Age indicator dots** on every pending item icon: 🟢 < 1 h, 🟠 1–4 h, 🔴 4+ h
+
+#### New: OS-level Snooze Action (`public/sw.js`, `api/push-snooze.js`)
+- Interrupt-related push notifications now include **"⏰ Snooze 30 min"** and **"✅ Done"** action buttons in the OS notification banner — no app open required
+- Snooze tapped → Service Worker calls `POST /api/push-snooze` silently in the background
+- Done tapped → opens `/focus?resolveInterrupt=<id>` for in-app marking
+
+### 🔔 Interrupt Reminder Crons
+
+#### New: `api/cron-interrupt-reminders.js` (hourly)
+- **Snooze expired**: Re-activates deferred items and sends a targeted push to the capturing user
+- **Urgent stale**: Fires for `now`-urgency items still pending after 1 hour
+- **End-of-day sweep**: Fires after 16:00 for `today`-urgency items still pending
+- All 3 triggers route pushes **per user** via new `user_id` column on `interrupt_inbox`; falls back to broadcast for older rows
+
+#### New: `api/cron-process-notifications.js` (hourly) — fixes Gap #4
+- Processes all `pending` notifications from the `notifications` table whose `scheduled_for <= now`
+- Handles email (nodemailer), SMS/WhatsApp (email fallback), and in-app (mark delivered + push)
+- Previously scheduled notifications were stored in DB but never sent
+
+#### New: `api/cron-weekly-digest.js` (Mondays 07:00)
+- Pushes a grouped inbox summary (by urgency bucket) + top 5 jobs due that week every Monday morning
+- Ensures nothing is forgotten over the weekend
+
+### 🔔 In-App → Push Fix (`src/lib/NotificationService.js`) — fixes Gap #2
+- `sendImmediately()` now also fires `/api/push-send` for `in_app` type notifications
+- Escalation alerts and filing reminders now ring the OS notification bell immediately instead of waiting for the 30-second poll cycle
+
+### 🔔 Focus Session → Inbox Nudge (`src/contexts/FocusContext.jsx`)
+- `completeFocusSession()` fires a targeted push to the user after their session ends if there are pending interrupts in their inbox
+- Single item: names it. Multiple: summarises the first 3.
+
+### 🔔 Job Register Notifications (`src/components/JobRegister.jsx`)
+- New `sendJobPush()` helper resolves assignee `user_id` from `directors` table by name (fuzzy match), falls back to broadcasting
+- **New job assigned**: Push to assignee on creation
+- **Assignment changed**: Push to new assignee on edit
+- **Urgent unassigned job**: Broadcast so someone picks it up
+- **Job completed**: Push to assignee
+- **Ready for review**: Broadcast to all subscribed users
+
+### 🗃️ Database
+- **`add_user_id_to_interrupt_inbox.sql`**: Adds `user_id UUID` column to `interrupt_inbox` for per-user push targeting
+
+### ⚙️ Vercel Crons (`vercel.json`)
+- Added `cron-process-notifications` — every hour (`0 * * * *`)
+- Added `cron-interrupt-reminders` — every hour (`0 * * * *`)
+- Added `cron-weekly-digest` — Mondays 07:00 (`0 7 * * 1`)
+
+### 📝 New Files
+- `api/cron-process-notifications.js`
+- `api/cron-interrupt-reminders.js`
+- `api/cron-weekly-digest.js`
+- `api/push-snooze.js`
+- `database/NEW_SQL_SCRIPTS_GO_HERE/add_user_id_to_interrupt_inbox.sql`
+
+### 📝 Modified Files
+- `public/sw.js` — snooze/resolve action buttons, `interruptId` in push data, separate `notificationclick` handler per action
+- `src/components/InterruptInbox.jsx` — snooze dropdown, age indicator dots, deferred wakeup time display
+- `src/components/JobRegister.jsx` — `sendJobPush` helper, 5 push triggers on job lifecycle events
+- `src/contexts/FocusContext.jsx` — imports `useAuth`, stamps `user_id` on captured interrupts, inbox nudge on session complete
+- `src/lib/NotificationService.js` — `in_app` type now also fires a push notification
+- `vercel.json` — 3 new cron schedules
+
+---
+
 ## [2026-04-20] - Rebrand to LMW Financial Solutions & IMAP Email Migration
 
 ### 🏢 Full Rebrand: Agility → LMW Financial Solutions

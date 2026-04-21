@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import supabase from '../lib/SupabaseClient';
+import { useAuth } from './AuthContext';
 
 const FocusContext = createContext(null);
 
@@ -14,6 +15,7 @@ const WIP_LIMIT_NOW = 1;
 const WIP_LIMIT_NEXT = 2;
 
 export const FocusProvider = ({ children }) => {
+  const { user } = useAuth();
   // Focus session state
   const [focusSession, setFocusSession] = useState(null); // { id, task_description, next_action, duration_minutes, started_at, ends_at, client_name, client_id }
   const [focusMode, setFocusMode] = useState('idle'); // idle | focus | review | email-window
@@ -124,11 +126,34 @@ export const FocusProvider = ({ children }) => {
       })
       .eq('id', focusSession.id);
 
+    // Count pending interrupts and nudge the user if any are waiting
+    const pending = interrupts.filter(i => i.status === 'pending' || i.status === 'deferred');
+    if (pending.length > 0 && user?.id) {
+      try {
+        await fetch('/api/push-send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.id,
+            title: `✅ Focus session done — ${pending.length} item${pending.length > 1 ? 's' : ''} in your inbox`,
+            body: pending.length === 1
+              ? `Don't forget: ${pending[0].subject}`
+              : `Time to triage: ${pending.map(i => i.subject).slice(0, 3).join(', ')}${pending.length > 3 ? '...' : ''}`,
+            url: '/focus',
+            tag: 'session-complete-nudge',
+            requireInteraction: false
+          })
+        });
+      } catch {
+        // Non-fatal — session is still marked complete
+      }
+    }
+
     setFocusSession(null);
     setFocusMode('idle');
     setSecondsLeft(0);
     setNowTask(null);
-  }, [focusSession, interruptCount]);
+  }, [focusSession, interruptCount, interrupts, user]);
 
   const parkFocusSession = useCallback(async () => {
     if (!focusSession?.id) return;
@@ -160,6 +185,7 @@ export const FocusProvider = ({ children }) => {
         urgency: urgency || 'today',
         next_action: nextAction || null,
         focus_session_id: focusSession?.id || null,
+        user_id: user?.id || null,
         status: 'pending',
         captured_at: new Date().toISOString()
       })

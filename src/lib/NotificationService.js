@@ -70,6 +70,26 @@ class NotificationService {
         case 'in_app':
           // In-app notifications are already stored in DB
           await this.markAsDelivered(notification.id);
+          // Also fire a push notification so the user is alerted immediately
+          if (notification.recipient_id) {
+            try {
+              await fetch('/api/push-send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  userId: notification.recipient_id,
+                  title: notification.subject || 'LMW Notification',
+                  body: notification.message,
+                  url: '/notifications',
+                  tag: 'in-app-alert',
+                  requireInteraction: true
+                })
+              });
+            } catch (pushErr) {
+              // Push failure is non-fatal — in-app notification is already stored
+              console.warn('Push notification failed for in_app event:', pushErr.message);
+            }
+          }
           break;
         default:
           console.warn('Unknown notification type:', notification.notification_type);

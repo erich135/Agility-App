@@ -243,6 +243,45 @@ export default function JobRegister() {
     setTimeout(() => setSuccessMsg(null), 4000);
   };
 
+  // Look up a director's user_id by their display name, then send a targeted push.
+  // Falls back to broadcasting to all subscribers when no match is found.
+  const sendJobPush = async ({ assignedToName, title, body, url, tag }) => {
+    try {
+      let userId = null;
+
+      if (assignedToName) {
+        const { data: directors } = await supabase
+          .from('directors')
+          .select('id, full_name, user_id')
+          .ilike('full_name', `%${assignedToName.trim()}%`)
+          .limit(1);
+        userId = directors?.[0]?.user_id || null;
+      }
+
+      if (userId) {
+        // Targeted push to the specific assignee
+        await fetch('/api/push-send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, title, body, url: url || '/jobs', tag, requireInteraction: false })
+        });
+      } else {
+        // No user found — broadcast to all subscribed users
+        const { data: subs } = await supabase.from('push_subscriptions').select('user_id');
+        const uniqueIds = [...new Set((subs || []).map(s => s.user_id).filter(Boolean))];
+        await Promise.all(uniqueIds.map(uid =>
+          fetch('/api/push-send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: uid, title, body, url: url || '/jobs', tag, requireInteraction: false })
+          })
+        ));
+      }
+    } catch {
+      // Push is best-effort — never block the UI action
+    }
+  };
+
   // ============== DATA ==============
 
   const fetchInitialData = async () => {
@@ -458,10 +497,24 @@ export default function JobRegister() {
         const { error: upErr } = await supabase.from('job_register').update(payload).eq('id', editingId);
         if (upErr) throw upErr;
 
-        // Log status change
         const oldJob = jobs.find(j => j.id === editingId);
+
+        // Log status change
         if (oldJob && oldJob.status !== payload.status) {
           await logActivity(editingId, 'status_changed', `Status changed`, oldJob.status, payload.status);
+        }
+
+        // Notify if assignment changed
+        const assigneeChanged = oldJob &&
+          (oldJob.assigned_to_name || '') !== (payload.assigned_to_name || '');
+        if (assigneeChanged && payload.assigned_to_name) {
+          const clientName = customers.find(c => c.id === formCustomerId)?.client_name || '';
+          sendJobPush({
+            assignedToName: payload.assigned_to_name,
+            title: `📋 Job assigned to you: ${payload.title}`,
+            body: clientName ? `Client: ${clientName}${payload.date_due ? ` — Due: ${payload.date_due}` : ''}` : (payload.date_due ? `Due: ${payload.date_due}` : 'Check the Job Register for details'),
+            tag: `job-assigned-${editingId}`
+          });
         }
 
         showSuccess('Job updated');
@@ -494,6 +547,26 @@ export default function JobRegister() {
         }
 
         await logActivity(newJob.id, 'created', `Job created: ${payload.title}`);
+
+        // Notify assignee when a new job is assigned, or broadcast if urgent
+        if (payload.assigned_to_name) {
+          const clientName = customers.find(c => c.id === formCustomerId)?.client_name || '';
+          sendJobPush({
+            assignedToName: payload.assigned_to_name,
+            title: `📋 New job assigned to you: ${payload.title}`,
+            body: clientName ? `Client: ${clientName}${payload.date_due ? ` — Due: ${payload.date_due}` : ''}` : (payload.date_due ? `Due: ${payload.date_due}` : ''),
+            tag: `job-assigned-${newJob.id}`
+          });
+        } else if (payload.priority === 'urgent') {
+          // No assignee yet but urgent — broadcast so someone picks it up
+          sendJobPush({
+            assignedToName: null,
+            title: `🚨 Urgent job created: ${payload.title}`,
+            body: payload.date_due ? `Due: ${payload.date_due}` : 'Needs immediate assignment',
+            tag: `job-urgent-${newJob.id}`
+          });
+        }
+
         showSuccess('Job created');
       }
 
@@ -538,6 +611,25 @@ export default function JobRegister() {
       const { error: upErr } = await supabase.from('job_register').update(updates).eq('id', job.id);
       if (upErr) throw upErr;
       await logActivity(job.id, 'status_changed', 'Status changed', job.status, newStatus);
+
+      // Notify on meaningful status transitions
+      if (newStatus === 'completed') {
+        sendJobPush({
+          assignedToName: job.assigned_to_name || null,
+          title: `✅ Job completed: ${job.title}`,
+          body: job.client_name ? `Client: ${job.client_name}` : 'Marked complete',
+          tag: `job-completed-${job.id}`
+        });
+      } else if (newStatus === 'ready_for_review') {
+        // Notify the creator / admin that this is ready to be reviewed
+        sendJobPush({
+          assignedToName: null, // broadcast — reviewer may differ from assignee
+          title: `👁️ Ready for review: ${job.title}`,
+          body: job.client_name ? `Client: ${job.client_name}` : 'Tap to review in Job Register',
+          tag: `job-review-${job.id}`
+        });
+      }
+
       await fetchJobs();
     } catch (err) { setError(err.message); }
   };

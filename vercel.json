@@ -25,6 +25,18 @@
     {
       "path": "/api/cron-cipc-jobs",
       "schedule": "0 5 1 * *"
+    },
+    {
+      "path": "/api/cron-process-notifications",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron-interrupt-reminders",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron-weekly-digest",
+      "schedule": "0 7 * * 1"
     }
   ]
 }

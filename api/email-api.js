@@ -763,7 +763,7 @@ async function handleLinkJob(res, { messageId, jobId, folder = 'INBOX', notes },
     return res.status(400).json({ error: 'messageId and jobId required' });
   }
 
-  // Fetch message envelope for metadata
+  // Fetch message envelope for metadata (best-effort; link still succeeds if IMAP fails)
   const client = createImapClient();
   let msgData;
   try {
@@ -783,14 +783,11 @@ async function handleLinkJob(res, { messageId, jobId, folder = 'INBOX', notes },
     await client.logout();
   } catch (err) {
     try { await client.logout(); } catch {}
-    throw err;
+    console.warn('handleLinkJob: IMAP metadata fetch failed (non-fatal):', err.message);
+    // Continue without envelope metadata
   }
 
-  if (!msgData) {
-    return res.status(404).json({ error: 'Message not found' });
-  }
-
-  const env = msgData.envelope || {};
+  const env = msgData?.envelope || {};
 
   const linkData = {
     job_id: jobId,

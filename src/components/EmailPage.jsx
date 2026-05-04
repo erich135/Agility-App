@@ -264,7 +264,7 @@ export default function EmailPage() {
   const loadJobsAndClients = async () => {
     const [jobResult, clientResult] = await Promise.all([
       supabase.from('job_register').select('id, title, client_id, category, status').order('created_at', { ascending: false }).limit(200),
-      supabase.from('clients').select('id, name, email'),
+      supabase.from('clients').select('id, client_name, email'),
     ]);
     setJobs(jobResult.data || []);
     setClients(clientResult.data || []);
@@ -765,7 +765,7 @@ function ComposeModal({ mode, data, onChange, onSend, onClose, sending }) {
 // ============================================================
 function JobPickerModal({ jobs, clients, searchQuery, onSearchChange, onSelect, onClose, linking }) {
   const clientMap = {};
-  clients.forEach(c => { clientMap[c.id] = c.name; });
+  clients.forEach(c => { clientMap[c.id] = c.client_name; });
 
   const filteredJobs = jobs.filter(j => {
     if (!searchQuery) return true;

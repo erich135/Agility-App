@@ -812,7 +812,7 @@ async function handleLinkJob(res, { messageId, jobId, folder = 'INBOX', notes },
 
   if (error) {
     console.error('Link job error:', error);
-    return res.status(500).json({ error: 'Failed to link email to job' });
+    return res.status(500).json({ error: 'Failed to link email to job', detail: error.message, code: error.code });
   }
 
   return res.status(200).json({ success: true, link: data });

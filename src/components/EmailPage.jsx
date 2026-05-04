@@ -287,7 +287,7 @@ export default function EmailPage() {
       const data = await emailService.getMessage(selectedMessage.id, currentFolder);
       setMessageDetail(data);
     } catch (err) {
-      showToast('Failed to link email', 'error');
+      showToast('Failed to link email: ' + err.message, 'error');
     }
     setLinkingJob(false);
   };

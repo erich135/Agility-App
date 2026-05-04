@@ -799,7 +799,7 @@ async function handleLinkJob(res, { messageId, jobId, folder = 'INBOX', notes },
     sender_email: env.from?.[0]?.address || null,
     received_at: env.date ? new Date(env.date).toISOString() : null,
     snippet: '',
-    has_attachments: hasAttachmentParts(msgData.bodyStructure),
+    has_attachments: msgData ? hasAttachmentParts(msgData.bodyStructure) : false,
     linked_by: userId,
     notes: notes || null,
   };

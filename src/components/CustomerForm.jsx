@@ -13,6 +13,7 @@ const CustomerForm = ({ customerId, onClose, onSave }) => {
     // Basic company info (existing fields)
     client_name: '',
     registration_number: '',
+    registration_date: '',
     
     // New customer management fields bte Erich's ass 
     company_income_tax_number: '',
@@ -97,6 +98,7 @@ const CustomerForm = ({ customerId, onClose, onSave }) => {
         setFormData({
           client_name: customerData.client_name || '',
           registration_number: customerData.registration_number || '',
+          registration_date: customerData.registration_date || '',
           company_income_tax_number: customerData.company_income_tax_number || '',
           company_vat_number: customerData.company_vat_number || '',
           company_paye_number: customerData.company_paye_number || '',
@@ -283,6 +285,7 @@ const CustomerForm = ({ customerId, onClose, onSave }) => {
       const customerPayload = {
         client_name: formData.client_name.trim(),
         registration_number: formData.registration_number.trim() || null,
+        registration_date: formData.registration_date || null,
         company_income_tax_number: formData.company_income_tax_number.trim() || null,
         company_vat_number: formData.company_vat_number.trim() || null,
         company_paye_number: formData.company_paye_number.trim() || null,
@@ -640,6 +643,19 @@ const CustomerForm = ({ customerId, onClose, onSave }) => {
                     <option value="Inactive">Inactive</option>
                     <option value="Suspended">Suspended</option>
                   </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Company Registration Date
+                    <span className="ml-1 text-xs text-blue-600 font-normal">(used for CIPC AR &amp; BO due dates)</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.registration_date}
+                    onChange={(e) => handleInputChange('registration_date', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  />
                 </div>
               </div>
             </div>

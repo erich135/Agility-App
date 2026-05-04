@@ -94,7 +94,6 @@ const CIPCManagement = () => {
     client_name: "",
     registration_number: "",
     registration_date: "",
-    due_month: "",
     last_cipc_filed: "",
     last_bo_filed: "",
   });
@@ -305,7 +304,6 @@ const CIPCManagement = () => {
       registration_number: formData.registration_number,
       // inputs of type="date" give YYYY-MM-DD, already ISO
       registration_date: toISO(formData.registration_date),
-      due_month: formData.due_month,
       last_cipc_filed: formData.last_cipc_filed ? toISO(formData.last_cipc_filed) : null,
       last_bo_filed: formData.last_bo_filed ? toISO(formData.last_bo_filed) : null,
       updated_at: new Date().toISOString(),
@@ -422,7 +420,6 @@ const CIPCManagement = () => {
             client_name: client.client_name,
             registration_number: client.registration_number,
             registration_date: toISO(client.registration_date),
-            due_month: client.due_month || "",
             last_cipc_filed: client.last_cipc_filed ? toISO(client.last_cipc_filed) : "",
             last_bo_filed: client.last_bo_filed ? toISO(client.last_bo_filed) : "",
           }
@@ -431,7 +428,6 @@ const CIPCManagement = () => {
             client_name: "",
             registration_number: "",
             registration_date: "",
-            due_month: "",
             last_cipc_filed: "",
             last_bo_filed: "",
           }
@@ -446,7 +442,6 @@ const CIPCManagement = () => {
       client_name: "",
       registration_number: "",
       registration_date: "",
-      due_month: "",
       last_cipc_filed: "",
       last_bo_filed: "",
     });
@@ -790,15 +785,9 @@ const CIPCManagement = () => {
                   }
                   className="w-full border border-gray-300 rounded px-3 py-2"
                 />
-                <input
-                  type="text"
-                  placeholder="Due Month (e.g. January)"
-                  value={formData.due_month}
-                  onChange={(e) =>
-                    setFormData({ ...formData, due_month: e.target.value })
-                  }
-                  className="w-full border border-gray-300 rounded px-3 py-2"
-                />
+                <p className="text-sm text-gray-500 px-1">
+                  Due month: <strong>{formData.registration_date ? new Date(formData.registration_date + 'T00:00:00').toLocaleString('default', { month: 'long' }) : '—'}</strong> (derived from registration date)
+                </p>
                 <input
                   type="date"
                   placeholder="Last CIPC Filed"

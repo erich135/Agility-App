@@ -4,6 +4,27 @@ All notable changes to the LMW Financial Solutions app will be documented in thi
 
 ---
 
+## [2026-05-04] - CIPC Registration Date Fix
+
+### 🐛 Bug Fixes
+
+#### `src/components/CIPCManagement.jsx`
+- **Removed `due_month` from Supabase update payload** — column does not exist in the `clients` schema; the due month is already derived client-side from `registration_date` via `getDueMonthLabel()`
+- **Removed misleading "Due Month" text input** from the CIPC edit form; replaced with a read-only display showing the month computed from the registration date, making it clear it is derived and not user-editable
+- Removed `due_month` from all `formData` initialisations and state resets
+
+#### `src/components/CustomerForm.jsx`
+- **Added `registration_date` field** to the Add New Customer / Edit Customer modal ("Company Registration Date" date picker in the Basic Company Information section)
+- Registration date is now captured in `formData` state, loaded from the DB when editing, and included in the `customerPayload` sent to Supabase
+- Field is labelled with a hint *(used for CIPC AR & BO due dates)* so the purpose is explicit
+- Fixes the root cause of the error: customers added via the Customer modal had no registration date, leaving the CIPC module unable to determine AR and BO filing due dates
+
+### 📝 Modified Files
+- `src/components/CIPCManagement.jsx` — removed `due_month` from payload, formData, and form UI
+- `src/components/CustomerForm.jsx` — added `registration_date` to state, loader, payload, and UI
+
+---
+
 ## [2026-04-21] - Notification System Overhaul
 
 ### 🔔 Interrupt Inbox — Snooze & Reminders

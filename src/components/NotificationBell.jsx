@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import supabase from '../lib/SupabaseClient';
 import {
   subscribeToPush,
   unsubscribeFromPush,
@@ -12,13 +13,15 @@ import {
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
 
 export default function NotificationBell() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [subscribed, setSubscribed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showPanel, setShowPanel] = useState(false);
   const [permState, setPermState] = useState('default');
   const [testSent, setTestSent] = useState(false);
   const [error, setError] = useState(null);
+  const [checkRunning, setCheckRunning] = useState(false);
+  const [checkResult, setCheckResult] = useState(null);
 
   useEffect(() => {
     checkSubscription();
@@ -84,6 +87,27 @@ export default function NotificationBell() {
       setTimeout(() => setTestSent(false), 3000);
     } catch (err) {
       setError(err.message);
+    }
+  }
+
+  async function handleRunCheck() {
+    setError(null);
+    setCheckResult(null);
+    setCheckRunning(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('Not authenticated');
+      const res = await fetch('/api/cron-deadline-check', {
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      setCheckResult(json);
+      setTimeout(() => setCheckResult(null), 8000);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setCheckRunning(false);
     }
   }
 
@@ -196,6 +220,24 @@ export default function NotificationBell() {
                   >
                     {testSent ? '✓ Test notification sent!' : '🔔 Send test notification'}
                   </button>
+                )}
+
+                {/* Admin: Manual deadline check trigger */}
+                {subscribed && isAdmin() && (
+                  <div className="mt-2">
+                    <button
+                      onClick={handleRunCheck}
+                      disabled={checkRunning}
+                      className="w-full py-2 px-3 text-sm font-medium rounded-lg border border-blue-200 text-blue-700 hover:bg-blue-50 transition-colors disabled:opacity-50"
+                    >
+                      {checkRunning ? '⏳ Running check...' : '🔍 Run deadline check now'}
+                    </button>
+                    {checkResult && (
+                      <p className="mt-1.5 text-xs text-gray-600 bg-gray-50 rounded p-2">
+                        ✓ {checkResult.jobsChecked ?? 0} jobs checked — {checkResult.overdue ?? 0} overdue, {checkResult.dueToday ?? 0} due today, {checkResult.notificationsSent ?? 0} notifications sent
+                      </p>
+                    )}
+                  </div>
                 )}
 
                 {/* Install hint */}

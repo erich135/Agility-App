@@ -17,10 +17,27 @@ webpush.setVapidDetails(
 );
 
 export default async function handler(req, res) {
-  // Verify cron secret to prevent unauthorized calls
+  // Verify auth: either Vercel CRON_SECRET or an admin user's JWT (for manual trigger)
   const authHeader = req.headers.authorization;
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return res.status(401).json({ error: 'Unauthorized' });
+  const isValidCron = process.env.CRON_SECRET && authHeader === `Bearer ${process.env.CRON_SECRET}`;
+
+  if (!isValidCron) {
+    // Allow admin users to trigger manually via their session JWT
+    const token = authHeader?.replace('Bearer ', '');
+    if (!token) return res.status(401).json({ error: 'Unauthorized' });
+
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !authUser) return res.status(401).json({ error: 'Unauthorized' });
+
+    const { data: profile } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', authUser.id)
+      .single();
+
+    if (profile?.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
   }
 
   try {
@@ -35,11 +52,19 @@ export default async function handler(req, res) {
     const in7Days = new Date(today);
     in7Days.setDate(in7Days.getDate() + 7);
 
+    // Get closed status keys from DB (so custom statuses marked as closed are also excluded)
+    const { data: closedStatusRows } = await supabase
+      .from('job_statuses')
+      .select('key')
+      .eq('is_closed', true);
+    const closedKeys = closedStatusRows?.map(s => s.key) || ['completed', 'cancelled'];
+
     // Fetch open jobs with upcoming or overdue deadlines
+    // Exclude all closed-status jobs (completed, cancelled, and any custom closed statuses)
     const { data: jobs, error: jobError } = await supabase
       .from('job_register')
       .select('id, job_title, client_name, due_date, assigned_to, status, category')
-      .or('status.neq.completed,status.neq.cancelled')
+      .not('status', 'in', `(${closedKeys.join(',')})`)
       .not('due_date', 'is', null)
       .lte('due_date', in7Days.toISOString().split('T')[0])
       .order('due_date');

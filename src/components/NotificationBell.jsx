@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import supabase from '../lib/SupabaseClient';
 import {
   subscribeToPush,
   unsubscribeFromPush,
@@ -95,10 +94,10 @@ export default function NotificationBell() {
     setCheckResult(null);
     setCheckRunning(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) throw new Error('Not authenticated');
       const res = await fetch('/api/cron-deadline-check', {
-        headers: { Authorization: `Bearer ${session.access_token}` }
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminUserId: user.id })
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);

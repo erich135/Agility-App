@@ -17,25 +17,24 @@ webpush.setVapidDetails(
 );
 
 export default async function handler(req, res) {
-  // Verify auth: either Vercel CRON_SECRET or an admin user's JWT (for manual trigger)
+  // Verify auth: either Vercel CRON_SECRET (GET) or admin userId in POST body (manual trigger)
   const authHeader = req.headers.authorization;
   const isValidCron = process.env.CRON_SECRET && authHeader === `Bearer ${process.env.CRON_SECRET}`;
 
   if (!isValidCron) {
-    // Allow admin users to trigger manually via their session JWT
-    const token = authHeader?.replace('Bearer ', '');
-    if (!token) return res.status(401).json({ error: 'Unauthorized' });
+    // Allow admin users to trigger manually by sending their userId
+    if (req.method !== 'POST') return res.status(401).json({ error: 'Unauthorized' });
 
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !authUser) return res.status(401).json({ error: 'Unauthorized' });
+    const { adminUserId } = req.body || {};
+    if (!adminUserId) return res.status(401).json({ error: 'Unauthorized' });
 
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('users')
       .select('role')
-      .eq('id', authUser.id)
+      .eq('id', adminUserId)
       .single();
 
-    if (profile?.role !== 'admin') {
+    if (profileError || profile?.role !== 'admin') {
       return res.status(403).json({ error: 'Admin access required' });
     }
   }

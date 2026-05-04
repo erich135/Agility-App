@@ -62,11 +62,11 @@ export default async function handler(req, res) {
     // Exclude all closed-status jobs (completed, cancelled, and any custom closed statuses)
     const { data: jobs, error: jobError } = await supabase
       .from('job_register')
-      .select('id, title, client_id, due_date, assigned_to, status, category')
+      .select('id, title, client_id, date_due, assigned_to, status, category')
       .not('status', 'in', `(${closedKeys.join(',')})`)
-      .not('due_date', 'is', null)
-      .lte('due_date', in7Days.toISOString().split('T')[0])
-      .order('due_date');
+      .not('date_due', 'is', null)
+      .lte('date_due', in7Days.toISOString().split('T')[0])
+      .order('date_due');
 
     if (jobError) throw jobError;
 
@@ -78,7 +78,7 @@ export default async function handler(req, res) {
     const notifications = [];
 
     for (const job of jobs) {
-      const dueDate = new Date(job.due_date);
+      const dueDate = new Date(job.date_due);
       const diffDays = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
 
       let urgency, emoji;

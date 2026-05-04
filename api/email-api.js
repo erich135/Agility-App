@@ -86,12 +86,91 @@ function createTransporter() {
 export default async function handler(req, res) {
   // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
+  // ── GET routing: status check, inline image, attachment download ──────────
+  if (req.method === 'GET') {
+    const { action, attachment, inline, uid, index, cid, folder = 'INBOX' } = req.query;
+
+    // Auth status / disconnect (replaces /api/email-auth)
+    if (action === 'status' || action === 'disconnect') {
+      if (action === 'disconnect') return res.status(200).json({ success: true });
+      const configured = !!(process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASSWORD);
+      return res.status(200).json({ connected: configured, email: configured ? process.env.EMAIL_USER : null });
+    }
+
+    // Inline image (replaces /api/email-inline)
+    if (inline === '1') {
+      if (!uid || !cid) return res.status(400).json({ error: 'uid and cid query params required' });
+      await loadDeps();
+      const client = createImapClient();
+      try {
+        await client.connect();
+        const lock = await client.getMailboxLock(folder);
+        try {
+          const raw = await client.fetchOne(uid, { source: true }, { uid: true });
+          const parsed = await simpleParser(raw.source);
+          const att = (parsed.attachments || []).find(a => {
+            const attCid = a.contentId ? a.contentId.replace(/[<>]/g, '') : '';
+            return attCid === cid;
+          });
+          lock.release();
+          await client.logout();
+          if (!att || !att.content) return res.status(404).json({ error: 'Inline image not found' });
+          res.setHeader('Content-Type', att.contentType || 'application/octet-stream');
+          res.setHeader('Cache-Control', 'public, max-age=86400');
+          return res.status(200).send(att.content);
+        } catch (err) { lock.release(); throw err; }
+      } catch (err) {
+        try { await client.logout(); } catch {}
+        return res.status(500).json({ error: 'Failed to serve inline image' });
+      }
+    }
+
+    // Attachment download (replaces /api/email-attachment)
+    if (attachment === '1') {
+      if (!uid || index === undefined) return res.status(400).json({ error: 'uid and index query params required' });
+      const attIndex = parseInt(index, 10);
+      if (isNaN(attIndex) || attIndex < 0) return res.status(400).json({ error: 'index must be a non-negative integer' });
+      await loadDeps();
+      const client = createImapClient();
+      try {
+        await client.connect();
+        const lock = await client.getMailboxLock(folder);
+        try {
+          const raw = await client.fetchOne(uid, { source: true }, { uid: true });
+          const parsed = await simpleParser(raw.source);
+          const attachments = parsed.attachments || [];
+          if (attIndex >= attachments.length) {
+            lock.release();
+            await client.logout();
+            return res.status(404).json({ error: 'Attachment not found' });
+          }
+          const att = attachments[attIndex];
+          lock.release();
+          await client.logout();
+          if (!att || !att.content) return res.status(404).json({ error: 'Attachment content not available' });
+          const filename = att.filename || `attachment-${attIndex}`;
+          const contentType = att.contentType || 'application/octet-stream';
+          res.setHeader('Content-Type', contentType);
+          res.setHeader('Content-Disposition', `attachment; filename="${filename.replace(/"/g, '\\"')}"`);
+          res.setHeader('Content-Length', att.content.length);
+          res.setHeader('Cache-Control', 'private, max-age=300');
+          return res.status(200).send(att.content);
+        } catch (err) { lock.release(); throw err; }
+      } catch (err) {
+        try { await client.logout(); } catch {}
+        return res.status(500).json({ error: 'Failed to download attachment' });
+      }
+    }
+
+    return res.status(400).json({ error: 'Unknown GET action' });
+  }
+
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'POST required' });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   // Load dependencies on first invocation
@@ -309,7 +388,7 @@ async function handleMessage(res, { messageId, folder = 'INBOX' }) {
       for (const att of (parsed.attachments || [])) {
         if (att.contentId) {
           const cid = att.contentId.replace(/[<>]/g, '');
-          const proxyUrl = `/api/email-inline?uid=${messageId}&cid=${encodeURIComponent(cid)}&folder=${encodeURIComponent(folder)}`;
+          const proxyUrl = `/api/email-api?inline=1&uid=${messageId}&cid=${encodeURIComponent(cid)}&folder=${encodeURIComponent(folder)}`;
           htmlContent = htmlContent.replace(
             new RegExp(`cid:${cid.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'gi'),
             proxyUrl

@@ -39,7 +39,7 @@ class EmailService {
 
   // ── Auth / Status ─────────────────────────────────────────
   async getStatus() {
-    return this._get(`email-auth?action=status`);
+    return this._get(`email-api?action=status`);
   }
 
   // ── Inbox ─────────────────────────────────────────────────
@@ -79,7 +79,7 @@ class EmailService {
 
   // ── Attachment Download ───────────────────────────────────
   getAttachmentUrl(messageId, attachmentIndex, folder = 'INBOX') {
-    return `${API_BASE}/email-attachment?uid=${encodeURIComponent(messageId)}&index=${encodeURIComponent(attachmentIndex)}&folder=${encodeURIComponent(folder)}`;
+    return `${API_BASE}/email-api?attachment=1&uid=${encodeURIComponent(messageId)}&index=${encodeURIComponent(attachmentIndex)}&folder=${encodeURIComponent(folder)}`;
   }
 
   // ── Search ────────────────────────────────────────────────

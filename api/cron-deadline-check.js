@@ -62,7 +62,7 @@ export default async function handler(req, res) {
     // Exclude all closed-status jobs (completed, cancelled, and any custom closed statuses)
     const { data: jobs, error: jobError } = await supabase
       .from('job_register')
-      .select('id, job_title, client_name, due_date, assigned_to, status, category')
+      .select('id, title, client_id, due_date, assigned_to, status, category')
       .not('status', 'in', `(${closedKeys.join(',')})`)
       .not('due_date', 'is', null)
       .lte('due_date', in7Days.toISOString().split('T')[0])
@@ -146,9 +146,9 @@ export default async function handler(req, res) {
       if (overdue.length > 0 || dueToday.length > 0) {
         const urgentItems = [...overdue, ...dueToday];
         const body = urgentItems.length === 1
-          ? `${urgentItems[0].emoji} ${urgentItems[0].urgency}: ${urgentItems[0].job.job_title} (${urgentItems[0].job.client_name || 'No client'})`
+          ? `${urgentItems[0].emoji} ${urgentItems[0].urgency}: ${urgentItems[0].job.title}`
           : `${urgentItems.length} jobs need attention:\n` +
-            urgentItems.slice(0, 5).map(n => `${n.emoji} ${n.job.job_title}`).join('\n') +
+            urgentItems.slice(0, 5).map(n => `${n.emoji} ${n.job.title}`).join('\n') +
             (urgentItems.length > 5 ? `\n...and ${urgentItems.length - 5} more` : '');
 
         const payload = JSON.stringify({
@@ -177,7 +177,7 @@ export default async function handler(req, res) {
       // Send upcoming as informational (only if there are items and no urgent)
       if (dueSoon.length > 0 && overdue.length === 0 && dueToday.length === 0) {
         const body = dueSoon.length === 1
-          ? `${dueSoon[0].emoji} ${dueSoon[0].urgency}: ${dueSoon[0].job.job_title}`
+          ? `${dueSoon[0].emoji} ${dueSoon[0].urgency}: ${dueSoon[0].job.title}`
           : `${dueSoon.length} jobs due in the next 3 days`;
 
         const payload = JSON.stringify({

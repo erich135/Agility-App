@@ -427,6 +427,7 @@ export default function JobRegister() {
     setFormData({ ...EMPTY_JOB });
     setFormCustomerId('');
     setEditingId(null);
+    fetchTemplates();
     setShowForm(true);
   };
 

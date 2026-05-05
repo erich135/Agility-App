@@ -1,0 +1,17 @@
+name: Hourly Meeting Reminders
+
+on:
+  schedule:
+    - cron: '0 * * * *'   # every hour
+  workflow_dispatch:        # allow manual trigger from GitHub UI
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call meeting reminders endpoint
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" \
+            -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_URL }}/api/cron-meeting-hourly"

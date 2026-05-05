@@ -105,7 +105,7 @@ self.addEventListener('notificationclick', (event) => {
   // Snooze 30 min — call the API silently, no window needed
   if (action === 'snooze30' && interruptId) {
     event.waitUntil(
-      fetch('/api/push-snooze', {
+      fetch('/api/push?action=snooze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ interruptId, minutes: 30 })

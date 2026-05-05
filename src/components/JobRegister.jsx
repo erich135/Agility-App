@@ -260,7 +260,7 @@ export default function JobRegister() {
 
       if (userId) {
         // Targeted push to the specific assignee
-        await fetch('/api/push-send', {
+        await fetch('/api/push?action=send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId, title, body, url: url || '/jobs', tag, requireInteraction: false })
@@ -270,7 +270,7 @@ export default function JobRegister() {
         const { data: subs } = await supabase.from('push_subscriptions').select('user_id');
         const uniqueIds = [...new Set((subs || []).map(s => s.user_id).filter(Boolean))];
         await Promise.all(uniqueIds.map(uid =>
-          fetch('/api/push-send', {
+          fetch('/api/push?action=send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: uid, title, body, url: url || '/jobs', tag, requireInteraction: false })

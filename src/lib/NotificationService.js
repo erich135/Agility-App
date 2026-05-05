@@ -73,7 +73,7 @@ class NotificationService {
           // Also fire a push notification so the user is alerted immediately
           if (notification.recipient_id) {
             try {
-              await fetch('/api/push-send', {
+              await fetch('/api/push?action=send', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

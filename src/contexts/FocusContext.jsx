@@ -130,7 +130,7 @@ export const FocusProvider = ({ children }) => {
     const pending = interrupts.filter(i => i.status === 'pending' || i.status === 'deferred');
     if (pending.length > 0 && user?.id) {
       try {
-        await fetch('/api/push-send', {
+        await fetch('/api/push?action=send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

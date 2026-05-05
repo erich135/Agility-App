@@ -70,7 +70,7 @@ export async function subscribeToPush(vapidPublicKey) {
 export async function saveSubscription(subscription, userId) {
   if (!userId) throw new Error('Not authenticated');
 
-  const response = await fetch('/api/push-subscribe', {
+  const response = await fetch('/api/push?action=subscribe', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -100,7 +100,7 @@ export async function unsubscribeFromPush(userId) {
 
     // Remove from backend
     if (userId) {
-      await fetch('/api/push-subscribe', {
+      await fetch('/api/push?action=subscribe', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -160,7 +160,7 @@ export async function ensurePushSubscription(vapidPublicKey, userId) {
 export async function sendTestNotification(userId) {
   if (!userId) throw new Error('Not authenticated');
 
-  const response = await fetch('/api/push-send', {
+  const response = await fetch('/api/push?action=send', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

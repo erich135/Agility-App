@@ -3,8 +3,8 @@ import Sidebar from './Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import GlobalTimerCard from './GlobalTimerCard';
 import NotificationBell from './NotificationBell';
-// import BillingNotifications from './BillingNotifications';
-// import NotificationCenter from './NotificationCenter';
+import GlobalCalendarPopup from './GlobalCalendarPopup';
+import { CalendarClock } from 'lucide-react';
 
 export default function Layout({ children }) {
   const { user } = useAuth();
@@ -12,6 +12,7 @@ export default function Layout({ children }) {
     const saved = localStorage.getItem('sidebarCollapsed');
     return saved ? JSON.parse(saved) : false;
   });
+  const [showCalendar, setShowCalendar] = useState(false);
 
   // Listen for sidebar state changes
   useEffect(() => {
@@ -48,6 +49,15 @@ export default function Layout({ children }) {
               
               {/* Right Side - Notifications & User */}
               <div className="flex items-center space-x-4">
+                {/* Global Calendar button */}
+                <button
+                  onClick={() => setShowCalendar(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors shadow-sm"
+                  title="Open Calendar"
+                >
+                  <CalendarClock className="w-4 h-4" />
+                  <span className="hidden sm:inline">Calendar</span>
+                </button>
                 {/* <BillingNotifications /> */}
                 {/* <NotificationCenter /> */}
                 <NotificationBell />
@@ -67,6 +77,9 @@ export default function Layout({ children }) {
           </main>
         </div>
       </div>
+
+      {/* Global Calendar Popup */}
+      {showCalendar && <GlobalCalendarPopup onClose={() => setShowCalendar(false)} />}
     </div>
   );
 }

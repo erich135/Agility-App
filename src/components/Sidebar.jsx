@@ -20,7 +20,8 @@ import {
   Target,
   Shield,
   Menu,
-  Mail
+  Mail,
+  CalendarClock
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -90,6 +91,12 @@ export default function Sidebar() {
           path: '/email', 
           icon: Mail, 
           label: 'Email',
+          permission: null
+        },
+        { 
+          path: '/meetings', 
+          icon: CalendarClock, 
+          label: 'Meetings',
           permission: null
         },
       ]

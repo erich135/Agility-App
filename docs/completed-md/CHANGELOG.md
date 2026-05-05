@@ -4,6 +4,68 @@ All notable changes to the LMW Financial Solutions app will be documented in thi
 
 ---
 
+## [2026-05-05] - Meetings Feature + Global Calendar Popup
+
+### ✨ New Features
+
+#### Meetings Module
+- **`database/NEW_SQL_SCRIPTS_GO_HERE/create_meetings_table.sql`** — new `meetings` table with `title`, `meeting_date` (TIMESTAMPTZ), `location`, `notes`, `client_id`, `job_id`, `created_by`, `reminders` (JSONB array of offset keys), and `reminders_sent` (JSONB — prevents duplicate push notifications)
+- **`src/components/MeetingsPage.jsx`** — full Meetings page with:
+  - Stats row (Upcoming / Today / This Week / Past)
+  - Search bar and filter tabs (All / Upcoming / Today / Past)
+  - Colour-coded meeting cards (red=imminent, orange=today, yellow=soon, blue=upcoming, gray=past)
+  - Reminder badges showing which offsets have already fired (green) vs pending (gray)
+  - Edit and delete actions with confirmation dialog
+- **`src/components/MeetingForm.jsx`** — create/edit modal with title, datetime picker, location, client dropdown, job dropdown (now shows `Job Title — Client Name` to disambiguate), notes, and 6 reminder checkboxes (1 week / 3 days / 1 day / 4 hours / 1 hour / 30 minutes)
+  - Resets `reminders_sent` automatically when meeting time is changed
+
+#### Meeting Reminder Crons
+- **`api/cron-meeting-reminders.js`** — daily cron (04:00 UTC / 06:00 SAST) for long-lead reminders: 1 week, 3 days, 1 day before; uses ±12h matching window to tolerate drift
+- **`api/cron-meeting-hourly.js`** — hourly cron for close-range reminders: 4 hours, 1 hour, 30 minutes before; 30-min reminder uses `requireInteraction: true`
+- Both crons use the existing VAPID/webpush setup, deduplicate via `reminders_sent`, and clean up stale push endpoints
+
+#### Global Calendar Popup
+- **`src/components/GlobalCalendarPopup.jsx`** — full-screen modal calendar showing **meetings** (blue) and **job deadlines** (colour-coded by urgency: red=overdue, orange=today/tomorrow, yellow=≤7d, green=future) together in one view
+  - Month navigation, "Today" button, date selection
+  - Right panel shows all items for the selected date
+  - All calendar grid pills and right-panel cards are **clickable** and open a detail popup
+  - **Detail popup** shows: full date/time, location, client, linked job, notes, reminders set (meetings); due date + urgency badge, client, status, category, description (jobs)
+  - Escape key closes the detail popup first, then the calendar
+  - Clicking the backdrop dismisses
+
+### 🔧 Changes
+
+#### `src/components/Layout.jsx`
+- Added **Calendar button** (blue pill with `CalendarClock` icon + "Calendar" label) in the top-bar header, visible on every page
+- Imported and rendered `GlobalCalendarPopup` — toggled by the header button
+
+#### `src/components/Sidebar.jsx`
+- Added **Meetings** nav entry (CalendarClock icon) in the Core group, between Email and Admin
+
+#### `src/App.jsx`
+- Added `/meetings` route → `<MeetingsPage />`
+
+#### `vercel.json`
+- Added two new Vercel Cron entries:
+  - `cron-meeting-reminders` — `0 4 * * *` (daily 04:00 UTC)
+  - `cron-meeting-hourly` — `0 * * * *` (every hour)
+
+### 📝 Modified Files
+- `src/App.jsx` — MeetingsPage import + /meetings route
+- `src/components/Layout.jsx` — Calendar header button + GlobalCalendarPopup
+- `src/components/Sidebar.jsx` — Meetings nav item + CalendarClock icon import
+- `vercel.json` — 2 new cron schedules
+
+### 📝 New Files
+- `database/NEW_SQL_SCRIPTS_GO_HERE/create_meetings_table.sql`
+- `api/cron-meeting-reminders.js`
+- `api/cron-meeting-hourly.js`
+- `src/components/MeetingsPage.jsx`
+- `src/components/MeetingForm.jsx`
+- `src/components/GlobalCalendarPopup.jsx`
+
+---
+
 ## [2026-05-04] - CIPC Registration Date Fix
 
 ### 🐛 Bug Fixes

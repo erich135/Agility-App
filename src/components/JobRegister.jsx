@@ -214,6 +214,9 @@ export default function JobRegister() {
   const [docLinkType, setDocLinkType] = useState('supporting');
   const [downloadingPack, setDownloadingPack] = useState(false);
   const [docCategories, setDocCategories] = useState([]); // all categories for suggestions
+  const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+  const [isDragOverDoc, setIsDragOverDoc] = useState(false);
+  const [invoicedJobs, setInvoicedJobs] = useState(new Set());
 
   // Messages
   const [successMsg, setSuccessMsg] = useState(null);
@@ -334,6 +337,24 @@ export default function JobRegister() {
         .order('created_at', { ascending: false });
       if (fetchErr) throw fetchErr;
       setJobs(data || []);
+
+      // Fetch which jobs have invoices
+      if (data && data.length > 0) {
+        const jobIds = data.map(j => j.id);
+        const { data: invLinks } = await supabase
+          .from('job_document_links')
+          .select('job_id, document_id, link_type, document:documents(document_name)')
+          .in('job_id', jobIds);
+        
+        const invoicedSet = new Set();
+        (invLinks || []).forEach(link => {
+          const docName = (link.document?.document_name || '').toLowerCase();
+          if (link.link_type === 'output' && (docName.includes('invoice') || docName.includes('inv-') || docName.includes('inv '))) {
+            invoicedSet.add(link.job_id);
+          }
+        });
+        setInvoicedJobs(invoicedSet);
+      }
 
       // Fetch all checklist items
       if (data && data.length > 0) {
@@ -770,8 +791,66 @@ export default function JobRegister() {
       }
       await logActivity(jobId, 'document_linked', 'Document linked to job');
       await fetchJobDocuments(jobId);
+      await fetchJobs();
       showSuccess('Document linked');
     } catch (err) { setError(err.message); }
+  };
+
+  const uploadAndLinkDocument = async (file, job) => {
+    if (file.size > 10 * 1024 * 1024) {
+      setError(`${file.name} exceeds 10MB limit`);
+      return;
+    }
+
+    try {
+      setIsUploadingDoc(true);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${job.client_id}/documents/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${fileExt}`;
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('client-documents')
+        .upload(fileName, file);
+      if (uploadError) throw uploadError;
+
+      const { data: dbData, error: dbError } = await supabase
+        .from('documents')
+        .insert([{
+          client_id: job.client_id,
+          document_type: 'uncategorised',
+          document_name: file.name,
+          file_path: uploadData.path,
+          file_size: file.size,
+          mime_type: file.type,
+          uploaded_by: user?.id || null
+        }])
+        .select()
+        .single();
+      if (dbError) throw dbError;
+
+      let linkType = 'supporting';
+      const nameL = file.name.toLowerCase();
+      if (nameL.includes('invoice') || nameL.includes('inv')) linkType = 'output';
+      else if (nameL.includes('cert') || nameL.includes('return') || nameL.includes('bo-1')) linkType = 'output';
+
+      const { error: insErr } = await supabase.from('job_document_links').insert([{
+        job_id: job.id,
+        document_id: dbData.id,
+        link_type: linkType,
+        linked_by: user?.id || null,
+      }]);
+      if (insErr && insErr.code !== '23505') throw insErr;
+      
+      await logActivity(job.id, 'document_linked', `Uploaded and linked ${file.name}`);
+      await fetchJobDocuments(job.id);
+      await fetchClientDocuments(job.client_id);
+      await fetchJobs();
+      showSuccess(`${file.name} uploaded and linked`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsUploadingDoc(false);
+      setIsDragOverDoc(false);
+    }
   };
 
   const unlinkDocument = async (jobId, linkId) => {
@@ -780,6 +859,7 @@ export default function JobRegister() {
       if (delErr) throw delErr;
       await logActivity(jobId, 'document_unlinked', 'Document removed from job');
       await fetchJobDocuments(jobId);
+      await fetchJobs();
     } catch (err) { setError(err.message); }
   };
 
@@ -1062,6 +1142,7 @@ export default function JobRegister() {
             onExpand={setExpandedJobId}
             expandedJobId={expandedJobId}
             getDueStatus={getDueStatus}
+            invoicedJobs={invoicedJobs}
           />
         ) : filteredJobs.length === 0 ? (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-16 text-center">
@@ -1123,7 +1204,14 @@ export default function JobRegister() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{job.title}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium text-gray-900 truncate">{job.title}</p>
+                          {invoicedJobs?.has(job.id) && (
+                            <span title="Invoice document attached" className="flex-shrink-0 flex items-center gap-1 text-[9px] font-bold tracking-wide uppercase px-1.5 py-0.5 bg-blue-50 text-blue-600 border border-blue-200 rounded">
+                              🧾 Invoiced
+                            </span>
+                          )}
+                        </div>
                         {job.period && <p className="text-xs text-gray-400">{job.period}</p>}
                       </div>
                     </div>
@@ -1332,7 +1420,25 @@ export default function JobRegister() {
                           : availableDocs;
 
                         return (
-                          <div className="mt-6 pt-6 border-t border-gray-200">
+                          <div 
+                            className={`mt-6 pt-6 border-t ${isDragOverDoc ? 'border-blue-400 bg-blue-50' : 'border-gray-200'} transition-colors relative rounded-lg p-2`}
+                            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragOverDoc(true); }}
+                            onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragOverDoc(false); }}
+                            onDrop={async (e) => {
+                              e.preventDefault(); e.stopPropagation(); setIsDragOverDoc(false);
+                              if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                                for(let i=0; i<e.dataTransfer.files.length; i++) {
+                                  await uploadAndLinkDocument(e.dataTransfer.files[i], job);
+                                }
+                              }
+                            }}
+                          >
+                            {isDragOverDoc && (
+                              <div className="absolute inset-0 bg-blue-50 bg-opacity-90 flex flex-col items-center justify-center z-10 rounded-lg border-2 border-dashed border-blue-400">
+                                <svg className="w-12 h-12 text-blue-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                                <p className="text-blue-700 font-medium">Drop files to link to this job</p>
+                              </div>
+                            )}
                             <div className="flex items-center justify-between mb-3">
                               <div className="flex items-center gap-3">
                                 <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
@@ -1356,6 +1462,27 @@ export default function JobRegister() {
                                     )}
                                   </button>
                                 )}
+                                <label className="cursor-pointer px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 border border-gray-300 text-xs font-medium flex items-center gap-1.5 transition-colors">
+                                  {isUploadingDoc ? (
+                                    <><div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-500"></div> Uploading...</>
+                                  ) : (
+                                    <><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg> Upload</>
+                                  )}
+                                  <input 
+                                    type="file" 
+                                    multiple 
+                                    className="hidden" 
+                                    disabled={isUploadingDoc}
+                                    onChange={async (e) => {
+                                      if (e.target.files && e.target.files.length > 0) {
+                                        for(let i=0; i<e.target.files.length; i++) {
+                                          await uploadAndLinkDocument(e.target.files[i], job);
+                                        }
+                                      }
+                                      e.target.value = ''; // Reset input
+                                    }} 
+                                  />
+                                </label>
                                 <button
                                   onClick={() => { setShowDocPicker(!showDocPicker); setDocPickerSearch(''); }}
                                   className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs font-medium flex items-center gap-1.5 transition-colors"
@@ -1402,7 +1529,20 @@ export default function JobRegister() {
                                     <div key={link.id} className="flex items-center gap-3 px-3 py-2 bg-white border border-gray-200 rounded-lg hover:border-blue-200 transition-colors group">
                                       <span className="text-lg flex-shrink-0">{ltCfg.icon}</span>
                                       <div className="flex-1 min-w-0">
-                                        <p className="text-sm text-gray-800 truncate font-medium">{doc.document_name || doc.file_name}</p>
+                                        <p 
+                                          className="text-sm text-blue-600 truncate font-medium cursor-pointer hover:underline"
+                                          onClick={async () => {
+                                            try {
+                                              const { data, error } = await supabase.storage.from('client-documents').createSignedUrl(doc.file_path, 3600);
+                                              if (error) throw error;
+                                              window.open(data.signedUrl, '_blank');
+                                            } catch (err) {
+                                              setError('Failed to open document: ' + err.message);
+                                            }
+                                          }}
+                                        >
+                                          {doc.document_name || doc.file_name}
+                                        </p>
                                         <div className="flex items-center gap-2 mt-0.5">
                                           <span className={`text-[10px] px-1.5 py-0.5 rounded ${ltCfg.color}`}>{ltCfg.label}</span>
                                           {(link.docCategories || []).slice(0, 3).map(cat => (
@@ -1470,7 +1610,21 @@ export default function JobRegister() {
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                                           </svg>
                                           <div className="flex-1 min-w-0">
-                                            <p className="text-sm text-gray-800 truncate">{doc.document_name || doc.file_name}</p>
+                                            <p 
+                                              className="text-sm text-blue-600 truncate cursor-pointer hover:underline"
+                                              onClick={async (e) => {
+                                                e.stopPropagation();
+                                                try {
+                                                  const { data, error } = await supabase.storage.from('client-documents').createSignedUrl(doc.file_path, 3600);
+                                                  if (error) throw error;
+                                                  window.open(data.signedUrl, '_blank');
+                                                } catch (err) {
+                                                  setError('Failed to open document: ' + err.message);
+                                                }
+                                              }}
+                                            >
+                                              {doc.document_name || doc.file_name}
+                                            </p>
                                             <div className="flex items-center gap-1.5 mt-0.5">
                                               {(doc.docCategories || []).slice(0, 3).map(cat => (
                                                 <span key={cat.name} className="text-[10px] px-1 py-0.5 rounded bg-gray-100 text-gray-500">

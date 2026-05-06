@@ -753,7 +753,12 @@ const DocumentManager = ({ customerId: propCustomerId, customerName: propCustome
                                       </div>
                                     ) : (
                                       <>
-                                        <p className="text-sm font-medium text-gray-900 truncate">{doc.document_name || doc.file_name}</p>
+                                        <p 
+                                          className="text-sm font-medium text-blue-600 truncate cursor-pointer hover:underline"
+                                          onClick={() => handleView(doc)}
+                                        >
+                                          {doc.document_name || doc.file_name}
+                                        </p>
                                         {doc.description && <p className="text-xs text-gray-500 truncate">{doc.description}</p>}
                                       </>
                                     )}
@@ -874,7 +879,12 @@ const DocumentManager = ({ customerId: propCustomerId, customerName: propCustome
                         <div className="text-center mb-3">
                           <span className="text-4xl">{getDocIcon(doc)}</span>
                         </div>
-                        <p className="text-sm font-medium text-gray-900 truncate text-center mb-1">{doc.document_name || doc.file_name}</p>
+                        <p 
+                          className="text-sm font-medium text-blue-600 truncate text-center mb-1 cursor-pointer hover:underline"
+                          onClick={() => handleView(doc)}
+                        >
+                          {doc.document_name || doc.file_name}
+                        </p>
                         <p className="text-xs text-gray-500 text-center mb-2">{formatFileSize(doc.file_size)}</p>
                         
                         {tags.length > 0 && (

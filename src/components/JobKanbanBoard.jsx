@@ -47,6 +47,7 @@ export default function JobKanbanBoard({
   onExpand,
   expandedJobId,
   getDueStatus,
+  invoicedJobs = new Set(),
 }) {
   // Build columns dynamically from DB statuses
   const columns = useMemo(() => {
@@ -121,7 +122,14 @@ export default function JobKanbanBoard({
                       {/* Card Top */}
                       <div className="p-3">
                         {/* Title & Period */}
-                        <p className="text-sm font-medium text-gray-900 leading-snug">{job.title}</p>
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-sm font-medium text-gray-900 leading-snug">{job.title}</p>
+                          {invoicedJobs?.has(job.id) && (
+                            <span title="Invoice attached" className="flex-shrink-0 flex items-center text-[9px] font-bold tracking-wide uppercase px-1.5 py-0.5 bg-blue-50 text-blue-600 border border-blue-200 rounded">
+                              🧾 Invoiced
+                            </span>
+                          )}
+                        </div>
                         {job.period && (
                           <p className="text-xs text-gray-400 mt-0.5">{job.period}</p>
                         )}
